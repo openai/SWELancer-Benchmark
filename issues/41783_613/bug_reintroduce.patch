@@ -1,0 +1,74 @@
+diff --git a/src/ROUTES.ts b/src/ROUTES.ts
+index dfcb42d3c4f..4bca6c2e372 100644
+--- a/src/ROUTES.ts
++++ b/src/ROUTES.ts
+@@ -405,8 +405,8 @@ const ROUTES = {
+     },
+     MONEY_REQUEST_STEP_CONFIRMATION: {
+         route: ':action/:iouType/confirmation/:transactionID/:reportID',
+-        getRoute: (action: IOUAction, iouType: IOUType, transactionID: string, reportID: string, participantsAutoAssigned?: boolean) =>
+-            `${action as string}/${iouType as string}/confirmation/${transactionID}/${reportID}${participantsAutoAssigned ? '?participantsAutoAssigned=true' : ''}` as const,
++        getRoute: (action: IOUAction, iouType: IOUType, transactionID: string, reportID: string) =>
++            `${action as string}/${iouType as string}/confirmation/${transactionID}/${reportID}` as const,
+     },
+     MONEY_REQUEST_STEP_AMOUNT: {
+         route: ':action/:iouType/amount/:transactionID/:reportID/:pageIndex?',
+diff --git a/src/libs/Navigation/types.ts b/src/libs/Navigation/types.ts
+index 39053de521d..2bc75efd6ff 100644
+--- a/src/libs/Navigation/types.ts
++++ b/src/libs/Navigation/types.ts
+@@ -1055,7 +1055,6 @@ type MoneyRequestNavigatorParamList = {
+         reportID: string;
+         pageIndex?: string;
+         backTo?: string;
+-        participantsAutoAssigned?: string;
+     };
+     [SCREENS.MONEY_REQUEST.STEP_SCAN]: {
+         action: IOUAction;
+diff --git a/src/libs/ReportUtils.ts b/src/libs/ReportUtils.ts
+index 78ebdd92751..cced8032130 100644
+--- a/src/libs/ReportUtils.ts
++++ b/src/libs/ReportUtils.ts
+@@ -7752,10 +7752,11 @@ function createDraftWorkspaceAndNavigateToConfirmationScreen(transactionID: stri
+             searchText: policyName,
+         },
+     ]);
++    const iouConfirmationPageRoute = ROUTES.MONEY_REQUEST_STEP_CONFIRMATION.getRoute(actionName, CONST.IOU.TYPE.SUBMIT, transactionID, expenseChatReportID);
+     if (isCategorizing) {
+-        Navigation.navigate(ROUTES.MONEY_REQUEST_STEP_CATEGORY.getRoute(actionName, CONST.IOU.TYPE.SUBMIT, transactionID, expenseChatReportID));
++        Navigation.navigate(ROUTES.MONEY_REQUEST_STEP_CATEGORY.getRoute(actionName, CONST.IOU.TYPE.SUBMIT, transactionID, expenseChatReportID, iouConfirmationPageRoute));
+     } else {
+-        Navigation.navigate(ROUTES.MONEY_REQUEST_STEP_CONFIRMATION.getRoute(actionName, CONST.IOU.TYPE.SUBMIT, transactionID, expenseChatReportID, true));
++        Navigation.navigate(iouConfirmationPageRoute);
+     }
+ }
+ 
+diff --git a/src/pages/iou/request/step/IOURequestStepConfirmation.tsx b/src/pages/iou/request/step/IOURequestStepConfirmation.tsx
+index b08f9a6ced5..7a807b5941f 100644
+--- a/src/pages/iou/request/step/IOURequestStepConfirmation.tsx
++++ b/src/pages/iou/request/step/IOURequestStepConfirmation.tsx
+@@ -47,7 +47,7 @@ function IOURequestStepConfirmation({
+     report: reportReal,
+     reportDraft,
+     route: {
+-        params: {iouType, reportID, transactionID, action, participantsAutoAssigned: participantsAutoAssignedFromRoute},
++        params: {iouType, reportID, transactionID, action},
+     },
+     transaction,
+ }: IOURequestStepConfirmationProps) {
+@@ -191,13 +191,13 @@ function IOURequestStepConfirmation({
+         }
+         // If there is not a report attached to the IOU with a reportID, then the participants were manually selected and the user needs taken
+         // back to the participants step
+-        if (!transaction?.participantsAutoAssigned && participantsAutoAssignedFromRoute !== 'true') {
++        if (!transaction?.participantsAutoAssigned) {
+             // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing
+             Navigation.goBack(ROUTES.MONEY_REQUEST_STEP_PARTICIPANTS.getRoute(iouType, transactionID, transaction?.reportID || reportID, undefined, action));
+             return;
+         }
+         IOUUtils.navigateToStartMoneyRequestStep(requestType, iouType, transactionID, reportID, action);
+-    }, [transaction, iouType, requestType, transactionID, reportID, action, participantsAutoAssignedFromRoute]);
++    }, [transaction, iouType, requestType, transactionID, reportID, action]);
+ 
+     const navigateToAddReceipt = useCallback(() => {
+         Navigation.navigate(ROUTES.MONEY_REQUEST_STEP_SCAN.getRoute(action, iouType, transactionID, reportID, Navigation.getActiveRouteWithoutParams()));

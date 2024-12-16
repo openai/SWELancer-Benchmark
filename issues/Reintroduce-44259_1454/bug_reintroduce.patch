@@ -1,0 +1,16 @@
+diff --git a/src/components/Composer/index.tsx b/src/components/Composer/index.tsx
+index 72116a346c0..94bf6102c24 100755
+--- a/src/components/Composer/index.tsx
++++ b/src/components/Composer/index.tsx
+@@ -77,6 +77,11 @@ function Composer(
+     }: ComposerProps,
+     ref: ForwardedRef<TextInput | HTMLInputElement>,
+ ) {
++    useEffect(() => {
++        if (selectionProp.start != 0) selectionProp.start = 0;
++        if (selectionProp.end != 0) selectionProp.end = 0;
++    }, []);
++
+     const textContainsOnlyEmojis = useMemo(() => EmojiUtils.containsOnlyEmojis(value ?? ''), [value]);
+     const theme = useTheme();
+     const styles = useThemeStyles();

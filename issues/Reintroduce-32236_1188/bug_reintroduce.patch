@@ -1,0 +1,18 @@
+diff --git a/src/libs/ReportActionsUtils.ts b/src/libs/ReportActionsUtils.ts
+index c8b7e673aed..bafb38b1608 100644
+--- a/src/libs/ReportActionsUtils.ts
++++ b/src/libs/ReportActionsUtils.ts
+@@ -81,7 +81,11 @@ function isCreatedAction(reportAction: OnyxEntry<ReportAction>): boolean {
+ function isDeletedAction(reportAction: OnyxEntry<ReportAction>): boolean {
+     // A deleted comment has either an empty array or an object with html field with empty string as value
+     const message = reportAction?.message ?? [];
+-    return message.length === 0 || message[0]?.html === '';
++    if (message.length > 1) {
++      return false;
++    }else {
++      return message.length === 0 && message[0]?.html === '';      
++    }
+ }
+ 
+ function isDeletedParentAction(reportAction: OnyxEntry<ReportAction>): boolean {
+

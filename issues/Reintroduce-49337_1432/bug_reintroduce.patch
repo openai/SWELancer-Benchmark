@@ -1,0 +1,30 @@
+diff --git a/src/pages/settings/Profile/CustomStatus/StatusPage.tsx b/src/pages/settings/Profile/CustomStatus/StatusPage.tsx
+index c9858738906..7a071199504 100644
+--- a/src/pages/settings/Profile/CustomStatus/StatusPage.tsx
++++ b/src/pages/settings/Profile/CustomStatus/StatusPage.tsx
+@@ -90,7 +90,11 @@ function StatusPage() {
+     const navigateBackToPreviousScreen = useCallback(() => Navigation.goBack(), []);
+     const updateStatus = useCallback(
+         ({emojiCode, statusText}: FormOnyxValues<typeof ONYXKEYS.FORMS.SETTINGS_STATUS_SET_FORM>) => {
+-            if (navigateBackToPreviousScreenTask.current) {
++            if (
++                typeof navigateBackToPreviousScreenTask.current === 'object' &&
++                navigateBackToPreviousScreenTask.current != null &&
++                JSON.stringify(navigateBackToPreviousScreenTask.current) != '{}'
++            ) {
+                 return;
+             }
+             // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing
+@@ -114,7 +118,11 @@ function StatusPage() {
+     );
+
+     const clearStatus = () => {
+-        if (navigateBackToPreviousScreenTask.current) {
++        if (
++            typeof navigateBackToPreviousScreenTask.current === 'object' &&
++            navigateBackToPreviousScreenTask.current != null &&
++            JSON.stringify(navigateBackToPreviousScreenTask.current) != '{}'
++        ) {
+             return;
+         }
+         User.clearCustomStatus();

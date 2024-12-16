@@ -1,0 +1,16 @@
+diff --git a/src/pages/settings/ExitSurvey/ExitSurveyConfirmPage.tsx b/src/pages/settings/ExitSurvey/ExitSurveyConfirmPage.tsx
+index 2e567fe8297..44ff43e68de 100644
+--- a/src/pages/settings/ExitSurvey/ExitSurveyConfirmPage.tsx
++++ b/src/pages/settings/ExitSurvey/ExitSurveyConfirmPage.tsx
+@@ -82,11 +82,6 @@ function ExitSurveyConfirmPage({exitReason, route, navigation}: ExitSurveyConfir
+                     success
+                     large
+                     text={translate('exitSurvey.goToExpensifyClassic')}
+-                    onPress={() => {
+-                        ExitSurvey.switchToOldDot();
+-                        Navigation.dismissModal();
+-                        Link.openOldDotLink(CONST.OLDDOT_URLS.INBOX);
+-                    }}
+                     isDisabled={isOffline}
+                 />
+             </FixedFooter>

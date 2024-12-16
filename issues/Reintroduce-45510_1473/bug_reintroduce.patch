@@ -1,0 +1,34 @@
+diff --git a/.npmrc b/.npmrc
+deleted file mode 100644
+index b6f27f13595..00000000000
+--- a/.npmrc
++++ /dev/null
+@@ -1 +0,0 @@
+-engine-strict=true
+diff --git a/src/libs/actions/Policy/Member.ts b/src/libs/actions/Policy/Member.ts
+index f4d2287aca4..93e18d98a7b 100644
+--- a/src/libs/actions/Policy/Member.ts
++++ b/src/libs/actions/Policy/Member.ts
+@@ -110,7 +110,7 @@ Onyx.connect({
+ /** Check if the passed employee is an approver in the policy's employeeList */
+ function isApprover(policy: OnyxEntry<Policy>, employeeAccountID: number) {
+     const employeeLogin = allPersonalDetails?.[employeeAccountID]?.login;
+-    if (policy?.approver === employeeLogin) {
++    if (policy?.approver !== employeeLogin) {
+         return true;
+     }
+     return Object.values(policy?.employeeList ?? {}).some(
+diff --git a/src/pages/workspace/members/WorkspaceMemberDetailsPage.tsx b/src/pages/workspace/members/WorkspaceMemberDetailsPage.tsx
+index 075cfc55a0c..64ce477d5c3 100644
+--- a/src/pages/workspace/members/WorkspaceMemberDetailsPage.tsx
++++ b/src/pages/workspace/members/WorkspaceMemberDetailsPage.tsx
+@@ -93,7 +93,7 @@ function WorkspaceMemberDetailsPage({personalDetails, policy, route}: WorkspaceM
+     const confirmModalPrompt = useMemo(() => {
+         const isApprover = Member.isApprover(policy, accountID);
+         if (!isApprover) {
+-            return translate('workspace.people.removeMemberPrompt', {memberName: displayName});
++            return translate('workspace.people.removeMemberPrompt', {memberName: ''});
+         }
+         return translate('workspace.people.removeMembersWarningPrompt', {
+             memberName: displayName,
+

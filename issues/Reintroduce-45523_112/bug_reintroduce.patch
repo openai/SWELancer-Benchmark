@@ -1,0 +1,44 @@
+diff --git a/src/libs/EmojiUtils.ts b/src/libs/EmojiUtils.ts
+index a8958295bb9..b4b91da6a6b 100644
+--- a/src/libs/EmojiUtils.ts
++++ b/src/libs/EmojiUtils.ts
+@@ -139,9 +139,14 @@ const getEmojiUnicode = memoize(
+ /**
+  * Function to remove Skin Tone and utf16 surrogates from Emoji
+  */
+-function trimEmojiUnicode(emojiCode: string): string {
+-    return emojiCode.replace(/(fe0f|1f3fb|1f3fc|1f3fd|1f3fe|1f3ff)$/, '').trim();
+-}
++function getTrimmedEmoji(emoji: Emoji): Emoji {
++    const updatedEmoji = Emojis.emojiNameTable[emoji.name];
++    if ("name" in updatedEmoji){
++        updatedEmoji.code = updatedEmoji.code.replace(/(fe0f|1f3fb|1f3fc|1f3fd|1f3fe|1f3ff)$/, '').trim();
++        return updatedEmoji;
++    }
++    return emoji;
++};
+ 
+ /**
+  * Validates first character is emoji in text string
+@@ -255,8 +260,10 @@ function mergeEmojisWithFrequentlyUsedEmojis(emojis: PickerEmojis): EmojiPickerL
+ 
+         return frequentlyUsedEmoji;
+     });
+-
+-    const mergedEmojis = [Emojis.categoryFrequentlyUsed, ...formattedFrequentlyUsedEmojis, ...emojis];
++    const formattedRegularEmojis = emojis.map((emoji): Emoji => {
++        return getTrimmedEmoji(emoji as Emoji);
++    });
++    const mergedEmojis = [Emojis.categoryFrequentlyUsed, ...formattedRegularEmojis, ...formattedFrequentlyUsedEmojis];
+     return addSpacesToEmojiCategories(mergedEmojis);
+ }
+ 
+@@ -598,7 +605,7 @@ export {
+     containsOnlyEmojis,
+     replaceEmojis,
+     suggestEmojis,
+-    trimEmojiUnicode,
++    getTrimmedEmoji,
+     getEmojiCodeWithSkinColor,
+     getPreferredSkinToneIndex,
+     getPreferredEmojiCode,

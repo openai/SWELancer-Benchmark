@@ -1,0 +1,13 @@
+diff --git a/src/libs/Navigation/dismissModal.ts b/src/libs/Navigation/dismissModal.ts
+index dd0e512ea33..1b64797d9ad 100644
+--- a/src/libs/Navigation/dismissModal.ts
++++ b/src/libs/Navigation/dismissModal.ts
+@@ -30,7 +30,7 @@ function dismissModal(navigationRef: NavigationContainerRef<RootStackParamList>)
+         case SCREENS.WORKSPACE_AVATAR:
+         case SCREENS.REPORT_AVATAR:
+         case SCREENS.CONCIERGE:
+-            navigationRef.dispatch({...StackActions.pop(), target: state.key});
++            navigationRef.dispatch({...StackActions.pop(), target: lastRoute.key});
+             break;
+         default: {
+             Log.hmmm('[Navigation] dismissModal failed because there is no modal stack to dismiss');

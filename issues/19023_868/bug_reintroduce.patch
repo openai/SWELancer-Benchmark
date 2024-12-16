@@ -1,0 +1,20 @@
+diff --git a/.npmrc b/.npmrc
+deleted file mode 100644
+index b6f27f13595..00000000000
+--- a/.npmrc
++++ /dev/null
+@@ -1 +0,0 @@
+-engine-strict=true
+diff --git a/src/pages/tasks/TaskTitlePage.tsx b/src/pages/tasks/TaskTitlePage.tsx
+index 900809256c4..b56baa4ee30 100644
+--- a/src/pages/tasks/TaskTitlePage.tsx
++++ b/src/pages/tasks/TaskTitlePage.tsx
+@@ -39,7 +39,7 @@ function TaskTitlePage({report, currentUserPersonalDetails}: TaskTitlePageProps)
+             const errors: FormInputErrors<typeof ONYXKEYS.FORMS.EDIT_TASK_FORM> = {};
+ 
+             if (!title) {
+-                ErrorUtils.addErrorMessage(errors, INPUT_IDS.TITLE, translate('newTaskPage.pleaseEnterTaskName'));
++                ErrorUtils.addErrorMessage(errors, INPUT_IDS.TITLE, translate('common.error.fieldRequired'));
+             } else if (title.length > CONST.TITLE_CHARACTER_LIMIT) {
+                 ErrorUtils.addErrorMessage(errors, INPUT_IDS.TITLE, translate('common.error.characterLimitExceedCounter', {length: title.length, limit: CONST.TITLE_CHARACTER_LIMIT}));
+             }

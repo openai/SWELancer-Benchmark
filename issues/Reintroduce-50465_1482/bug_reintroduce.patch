@@ -1,0 +1,13 @@
+diff --git a/src/pages/workspace/AccessOrNotFoundWrapper.tsx b/src/pages/workspace/AccessOrNotFoundWrapper.tsx
+index 45bce8c2d1b..2615a122982 100644
+--- a/src/pages/workspace/AccessOrNotFoundWrapper.tsx
++++ b/src/pages/workspace/AccessOrNotFoundWrapper.tsx
+@@ -97,7 +97,7 @@ function PageNotFoundFallback({policyID, fullPageNotFoundViewProps, isFeatureEna
+         <NotFoundPage
+             shouldForceFullScreen={shouldShowFullScreenFallback}
+             onBackButtonPress={() => {
+-                if (isPolicyNotAccessible) {
++                if (policyID && !isPolicyNotAccessible) {
+                     Navigation.dismissModal();
+                     return;
+                 }

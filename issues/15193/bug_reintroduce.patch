@@ -1,0 +1,35 @@
+diff --git a/src/libs/ReportUtils.ts b/src/libs/ReportUtils.ts
+index 78ebdd92751..0509a26e042 100644
+--- a/src/libs/ReportUtils.ts
++++ b/src/libs/ReportUtils.ts
+@@ -4188,6 +4188,17 @@ function getPolicyDescriptionText(policy: OnyxEntry<Policy>): string {
+     return Parser.htmlToText(policy.description);
+ }
+ 
++function makeInnerTextBold(text: string) {
++    const htmlTagRegex = /<([^>]+)>(.*?)<\/\1>/g;
++    const textWithoutHash = text.replace(/^#+\s/, '');
++    const modifiedText = textWithoutHash.replace(htmlTagRegex, (_, tag, innerText) => {
++        return `<${tag}><b>${innerText}</b></${tag}>`;
++    });
++
++    return modifiedText;
++}
++
++
+ function buildOptimisticAddCommentReportAction(
+     text?: string,
+     file?: FileObject,
+@@ -4199,7 +4210,11 @@ function buildOptimisticAddCommentReportAction(
+     const commentText = getParsedComment(text ?? '', {shouldEscapeText, reportID});
+     const attachmentHtml = getUploadingAttachmentHtml(file);
+ 
+-    const htmlForNewComment = `${commentText}${commentText && attachmentHtml ? '<br /><br />' : ''}${attachmentHtml}`;
++    let htmlForNewComment = `${commentText}${commentText && attachmentHtml ? '<br /><br />' : ''}${attachmentHtml}`;    
++    // If text starts with any number of # and a space, make the text inside the html tags bold
++    if (/^#+\s/.test(htmlForNewComment)) {
++        htmlForNewComment = makeInnerTextBold(htmlForNewComment)
++    }
+     const textForNewComment = Parser.htmlToText(htmlForNewComment);
+ 
+     const isAttachmentOnly = file && !text;

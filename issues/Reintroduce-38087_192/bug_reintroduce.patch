@@ -1,0 +1,14 @@
+diff --git a/src/libs/SidebarUtils.ts b/src/libs/SidebarUtils.ts
+index e120f7026fc..16c165d3ef7 100644
+--- a/src/libs/SidebarUtils.ts
++++ b/src/libs/SidebarUtils.ts
+@@ -459,7 +459,7 @@ function getOptionData({
+         }
+     } else {
+         if (!lastMessageText) {
+-            lastMessageText = ReportUtils.formatReportLastMessageText(getWelcomeMessage(report, policy).messageText ?? Localize.translateLocal('report.noActivityYet'));
++            lastMessageText = Localize.translate(preferredLocale, 'reportActionsView.beginningOfChatHistory')
+         }
+         result.alternateText =
+             (ReportUtils.isGroupChat(report) || ReportUtils.isDeprecatedGroupDM(report)) && lastActorDisplayName
+

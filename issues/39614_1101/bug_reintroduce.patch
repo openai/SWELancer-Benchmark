@@ -1,0 +1,53 @@
+diff --git a/src/ROUTES.ts b/src/ROUTES.ts
+index dfcb42d3c4f..66037467ddb 100644
+--- a/src/ROUTES.ts
++++ b/src/ROUTES.ts
+@@ -927,15 +927,15 @@ const ROUTES = {
+     },
+     WORKSPACE_TAX_EDIT: {
+         route: 'settings/workspaces/:policyID/tax/:taxID',
+-        getRoute: (policyID: string, taxID: string) => `settings/workspaces/${policyID}/tax/${encodeURIComponent(taxID)}` as const,
++        getRoute: (policyID: string, taxID: string) => `settings/workspaces/${policyID}/tax/${encodeURI(taxID)}` as const,
+     },
+     WORKSPACE_TAX_NAME: {
+         route: 'settings/workspaces/:policyID/tax/:taxID/name',
+-        getRoute: (policyID: string, taxID: string) => `settings/workspaces/${policyID}/tax/${encodeURIComponent(taxID)}/name` as const,
++        getRoute: (policyID: string, taxID: string) => `settings/workspaces/${policyID}/tax/${encodeURI(taxID)}/name` as const,
+     },
+     WORKSPACE_TAX_VALUE: {
+         route: 'settings/workspaces/:policyID/tax/:taxID/value',
+-        getRoute: (policyID: string, taxID: string) => `settings/workspaces/${policyID}/tax/${encodeURIComponent(taxID)}/value` as const,
++        getRoute: (policyID: string, taxID: string) => `settings/workspaces/${policyID}/tax/${encodeURI(taxID)}/value` as const,
+     },
+     WORKSPACE_TAX_CODE: {
+         route: 'settings/workspaces/:policyID/tax/:taxID/tax-code',
+diff --git a/src/libs/Navigation/linkingConfig/config.ts b/src/libs/Navigation/linkingConfig/config.ts
+index 319ec60d143..ba1664a37c7 100644
+--- a/src/libs/Navigation/linkingConfig/config.ts
++++ b/src/libs/Navigation/linkingConfig/config.ts
+@@ -820,9 +820,6 @@ const config: LinkingOptions<RootStackParamList>['config'] = {
+                         },
+                         [SCREENS.WORKSPACE.TAX_EDIT]: {
+                             path: ROUTES.WORKSPACE_TAX_EDIT.route,
+-                            parse: {
+-                                taxID: (taxID: string) => decodeURIComponent(taxID),
+-                            },
+                         },
+                         [SCREENS.WORKSPACE.TAX_CODE]: {
+                             path: ROUTES.WORKSPACE_TAX_CODE.route,
+@@ -832,15 +829,9 @@ const config: LinkingOptions<RootStackParamList>['config'] = {
+                         },
+                         [SCREENS.WORKSPACE.TAX_NAME]: {
+                             path: ROUTES.WORKSPACE_TAX_NAME.route,
+-                            parse: {
+-                                taxID: (taxID: string) => decodeURIComponent(taxID),
+-                            },
+                         },
+                         [SCREENS.WORKSPACE.TAX_VALUE]: {
+                             path: ROUTES.WORKSPACE_TAX_VALUE.route,
+-                            parse: {
+-                                taxID: (taxID: string) => decodeURIComponent(taxID),
+-                            },
+                         },
+                         [SCREENS.WORKSPACE.RULES_CUSTOM_NAME]: {
+                             path: ROUTES.RULES_CUSTOM_NAME.route,

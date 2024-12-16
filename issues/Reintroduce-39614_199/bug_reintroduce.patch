@@ -1,0 +1,20 @@
+diff --git a/.npmrc b/.npmrc
+deleted file mode 100644
+index b6f27f13595..00000000000
+--- a/.npmrc
++++ /dev/null
+@@ -1 +0,0 @@
+-engine-strict=true
+diff --git a/src/pages/workspace/taxes/WorkspaceEditTaxPage.tsx b/src/pages/workspace/taxes/WorkspaceEditTaxPage.tsx
+index 0f50ed8fe0b..f90a4ba75d5 100644
+--- a/src/pages/workspace/taxes/WorkspaceEditTaxPage.tsx
++++ b/src/pages/workspace/taxes/WorkspaceEditTaxPage.tsx
+@@ -36,7 +36,7 @@ function WorkspaceEditTaxPage({
+     const styles = useThemeStyles();
+     const {translate} = useLocalize();
+     const currentTaxID = PolicyUtils.getCurrentTaxID(policy, taxID);
+-    const currentTaxRate = currentTaxID && policy?.taxRates?.taxes?.[currentTaxID];
++    const currentTaxRate = currentTaxID && policy?.taxes?.[currentTaxID] || false;
+     const [isDeleteModalVisible, setIsDeleteModalVisible] = useState(false);
+     const canEditTaxRate = policy && PolicyUtils.canEditTaxRate(policy, currentTaxID ?? taxID);
+     const hasAccountingConnections = PolicyUtils.hasAccountingConnections(policy);

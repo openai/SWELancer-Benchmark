@@ -1,0 +1,54 @@
+diff --git a/.npmrc b/.npmrc
+deleted file mode 100644
+index b6f27f13595..00000000000
+--- a/.npmrc
++++ /dev/null
+@@ -1 +0,0 @@
+-engine-strict=true
+diff --git a/src/pages/ValidateLoginPage/index.website.tsx b/src/pages/ValidateLoginPage/index.website.tsx
+index 13f63686785..a982469a421 100644
+--- a/src/pages/ValidateLoginPage/index.website.tsx
++++ b/src/pages/ValidateLoginPage/index.website.tsx
+@@ -24,11 +24,9 @@ function ValidateLoginPage({
+     const isSignedIn = !!session?.authToken && session?.authTokenType !== CONST.AUTH_TOKEN_TYPES.ANONYMOUS;
+     const is2FARequired = !!account?.requiresTwoFactorAuth;
+     const cachedAccountID = credentials?.accountID;
+-    const isUserClickedSignIn = !login && isSignedIn && (autoAuthState === CONST.AUTO_AUTH_STATE.SIGNING_IN || autoAuthState === CONST.AUTO_AUTH_STATE.JUST_SIGNED_IN);
+-    const shouldStartSignInWithValidateCode = !isUserClickedSignIn && !isSignedIn && (!!login || !!exitTo);
+ 
+     useEffect(() => {
+-        if (isUserClickedSignIn) {
++        if (!login && isSignedIn && (autoAuthState === CONST.AUTO_AUTH_STATE.SIGNING_IN || autoAuthState === CONST.AUTO_AUTH_STATE.JUST_SIGNED_IN)) {
+             // The user clicked the option to sign in the current tab
+             Navigation.isNavigationReady().then(() => {
+                 Navigation.goBack();
+@@ -37,7 +35,7 @@ function ValidateLoginPage({
+         }
+         Session.initAutoAuthState(autoAuthState);
+ 
+-        if (!shouldStartSignInWithValidateCode) {
++        if (isSignedIn || (!login && !exitTo)) {
+             if (exitTo) {
+                 Session.handleExitToNavigation(exitTo);
+             }
+@@ -71,16 +69,15 @@ function ValidateLoginPage({
+     return (
+         <>
+             {autoAuthState === CONST.AUTO_AUTH_STATE.FAILED && <ExpiredValidateCodeModal />}
+-            {autoAuthState === CONST.AUTO_AUTH_STATE.JUST_SIGNED_IN && is2FARequired && !isSignedIn && login && <JustSignedInModal is2FARequired />}
+-            {autoAuthState === CONST.AUTO_AUTH_STATE.JUST_SIGNED_IN && isSignedIn && !exitTo && login && <JustSignedInModal is2FARequired={false} />}
+-            {/* If session.autoAuthState isn't available yet, we use shouldStartSignInWithValidateCode to conditionally render the component instead of local autoAuthState which contains a default value of NOT_STARTED */}
+-            {(!session?.autoAuthState ? !shouldStartSignInWithValidateCode : autoAuthState === CONST.AUTO_AUTH_STATE.NOT_STARTED) && !exitTo && (
++            {autoAuthState === CONST.AUTO_AUTH_STATE.JUST_SIGNED_IN && is2FARequired && !isSignedIn && <JustSignedInModal is2FARequired />}
++            {autoAuthState === CONST.AUTO_AUTH_STATE.JUST_SIGNED_IN && isSignedIn && !exitTo && <JustSignedInModal is2FARequired={false} />}
++            {autoAuthState === CONST.AUTO_AUTH_STATE.NOT_STARTED && !exitTo && (
+                 <ValidateCodeModal
+                     accountID={Number(accountID)}
+                     code={validateCode}
+                 />
+             )}
+-            {(!session?.autoAuthState ? shouldStartSignInWithValidateCode : autoAuthState === CONST.AUTO_AUTH_STATE.SIGNING_IN) && <FullScreenLoadingIndicator />}
++            {autoAuthState === CONST.AUTO_AUTH_STATE.SIGNING_IN && <FullScreenLoadingIndicator />}
+         </>
+     );
+ }

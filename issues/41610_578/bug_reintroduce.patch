@@ -1,0 +1,17 @@
+diff --git a/src/pages/GetAssistancePage.tsx b/src/pages/GetAssistancePage.tsx
+index 90b7ccbb28d..3ee2482cf5c 100644
+--- a/src/pages/GetAssistancePage.tsx
++++ b/src/pages/GetAssistancePage.tsx
+@@ -35,11 +35,10 @@ function GetAssistancePage({route, account}: GetAssistancePageProps) {
+     const styles = useThemeStyles();
+     const {translate} = useLocalize();
+     const navigateBackTo = route?.params.backTo || ROUTES.SETTINGS_CONTACT_METHODS.getRoute();
+-    const {isLargeScreenWidth} = useResponsiveLayout();
+     const menuItems: MenuItemWithLink[] = [
+         {
+             title: translate('getAssistancePage.chatWithConcierge'),
+-            onPress: () => Report.navigateToConciergeChat(isLargeScreenWidth),
++            onPress: () => Report.navigateToConciergeChat(true),
+             icon: Expensicons.ChatBubble,
+             shouldShowRightIcon: true,
+             wrapperStyle: [styles.cardMenuItem],

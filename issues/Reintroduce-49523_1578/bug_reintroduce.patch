@@ -1,0 +1,16 @@
+diff --git a/src/components/SettlementButton/index.tsx b/src/components/SettlementButton/index.tsx
+index 53b09bfcbf3..1b62ff6046f 100644
+--- a/src/components/SettlementButton/index.tsx
++++ b/src/components/SettlementButton/index.tsx
+@@ -190,10 +190,6 @@ function SettlementButton({
+         }
+ 
+         if (iouPaymentType === CONST.IOU.PAYMENT_TYPE.EXPENSIFY || iouPaymentType === CONST.IOU.PAYMENT_TYPE.VBBA) {
+-            if (!isUserValidated) {
+-                Navigation.navigate(ROUTES.SETTINGS_WALLET_VERIFY_ACCOUNT.route);
+-                return;
+-            }
+             triggerKYCFlow(event, iouPaymentType);
+             BankAccounts.setPersonalBankAccountContinueKYCOnSuccess(ROUTES.ENABLE_PAYMENTS);
+             return;
+

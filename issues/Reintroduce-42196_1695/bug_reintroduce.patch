@@ -1,0 +1,21 @@
+diff --git a/.npmrc b/.npmrc
+deleted file mode 100644
+index b6f27f13595..00000000000
+--- a/.npmrc
++++ /dev/null
+@@ -1 +0,0 @@
+-engine-strict=true
+diff --git a/src/hooks/useMarkdownStyle.ts b/src/hooks/useMarkdownStyle.ts
+index c7e9bf2c021..24fb07db1df 100644
+--- a/src/hooks/useMarkdownStyle.ts
++++ b/src/hooks/useMarkdownStyle.ts
+@@ -49,7 +49,7 @@ function useMarkdownStyle(message: string | null = null, excludeStyles: Array<ke
+                  * with last character of the text node.
+                  * As long as paddingRight > cursor.width, cursor will be displayed correctly.
+                  */
+-                paddingRight: 1,
++                paddingRight: 19,
+             },
+             code: {
+                 ...FontUtils.fontFamily.platform.MONOSPACE,
+

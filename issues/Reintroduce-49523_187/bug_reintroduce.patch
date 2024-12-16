@@ -1,0 +1,28 @@
+
+diff --git a/src/components/SettlementButton/index.tsx b/src/components/SettlementButton/index.tsx
+index 53b09bfcbf3..a5efa09b25b 100644
+--- a/src/components/SettlementButton/index.tsx
++++ b/src/components/SettlementButton/index.tsx
+@@ -191,13 +191,21 @@ function SettlementButton({
+ 
+         if (iouPaymentType === CONST.IOU.PAYMENT_TYPE.EXPENSIFY || iouPaymentType === CONST.IOU.PAYMENT_TYPE.VBBA) {
+             if (!isUserValidated) {
+-                Navigation.navigate(ROUTES.SETTINGS_WALLET_VERIFY_ACCOUNT.route);
++                // Skip navigation to Wallet Verify Account and allow the user to proceed
++                console.log("User is not validated, but proceeding without verifying the account.");
++
++                // Trigger the KYC flow or proceed with other actions directly
++                triggerKYCFlow(event, iouPaymentType);
++                BankAccounts.setPersonalBankAccountContinueKYCOnSuccess(ROUTES.ENABLE_PAYMENTS);
+                 return;
+             }
++
++            // Normal flow for validated users
+             triggerKYCFlow(event, iouPaymentType);
+             BankAccounts.setPersonalBankAccountContinueKYCOnSuccess(ROUTES.ENABLE_PAYMENTS);
+             return;
+         }
++
+ 
+         if (iouPaymentType === CONST.IOU.REPORT_ACTION_TYPE.APPROVE) {
+             if (confirmApproval) {

@@ -1,0 +1,24 @@
+diff --git a/.npmrc b/.npmrc
+deleted file mode 100644
+index b6f27f13595..00000000000
+--- a/.npmrc
++++ /dev/null
+@@ -1 +0,0 @@
+-engine-strict=true
+diff --git a/src/libs/actions/Policy/Policy.ts b/src/libs/actions/Policy/Policy.ts
+index 60cab178770..1aa2a7a7c47 100644
+--- a/src/libs/actions/Policy/Policy.ts
++++ b/src/libs/actions/Policy/Policy.ts
+@@ -1582,10 +1582,6 @@ function buildPolicyData(policyOwnerEmail = '', makeMeAdmin = false, policyName
+                     autoReporting: CONST.RED_BRICK_ROAD_PENDING_ACTION.ADD,
+                     approvalMode: CONST.RED_BRICK_ROAD_PENDING_ACTION.ADD,
+                     reimbursementChoice: CONST.RED_BRICK_ROAD_PENDING_ACTION.ADD,
+-                    name: CONST.RED_BRICK_ROAD_PENDING_ACTION.ADD,
+-                    outputCurrency: CONST.RED_BRICK_ROAD_PENDING_ACTION.ADD,
+-                    address: CONST.RED_BRICK_ROAD_PENDING_ACTION.ADD,
+-                    description: CONST.RED_BRICK_ROAD_PENDING_ACTION.ADD,
+                 },
+             },
+         },
+
+

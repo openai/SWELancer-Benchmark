@@ -1,0 +1,30 @@
+diff --git a/src/components/ReportActionItem/ReportPreview.tsx b/src/components/ReportActionItem/ReportPreview.tsx
+index 6bb70a275a3..378ddf4d205 100644
+--- a/src/components/ReportActionItem/ReportPreview.tsx
++++ b/src/components/ReportActionItem/ReportPreview.tsx
+@@ -142,7 +142,7 @@ function ReportPreview({
+     const moneyRequestComment = action?.childLastMoneyRequestComment ?? '';
+     const isPolicyExpenseChat = ReportUtils.isPolicyExpenseChat(chatReport);
+     const isInvoiceRoom = ReportUtils.isInvoiceRoom(chatReport);
+-    const isOpenExpenseReport = isPolicyExpenseChat && ReportUtils.isOpenExpenseReport(iouReport);
++    const isOpenExpenseReport = isPolicyExpenseChat || ReportUtils.isOpenExpenseReport(iouReport);
+ 
+     const isApproved = ReportUtils.isReportApproved(iouReport, action);
+     const canAllowSettlement = ReportUtils.hasUpdatedTotal(iouReport, policy);
+@@ -175,13 +175,13 @@ function ReportPreview({
+     }
+ 
+     const currentUserAccountID = getCurrentUserAccountID();
+-    const isAdmin = policy?.role === CONST.POLICY.ROLE.ADMIN;
+-    const shouldShowSubmitButton =
++    const isUser = policy?.role === CONST.POLICY.ROLE.USER;
++    const shouldShowSubmitButton = 
+         isOpenExpenseReport &&
+         reimbursableSpend !== 0 &&
+         !showRTERViolationMessage &&
+         !shouldShowBrokenConnectionViolation &&
+-        (iouReport?.ownerAccountID === currentUserAccountID || isAdmin || iouReport?.managerID === currentUserAccountID);
++        (iouReport?.ownerAccountID === currentUserAccountID || isUser || iouReport?.managerID === currentUserAccountID);
+ 
+     const shouldDisableSubmitButton = shouldShowSubmitButton && !ReportUtils.isAllowedToSubmitDraftExpenseReport(iouReport);
+ 

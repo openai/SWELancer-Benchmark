@@ -1,0 +1,62 @@
+diff --git a/.npmrc b/.npmrc
+deleted file mode 100644
+index b6f27f13595..00000000000
+--- a/.npmrc
++++ /dev/null
+@@ -1 +0,0 @@
+-engine-strict=true
+diff --git a/package-lock.json b/package-lock.json
+index 71049ab15f2..91720554ce5 100644
+--- a/package-lock.json
++++ b/package-lock.json
+@@ -1,12 +1,12 @@
+ {
+   "name": "new.expensify",
+-  "version": "1.4.81-11",
++  "version": "9.0.41-1",
+   "lockfileVersion": 3,
+   "requires": true,
+   "packages": {
+     "": {
+       "name": "new.expensify",
+-      "version": "1.4.81-11",
++      "version": "9.0.41-1",
+       "hasInstallScript": true,
+       "license": "MIT",
+       "dependencies": {
+diff --git a/package.json b/package.json
+index c4f89e2f142..9b22f3c1d34 100644
+--- a/package.json
++++ b/package.json
+@@ -1,6 +1,6 @@
+ {
+   "name": "new.expensify",
+-  "version": "1.4.81-11",
++  "version": "9.0.41-1",
+   "author": "Expensify, Inc.",
+   "homepage": "https://new.expensify.com",
+   "description": "New Expensify is the next generation of Expensify: a reimagination of payments based atop a foundation of chat.",
+diff --git a/src/libs/OptionsListUtils.ts b/src/libs/OptionsListUtils.ts
+index ca0ceee42a9..ce0b8130b2c 100644
+--- a/src/libs/OptionsListUtils.ts
++++ b/src/libs/OptionsListUtils.ts
+@@ -603,9 +603,6 @@ function getAlternateText(option: ReportUtils.OptionData, {showChatPreviewLine =
+ 
+ function isSearchStringMatchUserDetails(personalDetail: PersonalDetails, searchValue: string) {
+     let memberDetails = '';
+-    if (personalDetail.login) {
+-        memberDetails += ` ${personalDetail.login}`;
+-    }
+     if (personalDetail.firstName) {
+         memberDetails += ` ${personalDetail.firstName}`;
+     }
+@@ -615,6 +612,9 @@ function isSearchStringMatchUserDetails(personalDetail: PersonalDetails, searchV
+     if (personalDetail.displayName) {
+         memberDetails += ` ${PersonalDetailsUtils.getDisplayNameOrDefault(personalDetail)}`;
+     }
++    else if (personalDetail.login) {
++            memberDetails += ` ${personalDetail.login}`;
++    }
+     if (personalDetail.phoneNumber) {
+         memberDetails += ` ${personalDetail.phoneNumber}`;
+     }

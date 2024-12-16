@@ -1,0 +1,111 @@
+import sys, os
+
+base_path = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
+sys.path.insert(0, base_path)
+
+import re
+import time
+from playwright.sync_api import Page, sync_playwright, expect, ViewportSize
+
+EMAIL = "expensify66+6548748765433279763@gmail.com"
+FIRST_NAME = "Asaad"
+LAST_NAME = "I"
+
+
+def login_user(page: Page):
+    # Launch chromium and open new page
+
+    # Step 1: Open expensify url
+    page.goto("https://dev.new.expensify.com:8082/")
+
+    # Step 2: Enter email and click continue
+    page.get_by_test_id("username").fill(EMAIL)
+    page.get_by_role("button", name="Continue").click()
+
+    # Step 3: Click join button
+    page.get_by_role("button", name="Join").click()
+
+
+def onboarding_user(page: Page):
+    page.get_by_text("What do you want to do today?").wait_for()
+
+    # Step 4: Select 'Track and budget expenses' in onboarding page and click Continue
+    activity_text = "Track and budget expenses"
+    page.get_by_label(activity_text).click()
+
+    # Step 5: Enter first name, last name and click continue
+    page.get_by_role("textbox", name="First name").fill(FIRST_NAME)
+    page.get_by_role("textbox", name="Last name").fill(LAST_NAME)
+    page.get_by_role("button", name="Continue").last.click()
+
+
+def create_workspace_with_tags(page: Page):
+    # Step 6: Start the process to create a new workspace
+    page.get_by_label("Start chat (Floating action)").click()
+    page.get_by_label("New workspace").click()
+    page.get_by_label("More features").click()
+    page.get_by_label("Classify costs and track").click()
+    page.get_by_label("Tags").click()
+
+    # Step 7: Add 20 tags to the workspace
+    for i in range(1, 21):
+        page.get_by_role("button", name="Add tag").click()
+        page.get_by_role("textbox", name="Name").fill(f"{i}")
+        page.get_by_role("button", name="Save").click()
+
+    page.get_by_test_id("WorkspaceInitialPage").get_by_label("Back").click()
+
+    row_content = page.get_by_label("row").first.text_content()
+    workspace_name = row_content.split(".default-", 1)[0]
+
+    return workspace_name
+
+
+def go_to_select_tag(page: Page, workspace_name: str):
+    # Step 9: Navigate to the 'Inbox' to start the expense submission process
+    page.get_by_label("Inbox").click()
+    page.get_by_label("Navigates to a chat").get_by_text(
+        workspace_name, exact=True
+    ).click()
+
+    # Step 10: Create a new expense
+    page.get_by_label("Create").locator("visible=true").click()
+    page.get_by_label("Submit expense").click()
+    page.get_by_label("Manual").click()
+
+    # Step 11: Fill in the expense amount and proceed
+    page.get_by_placeholder("0").fill("123")
+    page.locator("#numPadContainerView").get_by_role("button", name="Next").click()
+
+    # Step 12: Expand additional options and select 'Tag'
+    page.get_by_label("Show more").click()
+    page.get_by_role("menuitem", name="Tag").click()
+
+
+def test_popup():
+    with sync_playwright() as playwright:
+        browser = playwright.chromium.launch(
+            headless=True,
+            args=[
+                "--ignore-certificate-errors",
+                "--disable-web-security",
+                "--disable-features=IsolateOrigins,site-per-process",
+            ],
+        )
+        context = browser.new_context(viewport=ViewportSize(width=1280, height=720))
+        page = context.new_page()
+
+        # Step 1: Login user using the utility function
+        login_user(page)
+        onboarding_user(page)
+
+        # Step 2: Create a new workspace and add tags
+        workspace_name = create_workspace_with_tags(page)
+        go_to_select_tag(page, workspace_name)
+
+        # Step 3: Search for a tag that does not exist
+        page.get_by_test_id("selection-list-text-input").fill("rabbit")
+        expect(page.get_by_text("No results found")).to_be_visible()
+
+        page.close()
+        browser.close()

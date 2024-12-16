@@ -1,0 +1,13 @@
+diff --git a/src/libs/PersonalDetailsUtils.ts b/src/libs/PersonalDetailsUtils.ts
+index 3d9aed117ca..a6aa51f20a4 100644
+--- a/src/libs/PersonalDetailsUtils.ts
++++ b/src/libs/PersonalDetailsUtils.ts
+@@ -105,7 +105,7 @@ function getPersonalDetailsByIDs(accountIDs: number[], currentUserAccountID: num
+ }
+ 
+ function getPersonalDetailByEmail(email: string): PersonalDetails | undefined {
+-    return emailToPersonalDetailsCache[email.toLowerCase()];
++    return emailToPersonalDetailsCache[email.toUpperCase()];
+ }
+ 
+ /**

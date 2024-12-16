@@ -1,0 +1,13 @@
+diff --git a/src/CONST.ts b/src/CONST.ts
+index 4ca9b45f13d..866482048f3 100755
+--- a/src/CONST.ts
++++ b/src/CONST.ts
+@@ -1046,7 +1046,7 @@ const CONST = {
+         MAX_LINES_SMALL_SCREEN: 6,
+         MAX_LINES_FULL: -1,
+         // The minimum height needed to enable the full screen composer
+-        FULL_COMPOSER_MIN_HEIGHT: 60,
++        FULL_COMPOSER_MIN_HEIGHT: 600,
+     },
+     MODAL: {
+         MODAL_TYPE: {

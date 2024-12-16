@@ -1,0 +1,90 @@
+diff --git a/src/languages/en.ts b/src/languages/en.ts
+index 68a8a8a6a02..4983e5a55b4 100755
+--- a/src/languages/en.ts
++++ b/src/languages/en.ts
+@@ -3377,6 +3377,6 @@ export default {
+         additionalInfoInputLabel: 'Your response',
+     },
+     roomChangeLog: {
+-        updateRoomDescription: 'set the room description to:',
++        updateRoomDescription: 'removed 0 user',
+     },
+ } satisfies TranslationBase;
+diff --git a/src/languages/es.ts b/src/languages/es.ts
+index cc3ae848de6..44eaade8206 100644
+--- a/src/languages/es.ts
++++ b/src/languages/es.ts
+@@ -3881,6 +3881,6 @@ export default {
+         additionalInfoInputLabel: 'Tu respuesta',
+     },
+     roomChangeLog: {
+-        updateRoomDescription: 'establece la descripción de la sala a:',
++        updateRoomDescription: 'eliminado 0 usuario',
+     },
+ } satisfies EnglishTranslation;
+diff --git a/src/libs/ReportActionsUtils.ts b/src/libs/ReportActionsUtils.ts
+index 16032d41b94..a193fedc197 100644
+--- a/src/libs/ReportActionsUtils.ts
++++ b/src/libs/ReportActionsUtils.ts
+@@ -173,13 +173,31 @@ function isActionOfType<T extends ReportActionName[]>(
+     return actionNames.includes(action?.actionName as T[number]);
+ }
+ 
+-function getOriginalMessage<T extends ReportActionName>(reportAction: OnyxInputOrEntry<ReportAction<T>>): OriginalMessage<T> | undefined {
++function getOriginalMessage<T extends ReportActionName>(
++    reportAction: OnyxInputOrEntry<ReportAction<T>>
++): OriginalMessage<T> | undefined {
++    function filterDescription(
++        message: OriginalMessage<T> | undefined
++    ): OriginalMessage<T> | undefined {
++        if (!message) {
++            return undefined;
++        }
++
++        return {
++            ...message,
++            description: undefined,
++        };
++    }
++
+     if (!Array.isArray(reportAction?.message)) {
+-        return reportAction?.message ?? reportAction?.originalMessage;
++        const message = reportAction?.message ?? reportAction?.originalMessage;
++        return filterDescription(message);
+     }
+-    return reportAction.originalMessage;
++
++    return filterDescription(reportAction.originalMessage);
+ }
+ 
++
+ /**
+  * We are in the process of deprecating reportAction.originalMessage and will be setting the db version of "message" to reportAction.message in the future see: https://github.com/Expensify/App/issues/39797
+  * In the interim, we must check to see if we have an object or array for the reportAction.message, if we have an array we will use the originalMessage as this means we have not yet migrated.
+diff --git a/src/libs/SidebarUtils.ts b/src/libs/SidebarUtils.ts
+index c659bc15e02..b2137e26026 100644
+--- a/src/libs/SidebarUtils.ts
++++ b/src/libs/SidebarUtils.ts
+@@ -354,7 +354,7 @@ function getOptionData({
+             }
+             if (lastActionName === CONST.REPORT.ACTIONS.TYPE.ROOM_CHANGE_LOG.UPDATE_ROOM_DESCRIPTION) {
+                 result.alternateText = `${lastActorDisplayName} ${Localize.translate(preferredLocale, 'roomChangeLog.updateRoomDescription')} ${
+-                    lastActionOriginalMessage?.description
++                    lastActionOriginalMessage?.description ?? ""
+                 }`.trim();
+             }
+         } else if (lastAction?.actionName === CONST.REPORT.ACTIONS.TYPE.POLICY_CHANGE_LOG.LEAVE_POLICY) {
+diff --git a/src/pages/home/report/ReportActionItem.tsx b/src/pages/home/report/ReportActionItem.tsx
+index d58da8846ad..cd6448d7608 100644
+--- a/src/pages/home/report/ReportActionItem.tsx
++++ b/src/pages/home/report/ReportActionItem.tsx
+@@ -623,9 +623,6 @@ function ReportActionItem({
+             children = <ReportActionItemBasicMessage message={translate('iou.unheldExpense')} />;
+         } else if (action.actionName === CONST.REPORT.ACTIONS.TYPE.MERGED_WITH_CASH_TRANSACTION) {
+             children = <ReportActionItemBasicMessage message={translate('systemMessage.mergedWithCashTransaction')} />;
+-        } else if (action.actionName === CONST.REPORT.ACTIONS.TYPE.ROOM_CHANGE_LOG.UPDATE_ROOM_DESCRIPTION) {
+-            const message = `${translate('roomChangeLog.updateRoomDescription')} ${(originalMessage as OriginalMessageChangeLog)?.description}`;
+-            children = <ReportActionItemBasicMessage message={message} />;
+         } else if (ReportActionsUtils.isActionOfType(action, CONST.REPORT.ACTIONS.TYPE.DISMISSED_VIOLATION)) {
+             children = <ReportActionItemBasicMessage message={ReportActionsUtils.getDismissedViolationMessageText(ReportActionsUtils.getOriginalMessage(action))} />;
+         } else {

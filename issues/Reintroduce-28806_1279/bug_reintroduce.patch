@@ -1,0 +1,21 @@
+diff --git a/.npmrc b/.npmrc
+deleted file mode 100644
+index b6f27f13595..00000000000
+--- a/.npmrc
++++ /dev/null
+@@ -1 +0,0 @@
+-engine-strict=true
+diff --git a/src/libs/ValidationUtils.ts b/src/libs/ValidationUtils.ts
+index 80c765f0edf..03c81910030 100644
+--- a/src/libs/ValidationUtils.ts
++++ b/src/libs/ValidationUtils.ts
+@@ -394,7 +394,7 @@ function isExistingRoomName(roomName: string, reports: OnyxCollection<Report>, p
+  * - It's between 1 and MAX_ROOM_NAME_LENGTH characters long
+  */
+ function isValidRoomName(roomName: string): boolean {
+-    return CONST.REGEX.ROOM_NAME.test(roomName);
++    return !CONST.REGEX.ROOM_NAME.test(roomName);
+ }
+ 
+ /**
+

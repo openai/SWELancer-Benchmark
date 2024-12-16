@@ -1,0 +1,16 @@
+diff --git a/src/pages/home/report/ReportActionsList.tsx b/src/pages/home/report/ReportActionsList.tsx
+index 8f5fc907a96..cc7e9c222f9 100644
+--- a/src/pages/home/report/ReportActionsList.tsx
++++ b/src/pages/home/report/ReportActionsList.tsx
+@@ -552,7 +552,10 @@ function ReportActionsList({
+         [isLoadingNewerReportActions, styles.chatContentScrollView, styles.chatContentScrollViewWithHeaderLoader, canShowHeader],
+     );
+ 
+-    const lastReportAction: OnyxTypes.ReportAction | undefined = useMemo(() => sortedReportActions.at(-1) ?? undefined, [sortedReportActions]);
++    const lastReportAction: OnyxTypes.ReportAction | undefined = useMemo(() => {
++        const filteredActions = sortedReportActions.filter((action) => action.actionName !== CONST.REPORT.ACTIONS.TYPE.CREATED);
++        return filteredActions.at(-1) ?? undefined;
++    }, [sortedReportActions]);
+ 
+     const retryLoadOlderChatsError = useCallback(() => {
+         loadOlderChats(true);

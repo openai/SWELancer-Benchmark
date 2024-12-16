@@ -1,0 +1,14 @@
+diff --git a/src/pages/workspace/WorkspaceNewRoomPage.tsx b/src/pages/workspace/WorkspaceNewRoomPage.tsx
+index c0e953a6a35..b5a8855d206 100644
+--- a/src/pages/workspace/WorkspaceNewRoomPage.tsx
++++ b/src/pages/workspace/WorkspaceNewRoomPage.tsx
+@@ -171,9 +171,6 @@ function WorkspaceNewRoomPage({policies, reports, formState, session, activePoli
+             if (!values.roomName || values.roomName === CONST.POLICY.ROOM_PREFIX) {
+                 // We error if the user doesn't enter a room name or left blank
+                 ErrorUtils.addErrorMessage(errors, 'roomName', translate('newRoomPage.pleaseEnterRoomName'));
+-            } else if (values.roomName !== CONST.POLICY.ROOM_PREFIX && !ValidationUtils.isValidRoomName(values.roomName)) {
+-                // We error if the room name has invalid characters
+-                ErrorUtils.addErrorMessage(errors, 'roomName', translate('newRoomPage.roomNameInvalidError'));
+             } else if (ValidationUtils.isReservedRoomName(values.roomName)) {
+                 // Certain names are reserved for default rooms and should not be used for policy rooms.
+                 ErrorUtils.addErrorMessage(errors, 'roomName', translate('newRoomPage.roomNameReservedError', {reservedName: values.roomName}));

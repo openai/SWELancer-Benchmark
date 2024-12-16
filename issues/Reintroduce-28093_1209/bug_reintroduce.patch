@@ -1,0 +1,13 @@
+diff --git a/src/pages/home/report/ReportActionCompose/ReportActionCompose.tsx b/src/pages/home/report/ReportActionCompose/ReportActionCompose.tsx
+index e4b0eef6ca5..8f8161308a4 100644
+--- a/src/pages/home/report/ReportActionCompose/ReportActionCompose.tsx
++++ b/src/pages/home/report/ReportActionCompose/ReportActionCompose.tsx
+@@ -479,7 +479,7 @@ function ReportActionCompose({
+                                             isBlockedFromConcierge={isBlockedFromConcierge}
+                                             disabled={!!disabled}
+                                             isFullComposerAvailable={isFullComposerAvailable}
+-                                            setIsFullComposerAvailable={setIsFullComposerAvailable}
++                                            setIsFullComposerAvailable={setIsFullComposerAvailable(false)}
+                                             setIsCommentEmpty={setIsCommentEmpty}
+                                             handleSendMessage={handleSendMessage}
+                                             shouldShowComposeInput={shouldShowComposeInput}

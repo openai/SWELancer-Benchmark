@@ -1,0 +1,101 @@
+diff --git a/src/components/ReportWelcomeText.tsx b/src/components/ReportWelcomeText.tsx
+index 3c38c9f4c4a..4bd9812d543 100644
+--- a/src/components/ReportWelcomeText.tsx
++++ b/src/components/ReportWelcomeText.tsx
+@@ -40,7 +40,7 @@ function ReportWelcomeText({report, policy}: ReportWelcomeTextProps) {
+     const isInvoiceRoom = ReportUtils.isInvoiceRoom(report);
+     const isSystemChat = ReportUtils.isSystemChat(report);
+     const isDefault = !(isChatRoom || isPolicyExpenseChat || isSelfDM || isInvoiceRoom || isSystemChat);
+-    const participantAccountIDs = ReportUtils.getParticipantsAccountIDsForDisplay(report, undefined, true, true);
++    const participantAccountIDs = ReportUtils.getParticipantsAccountIDsForDisplay(report, undefined, true);
+     const isMultipleParticipant = participantAccountIDs.length > 1;
+     const displayNamesWithTooltips = ReportUtils.getDisplayNamesWithTooltips(OptionsListUtils.getPersonalDetailsForAccountIDs(participantAccountIDs, personalDetails), isMultipleParticipant);
+     const welcomeMessage = SidebarUtils.getWelcomeMessage(report, policy);
+diff --git a/src/libs/ReportUtils.ts b/src/libs/ReportUtils.ts
+index 223e94e0bdd..0adc28041cf 100644
+--- a/src/libs/ReportUtils.ts
++++ b/src/libs/ReportUtils.ts
+@@ -2122,7 +2122,7 @@ function getDisplayNameForParticipant(
+     return shouldUseShortForm ? shortName : longName;
+ }
+ 
+-function getParticipantsAccountIDsForDisplay(report: OnyxEntry<Report>, shouldExcludeHidden = false, shouldExcludeDeleted = false, shouldForceExcludeCurrentUser = false): number[] {
++function getParticipantsAccountIDsForDisplay(report: OnyxEntry<Report>, shouldExcludeHidden = false, shouldForceExcludeCurrentUser = false): number[] {
+     const reportParticipants = report?.participants ?? {};
+     let participantsEntries = Object.entries(reportParticipants);
+ 
+@@ -2151,7 +2151,7 @@ function getParticipantsAccountIDsForDisplay(report: OnyxEntry<Report>, shouldEx
+     // For system chat, we want to display Expensify as the only participant
+     const shouldExcludeCurrentUser = isOneOnOneChat(report) || isSystemChat(report) || shouldForceExcludeCurrentUser;
+ 
+-    if (shouldExcludeCurrentUser || shouldExcludeHidden || shouldExcludeDeleted) {
++    if (shouldExcludeCurrentUser || shouldExcludeHidden) {
+         participantsIds = participantsIds.filter((accountID) => {
+             if (shouldExcludeCurrentUser && accountID === currentUserAccountID) {
+                 return false;
+@@ -2161,13 +2161,6 @@ function getParticipantsAccountIDsForDisplay(report: OnyxEntry<Report>, shouldEx
+                 return false;
+             }
+ 
+-            if (
+-                shouldExcludeDeleted &&
+-                report?.pendingChatMembers?.findLast((member) => Number(member.accountID) === accountID)?.pendingAction === CONST.RED_BRICK_ROAD_PENDING_ACTION.DELETE
+-            ) {
+-                return false;
+-            }
+-
+             return true;
+         });
+     }
+diff --git a/src/libs/SidebarUtils.ts b/src/libs/SidebarUtils.ts
+index 7be24d4ee69..a7e2f728500 100644
+--- a/src/libs/SidebarUtils.ts
++++ b/src/libs/SidebarUtils.ts
+@@ -569,7 +569,7 @@ function getWelcomeMessage(report: OnyxEntry<Report>, policy: OnyxEntry<Policy>)
+     }
+ 
+     welcomeMessage.phrase1 = Localize.translateLocal('reportActionsView.beginningOfChatHistory');
+-    const participantAccountIDs = ReportUtils.getParticipantsAccountIDsForDisplay(report, undefined, undefined, true);
++    const participantAccountIDs = ReportUtils.getParticipantsAccountIDsForDisplay(report, undefined, true);
+     const isMultipleParticipant = participantAccountIDs.length > 1;
+     const displayNamesWithTooltips = ReportUtils.getDisplayNamesWithTooltips(
+         OptionsListUtils.getPersonalDetailsForAccountIDs(participantAccountIDs, allPersonalDetails),
+diff --git a/src/pages/InviteReportParticipantsPage.tsx b/src/pages/InviteReportParticipantsPage.tsx
+index 6a5bf6832fd..dcedbe4bd18 100644
+--- a/src/pages/InviteReportParticipantsPage.tsx
++++ b/src/pages/InviteReportParticipantsPage.tsx
+@@ -61,7 +61,7 @@ function InviteReportParticipantsPage({betas, personalDetails, report, didScreen
+ 
+     // Any existing participants and Expensify emails should not be eligible for invitation
+     const excludedUsers = useMemo(
+-        () => [...PersonalDetailsUtils.getLoginsByAccountIDs(ReportUtils.getParticipantsAccountIDsForDisplay(report, false, true)), ...CONST.EXPENSIFY_EMAILS],
++        () => [...PersonalDetailsUtils.getLoginsByAccountIDs(ReportUtils.getParticipantsAccountIDsForDisplay(report, false)), ...CONST.EXPENSIFY_EMAILS],
+         [report],
+     );
+ 
+diff --git a/src/pages/ReportDetailsPage.tsx b/src/pages/ReportDetailsPage.tsx
+index 7de12eeda89..cf8cafa1650 100644
+--- a/src/pages/ReportDetailsPage.tsx
++++ b/src/pages/ReportDetailsPage.tsx
+@@ -417,7 +417,7 @@ function ReportDetailsPage({policies, report, route}: ReportDetailsPageProps) {
+                 icon: Expensicons.Exit,
+                 isAnonymousAction: true,
+                 action: () => {
+-                    if (ReportUtils.getParticipantsAccountIDsForDisplay(report, false, true).length === 1 && isRootGroupChat) {
++                    if (ReportUtils.getParticipantsAccountIDsForDisplay(report, false).length === 1 && isRootGroupChat) {
+                         setIsLastMemberLeavingGroupModalVisible(true);
+                         return;
+                     }
+diff --git a/src/pages/home/HeaderView.tsx b/src/pages/home/HeaderView.tsx
+index 8bb06f8a167..aa766f94fad 100644
+--- a/src/pages/home/HeaderView.tsx
++++ b/src/pages/home/HeaderView.tsx
+@@ -76,7 +76,7 @@ function HeaderView({report, parentReportAction, reportID, onNavigationMenuButto
+     const isSelfDM = ReportUtils.isSelfDM(report);
+     const isGroupChat = ReportUtils.isGroupChat(report) || ReportUtils.isDeprecatedGroupDM(report);
+ 
+-    const participants = ReportUtils.getParticipantsAccountIDsForDisplay(report, false, true).slice(0, 5);
++    const participants = ReportUtils.getParticipantsAccountIDsForDisplay(report, false).slice(0, 5);
+     const isMultipleParticipant = participants.length > 1;
+ 
+     const participantPersonalDetails = OptionsListUtils.getPersonalDetailsForAccountIDs(participants, personalDetails);

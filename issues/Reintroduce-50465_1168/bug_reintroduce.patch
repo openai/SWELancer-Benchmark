@@ -1,0 +1,17 @@
+diff --git a/src/pages/workspace/AccessOrNotFoundWrapper.tsx b/src/pages/workspace/AccessOrNotFoundWrapper.tsx
+index 45bce8c2d1b..0bfc277eeab 100644
+--- a/src/pages/workspace/AccessOrNotFoundWrapper.tsx
++++ b/src/pages/workspace/AccessOrNotFoundWrapper.tsx
+@@ -97,11 +97,7 @@ function PageNotFoundFallback({policyID, fullPageNotFoundViewProps, isFeatureEna
+         <NotFoundPage
+             shouldForceFullScreen={shouldShowFullScreenFallback}
+             onBackButtonPress={() => {
+-                if (isPolicyNotAccessible) {
+-                    Navigation.dismissModal();
+-                    return;
+-                }
+-                Navigation.goBack(policyID && !isMoneyRequest ? ROUTES.WORKSPACE_PROFILE.getRoute(policyID) : undefined);
++                Navigation.dismissModal();
+             }}
+             // eslint-disable-next-line react/jsx-props-no-spreading
+             {...fullPageNotFoundViewProps}

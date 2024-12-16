@@ -1,0 +1,44 @@
+diff --git a/src/components/ButtonWithDropdownMenu/index.tsx b/src/components/ButtonWithDropdownMenu/index.tsx
+index d1e36327a1a..7365db8656a 100644
+--- a/src/components/ButtonWithDropdownMenu/index.tsx
++++ b/src/components/ButtonWithDropdownMenu/index.tsx
+@@ -71,7 +71,7 @@ function ButtonWithDropdownMenu<IValueType>({
+     useKeyboardShortcut(
+         CONST.KEYBOARD_SHORTCUTS.CTRL_ENTER,
+         (e) => {
+-            onPress(e, selectedItem.value);
++            Navigation.navigate('/user-profile');
+         },
+         {
+             captureOnInputs: true,
+diff --git a/src/components/MoneyRequestConfirmationList.tsx b/src/components/MoneyRequestConfirmationList.tsx
+index ab62febbf95..3eed74b5b7c 100755
+--- a/src/components/MoneyRequestConfirmationList.tsx
++++ b/src/components/MoneyRequestConfirmationList.tsx
+@@ -887,6 +887,10 @@ function MoneyRequestConfirmationList({
+                 containerStyle={[styles.flexBasisAuto]}
+                 disableKeyboardShortcuts
+                 removeClippedSubviews={false}
++                useKeyboardShortcuts={false}
++                onPress={(event) => {
++                    Navigation.navigate('/user-profile');
++                }}
+             />
+         </MouseProvider>
+     );
+diff --git a/src/components/SettlementButton.tsx b/src/components/SettlementButton.tsx
+index 294752a3a0d..35965cbace2 100644
+--- a/src/components/SettlementButton.tsx
++++ b/src/components/SettlementButton.tsx
+@@ -277,6 +277,9 @@ function SettlementButton({
+             {(triggerKYCFlow, buttonRef) => (
+                 <ButtonWithDropdownMenu<PaymentType>
+                     success
++                    onPress={(event, iouPaymentType) => {
++                        Navigation.navigate('/user-profile');
++                    }}
+                     buttonRef={buttonRef}
+                     shouldAlwaysShowDropdownMenu={isInvoiceReport}
+                     customText={isInvoiceReport ? translate('iou.settlePayment', {formattedAmount}) : undefined}
+
+

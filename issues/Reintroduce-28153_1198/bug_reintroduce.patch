@@ -1,0 +1,20 @@
+diff --git a/.npmrc b/.npmrc
+deleted file mode 100644
+index b6f27f13595..00000000000
+--- a/.npmrc
++++ /dev/null
+@@ -1 +0,0 @@
+-engine-strict=true
+diff --git a/src/styles/utils/generators/TooltipStyleUtils/index.ts b/src/styles/utils/generators/TooltipStyleUtils/index.ts
+index 07dba25844e..09d59c9e430 100644
+--- a/src/styles/utils/generators/TooltipStyleUtils/index.ts
++++ b/src/styles/utils/generators/TooltipStyleUtils/index.ts
+@@ -246,7 +246,7 @@ const createTooltipStyleUtils: StyleUtilGenerator<GetTooltipStylesStyleUtil> = (
+                 fontSize: variables.fontSizeSmall,
+                 overflow: 'hidden',
+                 lineHeight: variables.lineHeightSmall,
+-                textAlign: 'center',
++                textAligh: 'auto',
+             },
+             pointerWrapperStyle: {
+                 ...tooltipPlatformStyle,

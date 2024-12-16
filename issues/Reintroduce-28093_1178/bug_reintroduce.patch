@@ -1,0 +1,13 @@
+diff --git a/src/libs/ComposerUtils/updateIsFullComposerAvailable.ts b/src/libs/ComposerUtils/updateIsFullComposerAvailable.ts
+index c10635f1c49..4f6debbdc68 100644
+--- a/src/libs/ComposerUtils/updateIsFullComposerAvailable.ts
++++ b/src/libs/ComposerUtils/updateIsFullComposerAvailable.ts
+@@ -14,7 +14,7 @@ function updateIsFullComposerAvailable(props: ComposerProps, event: NativeSynthe
+         return;
+     }
+     const totalHeight = inputHeight + paddingTopAndBottom;
+-    const isFullComposerAvailable = totalHeight >= CONST.COMPOSER.FULL_COMPOSER_MIN_HEIGHT;
++    const isFullComposerAvailable = totalHeight >= CONST.COMPOSER.FULL_COMPOSER_MIN_HEIGHT && (props.value?.trim() || '') !== '';
+     if (isFullComposerAvailable !== props.isFullComposerAvailable) {
+         props.setIsFullComposerAvailable?.(isFullComposerAvailable);
+     }

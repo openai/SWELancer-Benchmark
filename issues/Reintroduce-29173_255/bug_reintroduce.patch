@@ -1,0 +1,16 @@
+diff --git a/src/pages/home/report/ReportActionsList.tsx b/src/pages/home/report/ReportActionsList.tsx
+index 8f5fc907a96..9f1a096a685 100644
+--- a/src/pages/home/report/ReportActionsList.tsx
++++ b/src/pages/home/report/ReportActionsList.tsx
+@@ -207,9 +207,9 @@ function ReportActionsList({
+      * - marks a message as read/unread
+      * - reads a new message as it is received
+      */
+-    const [unreadMarkerTime, setUnreadMarkerTime] = useState(report.lastReadTime ?? '');
++    const [unreadMarkerTime, setUnreadMarkerTime] = useState('');
+     useEffect(() => {
+-        setUnreadMarkerTime(report.lastReadTime ?? '');
++        setUnreadMarkerTime('');
+ 
+         // eslint-disable-next-line react-compiler/react-compiler, react-hooks/exhaustive-deps
+     }, [report.reportID]);

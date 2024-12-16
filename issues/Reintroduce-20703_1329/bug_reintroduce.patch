@@ -1,0 +1,21 @@
+diff --git a/src/pages/home/sidebar/SidebarLinks.tsx b/src/pages/home/sidebar/SidebarLinks.tsx
+index c4ace993d22..8580371fd46 100644
+--- a/src/pages/home/sidebar/SidebarLinks.tsx
++++ b/src/pages/home/sidebar/SidebarLinks.tsx
+@@ -84,14 +84,14 @@ function SidebarLinks({onLinkClick, insets, optionListItems, isLoading, priority
+ 
+     // eslint-disable-next-line react-compiler/react-compiler, react-hooks/exhaustive-deps
+     const contentContainerStyles = useMemo(() => StyleSheet.flatten([styles.sidebarListContainer, {paddingBottom: StyleUtils.getSafeAreaMargins(insets).marginBottom}]), [insets]);
+-
++    const filteredOptionListItems = optionListItems.filter((item) => item !== Navigation.getTopmostReportId());
+     return (
+         <View style={[styles.flex1, styles.h100]}>
+             <View style={[styles.pRelative, styles.flex1]}>
+                 <LHNOptionsList
+                     style={styles.flex1}
+                     contentContainerStyles={contentContainerStyles}
+-                    data={optionListItems}
++                    data={filteredOptionListItems}
+                     onSelectRow={showReportPage}
+                     shouldDisableFocusOptions={shouldUseNarrowLayout}
+                     optionMode={viewMode}

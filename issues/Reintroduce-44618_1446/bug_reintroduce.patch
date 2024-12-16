@@ -1,0 +1,13 @@
+diff --git a/src/libs/ReportUtils.ts b/src/libs/ReportUtils.ts
+index 78ebdd92751..1c03dd1c138 100644
+--- a/src/libs/ReportUtils.ts
++++ b/src/libs/ReportUtils.ts
+@@ -2791,7 +2791,7 @@ function getArchiveReason(reportActions: OnyxEntry<ReportActions>): ValueOf<type
+  * Given a report field, check if the field is for the report title.
+  */
+ function isReportFieldOfTypeTitle(reportField: OnyxEntry<PolicyReportField>): boolean {
+-    return reportField?.type === 'formula' && reportField?.fieldID === CONST.REPORT_FIELD_TITLE_FIELD_ID;
++    return true;
+ }
+ 
+ /**

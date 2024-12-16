@@ -1,0 +1,87 @@
+diff --git a/src/libs/actions/Task.ts b/src/libs/actions/Task.ts
+index 08568b6d5a0..837453fe642 100644
+--- a/src/libs/actions/Task.ts
++++ b/src/libs/actions/Task.ts
+@@ -730,6 +730,11 @@ function setTitleValue(title: string) {
+     Onyx.merge(ONYXKEYS.TASK, {title: title.trim()});
+ }
+ 
++
++function setAssigneeLogin(login: string) {
++    Onyx.merge(ONYXKEYS.TASK, {assigneeLogin: login.trim()});
++}
++
+ /**
+  * Sets the description value for the task
+  */
+@@ -1191,6 +1196,7 @@ export {
+     setDetailsValue,
+     setAssigneeValue,
+     setShareDestinationValue,
++    setAssigneeLogin,
+     clearOutTaskInfo,
+     reopenTask,
+     completeTask,
+diff --git a/src/pages/tasks/NewTaskPage.tsx b/src/pages/tasks/NewTaskPage.tsx
+index faf45df8b51..7a594814ddb 100644
+--- a/src/pages/tasks/NewTaskPage.tsx
++++ b/src/pages/tasks/NewTaskPage.tsx
+@@ -50,7 +50,7 @@ function NewTaskPage({task, reports, personalDetails, route}: NewTaskPageProps)
+     const assigneeTooltipDetails = ReportUtils.getDisplayNamesWithTooltips(
+         OptionsListUtils.getPersonalDetailsForAccountIDs(task?.assigneeAccountID ? [task.assigneeAccountID] : [], personalDetails),
+         false,
+-    );
++    );  
+     const [shareDestination, setShareDestination] = useState<TaskActions.ShareDestination>();
+     const [title, setTitle] = useState('');
+     const [description, setDescription] = useState('');
+@@ -130,6 +130,12 @@ function NewTaskPage({task, reports, personalDetails, route}: NewTaskPageProps)
+             return;
+         }
+ 
++        if (!task.assigneeLogin) {
++            setErrorMessage(translate('task.genericCreateTaskFailureMessage'));
++            return;   
++        }
++        
++
+         playSound(SOUNDS.DONE);
+         TaskActions.createTaskAndNavigate(
+             parentReport?.reportID ?? '-1',
+diff --git a/src/pages/tasks/TaskAssigneeSelectorModal.tsx b/src/pages/tasks/TaskAssigneeSelectorModal.tsx
+index 3f44882e2fd..0135e3a4401 100644
+--- a/src/pages/tasks/TaskAssigneeSelectorModal.tsx
++++ b/src/pages/tasks/TaskAssigneeSelectorModal.tsx
+@@ -1,5 +1,6 @@
+ /* eslint-disable es/no-optional-chaining */
+ import type {RouteProp} from '@react-navigation/native';
++import {Str} from 'expensify-common';
+ import {useRoute} from '@react-navigation/native';
+ import React, {useCallback, useEffect, useMemo, useState} from 'react';
+ import {InteractionManager, View} from 'react-native';
+@@ -176,6 +177,11 @@ function TaskAssigneeSelectorModal() {
+                 return;
+             }
+ 
++            const isValidLogin = Str.isValidEmail(option?.login || '');
++            if (option?.login && isValidLogin) {
++                TaskActions.setAssigneeLogin(option?.login)
++            }
++
+             // Check to see if we're editing a task and if so, update the assignee
+             if (report) {
+                 if (option.accountID !== report.managerID) {
+diff --git a/src/types/onyx/Task.ts b/src/types/onyx/Task.ts
+index fcdb9789933..a7eaf5eb3ae 100644
+--- a/src/types/onyx/Task.ts
++++ b/src/types/onyx/Task.ts
+@@ -24,6 +24,9 @@ type Task = {
+     /** The account id of the assignee */
+     assigneeAccountID?: number;
+ 
++    /** The account login of the assignee */
++    assigneeLogin?: string;
++
+     /** Report id only when a task was created from a report */
+     parentReportID?: string;
+ 

@@ -1,0 +1,13 @@
+diff --git a/src/pages/workspace/members/WorkspaceMemberDetailsPage.tsx b/src/pages/workspace/members/WorkspaceMemberDetailsPage.tsx
+index 075cfc55a0c..cd038e5917b 100644
+--- a/src/pages/workspace/members/WorkspaceMemberDetailsPage.tsx
++++ b/src/pages/workspace/members/WorkspaceMemberDetailsPage.tsx
+@@ -201,7 +201,7 @@ function WorkspaceMemberDetailsPage({personalDetails, policy, route}: WorkspaceM
+     const shouldShowNotFoundPage =
+         !member || (member.pendingAction === CONST.RED_BRICK_ROAD_PENDING_ACTION.DELETE && prevMember?.pendingAction === CONST.RED_BRICK_ROAD_PENDING_ACTION.DELETE);
+ 
+-    if (shouldShowNotFoundPage) {
++    if (shouldShowNotFoundPage && member) {
+         return <NotFoundPage />;
+     }
+ 

@@ -1,0 +1,26 @@
+diff --git a/src/CONST.ts b/src/CONST.ts
+index 8e38812ccdc..467753e7605 100755
+--- a/src/CONST.ts
++++ b/src/CONST.ts
+@@ -164,6 +164,7 @@ type OnboardingMessageType = {
+ };
+
+ const CONST = {
++    PAYMENT_COMPLETE_TEXT: 'Payment complete',
+     HEIC_SIGNATURES: [
+         '6674797068656963', // 'ftypheic' - Indicates standard HEIC file
+         '6674797068656978', // 'ftypheix' - Indicates a variation of HEIC
+diff --git a/src/components/SettlementButton/AnimatedSettlementButton.tsx b/src/components/SettlementButton/AnimatedSettlementButton.tsx
+index 5de528d741a..5a0350eb827 100644
+--- a/src/components/SettlementButton/AnimatedSettlementButton.tsx
++++ b/src/components/SettlementButton/AnimatedSettlementButton.tsx
+@@ -79,7 +79,7 @@ function AnimatedSettlementButton({isPaidAnimationRunning, onAnimationFinish, is
+         <Animated.View style={containerStyles}>
+             {isPaidAnimationRunning && (
+                 <Animated.View style={paymentCompleteTextStyles}>
+-                    <Text style={[styles.buttonMediumText]}>{translate('iou.paymentComplete')}</Text>
++                    <Text style={[styles.buttonMediumText]}>{CONST.PAYMENT_COMPLETE_TEXT}</Text>
+                 </Animated.View>
+             )}
+             <Animated.View style={buttonStyles}>
+

@@ -1,0 +1,25 @@
+diff --git a/src/libs/ActiveClientManager/index.ts b/src/libs/ActiveClientManager/index.ts
+index b364f08508b..e703ce0458f 100644
+--- a/src/libs/ActiveClientManager/index.ts
++++ b/src/libs/ActiveClientManager/index.ts
+@@ -45,11 +45,6 @@ Onyx.connect({
+     },
+ });
+ 
+-const cleanUpClientId = () => {
+-    activeClients = activeClients.filter((id) => id !== clientID);
+-    ActiveClients.setActiveClients(activeClients);
+-};
+-
+ /**
+  * Add our client ID to the list of active IDs.
+  * We want to ensure we have no duplicates and that the activeClient gets added at the end of the array (see isClientTheLeader)
+@@ -58,8 +53,6 @@ const init: Init = () => {
+     activeClients = activeClients.filter((id) => id !== clientID);
+     activeClients.push(clientID);
+     ActiveClients.setActiveClients(activeClients).then(resolveSavedSelfPromise);
+-
+-    window.addEventListener('beforeunload', cleanUpClientId);
+ };
+ 
+ /**

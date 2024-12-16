@@ -1,0 +1,13 @@
+diff --git a/src/libs/DistanceRequestUtils.ts b/src/libs/DistanceRequestUtils.ts
+index e9a2eaa8027..56a84b8991f 100644
+--- a/src/libs/DistanceRequestUtils.ts
++++ b/src/libs/DistanceRequestUtils.ts
+@@ -244,7 +244,7 @@ function getRateForP2P(currency: string): RateAndUnit {
+ function getDistanceRequestAmount(distance: number, unit: Unit, rate: number): number {
+     const convertedDistance = convertDistanceUnit(distance, unit);
+     const roundedDistance = parseFloat(convertedDistance.toFixed(2));
+-    return Math.round(roundedDistance * rate);
++    return Math.round(roundedDistance);
+ }
+ 
+ /**

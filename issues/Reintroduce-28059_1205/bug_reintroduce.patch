@@ -1,0 +1,37 @@
+diff --git a/src/components/OfflineWithFeedback.tsx b/src/components/OfflineWithFeedback.tsx
+index 32e5a128bcf..fca23f6edb5 100644
+--- a/src/components/OfflineWithFeedback.tsx
++++ b/src/components/OfflineWithFeedback.tsx
+@@ -75,7 +75,7 @@ function OfflineWithFeedback({
+     errors,
+     needsOffscreenAlphaCompositing = false,
+     onClose = () => {},
+-    shouldDisableOpacity = false,
++    shouldDisableOpacity = true,
+     shouldDisableStrikeThrough = false,
+     shouldHideOnDelete = true,
+     shouldShowErrorMessages = true,
+diff --git a/src/components/Reactions/ReportActionItemEmojiReactions.tsx b/src/components/Reactions/ReportActionItemEmojiReactions.tsx
+index 943158607db..e94d3cea336 100644
+--- a/src/components/Reactions/ReportActionItemEmojiReactions.tsx
++++ b/src/components/Reactions/ReportActionItemEmojiReactions.tsx
+@@ -88,9 +88,11 @@ function ReportActionItemEmojiReactions({
+     const reactionListRef = useContext(ReactionListContext);
+     const popoverReactionListAnchors = useRef<PopoverReactionListAnchors>({});
+ 
++    const makeEmojiInvisible = true; 
+     let totalReactionCount = 0;
+ 
+     const reportActionID = reportAction.reportActionID;
++    reportAction.pendingAction = 'pending' as PendingAction;
+ 
+     // Each emoji is sorted by the oldest timestamp of user reactions so that they will always appear in the same order for everyone
+     const formattedReactions: Array<FormattedReaction | null> = sortBy(
+@@ -164,6 +166,7 @@ function ReportActionItemEmojiReactions({
+                                         shouldBlockReactions={shouldBlockReactions}
+                                     />
+                                 </OfflineWithFeedback>
++                                
+                             </View>
+                         </Tooltip>
+                     );

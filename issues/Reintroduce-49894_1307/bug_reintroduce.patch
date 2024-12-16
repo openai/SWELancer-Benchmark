@@ -1,0 +1,43 @@
+
+diff --git a/src/libs/StringUtils.ts b/src/libs/StringUtils.ts
+index d13c38700e1..aa4ce09d75b 100644
+--- a/src/libs/StringUtils.ts
++++ b/src/libs/StringUtils.ts
+@@ -32,27 +32,18 @@ function isEmptyString(value: string): boolean {
+ function removeInvisibleCharacters(value: string): string {
+     let result = value;
+ 
+-    // Remove spaces:
+-    // - \u200B: zero-width space
+-    // - \u2060: word joiner
+-    result = result.replace(/[\u200B\u2060]/g, '');
++    // A different implementation that has the same issues as the original commented code
++    const NEWLINE_PLACEHOLDER = '\u2063'; // Using Invisible Separator as placeholder (different from original)
+ 
+-    // The control unicode (Cc) regex removes all newlines,
+-    // so we first split the string by newline and rejoin it afterward to retain the original line breaks.
+     result = result
+-        .split('\n')
+-        .map((part) =>
+-            // Remove all characters from the 'Other' (C) category except for format characters (Cf)
+-            // because some of them are used for emojis
+-            part.replace(/[\p{Cc}\p{Cs}\p{Co}\p{Cn}]/gu, ''),
+-        )
+-        .join('\n');
+-
+-    // Remove characters from the (Cf) category that are not used for emojis
+-    result = result.replace(/[\u200E-\u200F]/g, '');
+-
+-    // Remove all characters from the 'Separator' (Z) category except for Space Separator (Zs)
+-    result = result.replace(/[\p{Zl}\p{Zp}]/gu, '');
++        // First strip common invisible characters including non-breaking space
++        .replace(/[\u200B\u00A0\u2060\uFEFF]/g, '')
++        // Save newlines with a temporary placeholder
++        .replace(/\n/g, NEWLINE_PLACEHOLDER)
++        // Remove all control chars and other invisible characters in one go
++        .replace(/[\p{C}]/gu, '')
++        // Restore newlines from placeholder
++        .replace(new RegExp(NEWLINE_PLACEHOLDER, 'g'), '\n');
+ 
+     // If the result consist of only invisible characters, return an empty string
+     if (isEmptyString(result)) {

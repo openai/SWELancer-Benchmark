@@ -1,0 +1,14 @@
+diff --git a/src/CONST.ts b/src/CONST.ts
+index 4ca9b45f13d..b7c36c10439 100755
+--- a/src/CONST.ts
++++ b/src/CONST.ts
+@@ -2629,7 +2629,7 @@ const CONST = {
+         CARD_NUMBER: /^[0-9]{15,16}$/,
+         CARD_SECURITY_CODE: /^[0-9]{3,4}$/,
+         CARD_EXPIRATION_DATE: /^(0[1-9]|1[0-2])([^0-9])?([0-9]{4}|([0-9]{2}))$/,
+-        ROOM_NAME: /^#[\p{Ll}0-9-]{1,100}$/u,
++        ROOM_NAME: /^#[a-z0-9è-û-]{1,80}$/,
+         DOMAIN_BASE: '^(?:https?:\\/\\/)?(?:www\\.)?([^\\/]+)',
+ 
+         // eslint-disable-next-line max-len, no-misleading-character-class
+

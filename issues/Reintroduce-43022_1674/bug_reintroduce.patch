@@ -1,0 +1,13 @@
+diff --git a/src/components/Section/index.tsx b/src/components/Section/index.tsx
+index 67ad0c95856..7199e4a75b6 100644
+--- a/src/components/Section/index.tsx
++++ b/src/components/Section/index.tsx
+@@ -180,7 +180,7 @@ function Section({
+                             iconContainerStyles={[styles.flexGrow0, styles.justifyContentStart, iconContainerStyles]}
+                         />
+                     )}
+-                    <View style={[styles.flexShrink1]}>{renderTitle ? renderTitle() : <Text style={[styles.textHeadline, styles.cardSectionTitle, titleStyles]}>{title}</Text>}</View>
++                    <View style={[styles.flexShrink1]}>{renderTitle ? renderTitle() : <Text style={[styles.textHeadline, styles.cardSectionTitle]}>{title}</Text>}</View>
+                     {cardLayout === CARD_LAYOUT.ICON_ON_RIGHT && (
+                         <IconSection
+                             width={iconWidth}

@@ -1,0 +1,44 @@
+diff --git a/src/components/AnchorForAttachmentsOnly/BaseAnchorForAttachmentsOnly.tsx b/src/components/AnchorForAttachmentsOnly/BaseAnchorForAttachmentsOnly.tsx
+index ae74a11c7e9..4181c4f7352 100644
+--- a/src/components/AnchorForAttachmentsOnly/BaseAnchorForAttachmentsOnly.tsx
++++ b/src/components/AnchorForAttachmentsOnly/BaseAnchorForAttachmentsOnly.tsx
+@@ -1,4 +1,4 @@
+-import React from 'react';
++import React, {useEffect} from 'react';
+ import {useOnyx} from 'react-native-onyx';
+ import AttachmentView from '@components/Attachments/AttachmentView';
+ import PressableWithoutFeedback from '@components/Pressable/PressableWithoutFeedback';
+@@ -23,6 +23,7 @@ type BaseAnchorForAttachmentsOnlyProps = AnchorForAttachmentsOnlyProps & {
+ };
+ 
+ function BaseAnchorForAttachmentsOnly({style, source = '', displayName = '', onPressIn, onPressOut, isDeleted}: BaseAnchorForAttachmentsOnlyProps) {
++    const [shouldRender, setShouldRender] = React.useState(true);
+     const sourceURLWithAuth = addEncryptedAuthTokenToURL(source);
+     const sourceID = (source.match(CONST.REGEX.ATTACHMENT_ID) ?? [])[1];
+ 
+@@ -33,6 +34,25 @@ function BaseAnchorForAttachmentsOnly({style, source = '', displayName = '', onP
+ 
+     const isDownloading = download?.isDownloading ?? false;
+ 
++    // Fix for attachment rendering issues when source URL changes from blob to https
++    // This ensures the attachment view fully re-initializes with the new URL
++    // to prevent stale cache and display artifacts
++    useEffect(() => {
++        if (source) {
++            // Temporarily hide the component
++            console.log('debug: hiding component');
++            setShouldRender(false);
++
++            // Show it again after a brief delay to ensure clean re-render
++            const timer = setTimeout(() => setShouldRender(true), 50);
++            return () => clearTimeout(timer);
++        }
++    }, [source]);
++
++    if (!shouldRender) {
++        return null;
++    }
++
+     return (
+         <ShowContextMenuContext.Consumer>
+             {({anchor, report, reportNameValuePairs, action, checkIfContextMenuActive, isDisabled}) => (

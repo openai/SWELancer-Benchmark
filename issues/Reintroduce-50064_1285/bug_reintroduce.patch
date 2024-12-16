@@ -1,0 +1,14 @@
+diff --git a/src/libs/actions/Welcome/OnboardingFlow.ts b/src/libs/actions/Welcome/OnboardingFlow.ts
+index b052214fe78..b56da1277fa 100644
+--- a/src/libs/actions/Welcome/OnboardingFlow.ts
++++ b/src/libs/actions/Welcome/OnboardingFlow.ts
+@@ -111,7 +111,7 @@ function startOnboardingFlow() {
+         return;
+     }
+     navigationRef.resetRoot({
+-        ...navigationRef.getRootState(),
++        ...focusedRoute,
+         ...adaptedState,
+         stale: true,
+     } as PartialState<NavigationState>);
+

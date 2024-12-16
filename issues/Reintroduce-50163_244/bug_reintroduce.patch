@@ -1,0 +1,84 @@
+diff --git a/src/components/TextInput/BaseTextInput/index.native.tsx b/src/components/TextInput/BaseTextInput/index.native.tsx
+index eadcabb8bfc..f0f8f6e0c51 100644
+--- a/src/components/TextInput/BaseTextInput/index.native.tsx
++++ b/src/components/TextInput/BaseTextInput/index.native.tsx
+@@ -62,7 +62,7 @@ function BaseTextInput(
+         inputID,
+         isMarkdownEnabled = false,
+         excludedMarkdownStyles = [],
+-        shouldShowClearButton = false,
++        shouldNotShowClearButton = true,
+         prefixContainerStyle = [],
+         prefixStyle = [],
+         contentWidth,
+@@ -380,7 +380,7 @@ function BaseTextInput(
+                                 defaultValue={defaultValue}
+                                 markdownStyle={markdownStyle}
+                             />
+-                            {isFocused && !isReadOnly && shouldShowClearButton && value && <TextInputClearButton onPressButton={() => setValue('')} />}
++                            {isFocused && !isReadOnly && !shouldNotShowClearButton && value && <TextInputClearButton onPressButton={() => setValue('')} />}
+                             {inputProps.isLoading && (
+                                 <ActivityIndicator
+                                     size="small"
+diff --git a/src/components/TextInput/BaseTextInput/index.tsx b/src/components/TextInput/BaseTextInput/index.tsx
+index 48b99486d6c..8b6ec4414b1 100644
+--- a/src/components/TextInput/BaseTextInput/index.tsx
++++ b/src/components/TextInput/BaseTextInput/index.tsx
+@@ -65,7 +65,7 @@ function BaseTextInput(
+         inputID,
+         isMarkdownEnabled = false,
+         excludedMarkdownStyles = [],
+-        shouldShowClearButton = false,
++        shouldNotShowClearButton = true,
+         shouldUseDisabledStyles = true,
+         prefixContainerStyle = [],
+         prefixStyle = [],
+@@ -427,8 +427,7 @@ function BaseTextInput(
+                                     </Text>
+                                 </View>
+                             )}
+-                            {isFocused && !isReadOnly && shouldShowClearButton && !!value && <TextInputClearButton onPressButton={() => setValue('')} />}
+-                            {inputProps.isLoading && (
++                            {isFocused && !isReadOnly && !shouldNotShowClearButton && !!value && <TextInputClearButton onPressButton={() => setValue('')} />}{inputProps.isLoading && (
+                                 <ActivityIndicator
+                                     size="small"
+                                     color={theme.iconSuccessFill}
+diff --git a/src/components/TextInput/BaseTextInput/types.ts b/src/components/TextInput/BaseTextInput/types.ts
+index c9844e33d59..17e5fc2cae4 100644
+--- a/src/components/TextInput/BaseTextInput/types.ts
++++ b/src/components/TextInput/BaseTextInput/types.ts
+@@ -120,7 +120,7 @@ type CustomBaseTextInputProps = {
+     excludedMarkdownStyles?: Array<keyof MarkdownStyle>;
+ 
+     /** Whether the clear button should be displayed */
+-    shouldShowClearButton?: boolean;
++    shouldNotShowClearButton?: boolean;
+ 
+     /** Whether to apply styles when input is disabled */
+     shouldUseDisabledStyles?: boolean;
+diff --git a/src/pages/GroupChatNameEditPage.tsx b/src/pages/GroupChatNameEditPage.tsx
+index 425e8a421cb..70d8d273c9b 100644
+--- a/src/pages/GroupChatNameEditPage.tsx
++++ b/src/pages/GroupChatNameEditPage.tsx
+@@ -108,7 +108,7 @@ function GroupChatNameEditPage({groupChatDraft, report}: GroupChatNameEditPagePr
+                     inputID={INPUT_IDS.NEW_CHAT_NAME}
+                     role={CONST.ROLE.PRESENTATION}
+                     ref={inputCallbackRef}
+-                    shouldShowClearButton
++                    shouldNotShowClearButton={false}
+                 />
+             </FormProvider>
+         </ScreenWrapper>
+diff --git a/src/pages/Search/SavedSearchRenamePage.tsx b/src/pages/Search/SavedSearchRenamePage.tsx
+index 98a33759682..daecaeddf87 100644
+--- a/src/pages/Search/SavedSearchRenamePage.tsx
++++ b/src/pages/Search/SavedSearchRenamePage.tsx
+@@ -68,7 +68,7 @@ function SavedSearchRenamePage({route}: {route: {params: {q: string; name: strin
+                     onChangeText={(renamedName) => setNewName(renamedName)}
+                     ref={inputCallbackRef}
+                     defaultValue={name}
+-                    shouldShowClearButton
++                    shouldNotShowClearButton
+                 />
+             </FormProvider>
+         </ScreenWrapper>

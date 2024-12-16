@@ -1,0 +1,21 @@
+diff --git a/src/libs/OptionsListUtils.ts b/src/libs/OptionsListUtils.ts
+index 51db5a693f9..70175f5aecd 100644
+--- a/src/libs/OptionsListUtils.ts
++++ b/src/libs/OptionsListUtils.ts
+@@ -232,6 +232,7 @@ type FilterOptionsConfig = Pick<GetOptionsConfig, 'sortByReportTypeInSearch' | '
+  */
+ let currentUserLogin: string | undefined;
+ let currentUserAccountID: number | undefined;
++const isOneOnOneChats = true;
+ Onyx.connect({
+     key: ONYXKEYS.SESSION,
+     callback: (value) => {
+@@ -1537,7 +1538,7 @@ function createOptionList(personalDetails: OnyxEntry<PersonalDetailsList>, repor
+             // Save the report in the map if this is a single participant so we can associate the reportID with the
+             // personal detail option later. Individuals should not be associated with single participant
+             // policyExpenseChats or chatRooms since those are not people.
+-            if (accountIDs.length <= 1 && isOneOnOneChat) {
++            if (accountIDs.length <= 1 && isOneOnOneChats) {
+                 reportMapForAccountIDs[accountIDs[0]] = report;
+             }
+

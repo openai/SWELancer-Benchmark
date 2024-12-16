@@ -1,0 +1,44 @@
+diff --git a/src/pages/iou/request/step/IOURequestStepConfirmation.tsx b/src/pages/iou/request/step/IOURequestStepConfirmation.tsx
+index b08f9a6ced5..599da826db8 100644
+--- a/src/pages/iou/request/step/IOURequestStepConfirmation.tsx
++++ b/src/pages/iou/request/step/IOURequestStepConfirmation.tsx
+@@ -69,6 +69,7 @@ function IOURequestStepConfirmation({
+     const {windowWidth} = useWindowDimensions();
+     const {isOffline} = useNetwork();
+     const [startLocationPermissionFlow, setStartLocationPermissionFlow] = useState(false);
++    const [shouldplaySound, setShouldPlaySound] = useState(true);
+     const [selectedParticipantList, setSelectedParticipantList] = useState<Participant[]>([]);
+ 
+     const [receiptFile, setReceiptFile] = useState<OnyxEntry<Receipt>>();
+@@ -343,6 +344,7 @@ function IOURequestStepConfirmation({
+     const createTransaction = useCallback(
+         (selectedParticipants: Participant[], locationPermissionGranted = false) => {
+             setIsConfirmed(true);
++            setShouldPlaySound(true);
+             let splitParticipants = selectedParticipants;
+ 
+             // Filter out participants with an amount equal to O
+@@ -546,12 +548,14 @@ function IOURequestStepConfirmation({
+ 
+             if (paymentMethod === CONST.IOU.PAYMENT_TYPE.ELSEWHERE) {
+                 setIsConfirmed(true);
++                setShouldPlaySound(true);
+                 IOU.sendMoneyElsewhere(report, transaction.amount, currency, trimmedComment, currentUserPersonalDetails.accountID, participant);
+                 return;
+             }
+ 
+             if (paymentMethod === CONST.IOU.PAYMENT_TYPE.EXPENSIFY) {
+                 setIsConfirmed(true);
++                setShouldPlaySound(true);
+                 IOU.sendMoneyWithWallet(report, transaction.amount, currency, trimmedComment, currentUserPersonalDetails.accountID, participant);
+             }
+         },
+@@ -635,7 +639,7 @@ function IOURequestStepConfirmation({
+                         shouldShowSmartScanFields={isMovingTransactionFromTrackExpense ? transaction?.amount !== 0 : requestType !== CONST.IOU.REQUEST_TYPE.SCAN}
+                         action={action}
+                         payeePersonalDetails={payeePersonalDetails}
+-                        shouldPlaySound={false}
++                        shouldPlaySound={shouldplaySound}
+                         isConfirmed={isConfirmed}
+                     />
+                 </View>

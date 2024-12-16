@@ -1,0 +1,22 @@
+diff --git a/.npmrc b/.npmrc
+deleted file mode 100644
+index b6f27f13595..00000000000
+--- a/.npmrc
++++ /dev/null
+@@ -1 +0,0 @@
+-engine-strict=true
+diff --git a/src/libs/ReportUtils.js b/src/libs/ReportUtils.js
+index 6a34611838c..fa9cfd6d5e3 100644
+--- a/src/libs/ReportUtils.js
++++ b/src/libs/ReportUtils.js
+@@ -4203,6 +4203,9 @@ function getRoom(type, policyID) {
+  * @return {Boolean}
+  */
+ function shouldDisableWelcomeMessage(report, policy) {
++    if(isChatThread(report)){
++        return false;
++    }
+     return isMoneyRequestReport(report) || isArchivedRoom(report) || !isChatRoom(report) || isChatThread(report) || !PolicyUtils.isPolicyAdmin(policy);
+ }
+ 
+

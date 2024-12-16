@@ -1,0 +1,13 @@
+diff --git a/src/styles/utils/index.ts b/src/styles/utils/index.ts
+index d3d31cc2ea1..28e2854f649 100644
+--- a/src/styles/utils/index.ts
++++ b/src/styles/utils/index.ts
+@@ -607,7 +607,7 @@ function getModalPaddingStyles({
+  * Returns the font size for the HTML code tag renderer.
+  */
+ function getCodeFontSize(isInsideH1: boolean) {
+-    return isInsideH1 ? 15 : 13;
++    return isInsideH1 ? 14.5 : 13;
+ }
+ 
+ /**

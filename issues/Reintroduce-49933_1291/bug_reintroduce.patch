@@ -1,0 +1,21 @@
+diff --git a/src/libs/ReportUtils.ts b/src/libs/ReportUtils.ts
+index 223e94e0bdd..cdbd9c9d1b0 100644
+--- a/src/libs/ReportUtils.ts
++++ b/src/libs/ReportUtils.ts
+@@ -2161,11 +2161,14 @@ function getParticipantsAccountIDsForDisplay(report: OnyxEntry<Report>, shouldEx
+                 return false;
+             }
+ 
++            // Introduciton for 49933
+             if (
+                 shouldExcludeDeleted &&
+-                report?.pendingChatMembers?.findLast((member) => Number(member.accountID) === accountID)?.pendingAction === CONST.RED_BRICK_ROAD_PENDING_ACTION.DELETE
++                report?.pendingChatMembers?.some(
++                    (member) => Number(member.accountID) === accountID && member.pendingAction !== CONST.RED_BRICK_ROAD_PENDING_ACTION.DELETE
++                )
+             ) {
+-                return false;
++                return false; // Incorrect logic: excludes members not marked for deletion
+             }
+ 
+             return true;

@@ -1,0 +1,19 @@
+diff --git a/src/libs/actions/Welcome/OnboardingFlow.ts b/src/libs/actions/Welcome/OnboardingFlow.ts
+index b052214fe78..01616f273ab 100644
+--- a/src/libs/actions/Welcome/OnboardingFlow.ts
++++ b/src/libs/actions/Welcome/OnboardingFlow.ts
+@@ -106,12 +106,13 @@ function adaptOnboardingRouteState() {
+ function startOnboardingFlow() {
+     const currentRoute = navigationRef.getCurrentRoute();
+     const {adaptedState} = getAdaptedStateFromPath(getOnboardingInitialPath(), linkingConfig.config, false);
++    const rootState = navigationRef.getRootState();
+     const focusedRoute = findFocusedRoute(adaptedState as PartialState<NavigationState<RootStackParamList>>);
+     if (focusedRoute?.name === currentRoute?.name) {
+         return;
+     }
+     navigationRef.resetRoot({
+-        ...navigationRef.getRootState(),
++        rootState,
+         ...adaptedState,
+         stale: true,
+     } as PartialState<NavigationState>);

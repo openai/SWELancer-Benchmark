@@ -1,0 +1,12 @@
+diff --git a/src/components/MoneyRequestConfirmationList.tsx b/src/components/MoneyRequestConfirmationList.tsx
+index 0eccd9834ba..8059a7262ee 100755
+--- a/src/components/MoneyRequestConfirmationList.tsx
++++ b/src/components/MoneyRequestConfirmationList.tsx
+@@ -862,6 +862,7 @@ function MoneyRequestConfirmationList({
+             <ButtonWithDropdownMenu
+                 success
+                 pressOnEnter
++                isDisabled={isMerchantEmpty}
+                 onPress={(event, value) => confirm(value as PaymentMethodType)}
+                 options={splitOrRequestOptions}
+                 buttonSize={CONST.DROPDOWN_BUTTON_SIZE.LARGE}

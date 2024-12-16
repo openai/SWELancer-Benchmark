@@ -1,0 +1,13 @@
+diff --git a/src/pages/Search/SavedSearchRenamePage.tsx b/src/pages/Search/SavedSearchRenamePage.tsx
+index 98a33759682..19893ff572e 100644
+--- a/src/pages/Search/SavedSearchRenamePage.tsx
++++ b/src/pages/Search/SavedSearchRenamePage.tsx
+@@ -68,7 +68,7 @@ function SavedSearchRenamePage({route}: {route: {params: {q: string; name: strin
+                     onChangeText={(renamedName) => setNewName(renamedName)}
+                     ref={inputCallbackRef}
+                     defaultValue={name}
+-                    shouldShowClearButton
++                    ShouldShowClearButton
+                 />
+             </FormProvider>
+         </ScreenWrapper>

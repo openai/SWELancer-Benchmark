@@ -1,0 +1,50 @@
+diff --git a/src/components/BaseMiniContextMenuItem.tsx b/src/components/BaseMiniContextMenuItem.tsx
+index fa0fdb45153..da3f7249902 100644
+--- a/src/components/BaseMiniContextMenuItem.tsx
++++ b/src/components/BaseMiniContextMenuItem.tsx
+@@ -80,7 +80,7 @@ function BaseMiniContextMenuItem(
+                 style={({hovered, pressed}) => [
+                     styles.reportActionContextMenuMiniButton,
+                     StyleUtils.getButtonBackgroundColorStyle(getButtonState(hovered, pressed, isDelayButtonStateComplete), true),
+-                    isDelayButtonStateComplete && styles.cursorDefault,
++                    hovered ? styles.cursorPointer : styles.cursorDefault,
+                 ]}
+             >
+                 {(pressableState) => (
+diff --git a/src/components/ContextMenuItem.tsx b/src/components/ContextMenuItem.tsx
+index fe7be45e1b5..01b07507c60 100644
+--- a/src/components/ContextMenuItem.tsx
++++ b/src/components/ContextMenuItem.tsx
+@@ -140,7 +140,7 @@ function ContextMenuItem(
+             style={shouldLimitWidth && StyleUtils.getContextMenuItemStyles(windowWidth)}
+             isAnonymousAction={isAnonymousAction}
+             focused={isFocused}
+-            interactive={isThrottledButtonActive}
++            interactive={true} 
+             onFocus={onFocus}
+             onBlur={onBlur}
+             disabled={disabled}
+diff --git a/src/components/Pressable/PressableWithDelayToggle.tsx b/src/components/Pressable/PressableWithDelayToggle.tsx
+index 61781163752..ba43e210c47 100644
+--- a/src/components/Pressable/PressableWithDelayToggle.tsx
++++ b/src/components/Pressable/PressableWithDelayToggle.tsx
+@@ -72,6 +72,8 @@ function PressableWithDelayToggle(
+     const styles = useThemeStyles();
+     const StyleUtils = useStyleUtils();
+     const [isActive, temporarilyDisableInteractions] = useThrottledButtonState();
++    const CursorStyle = StyleUtils.getZoomCursorStyle(false, false); 
++
+ 
+     const updatePressState = () => {
+         if (!isActive) {
+@@ -116,8 +118,8 @@ function PressableWithDelayToggle(
+                         tabIndex={-1}
+                         accessible={false}
+                         onPress={updatePressState}
+-                        style={[styles.flexRow, pressableStyle, !isActive && styles.cursorDefault]}
+-                    >
++                        style={[styles.flexRow, pressableStyle, CursorStyle]} 
++                                            >
+                         {({hovered, pressed}) => (
+                             <>
+                                 {!inline && labelText}

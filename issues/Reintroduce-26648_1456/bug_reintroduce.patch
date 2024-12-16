@@ -1,0 +1,13 @@
+diff --git a/src/styles/theme/themes/light.ts b/src/styles/theme/themes/light.ts
+index f73ac2d788e..866fc9bea5f 100644
+--- a/src/styles/theme/themes/light.ts
++++ b/src/styles/theme/themes/light.ts
+@@ -7,7 +7,7 @@ const lightTheme = {
+     // Figma keys
+     appBG: colors.productLight100,
+     splashBG: colors.green400,
+-    highlightBG: colors.productLight200,
++    highlightBG: colors.productLight100,
+     border: colors.productLight400,
+     borderLighter: colors.productLight400,
+     borderFocus: colors.green400,

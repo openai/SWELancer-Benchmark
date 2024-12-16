@@ -1,0 +1,19 @@
+diff --git a/src/hooks/useAutoFocusInput.ts b/src/hooks/useAutoFocusInput.ts
+index 5509d363529..86476706399 100644
+--- a/src/hooks/useAutoFocusInput.ts
++++ b/src/hooks/useAutoFocusInput.ts
+@@ -24,13 +24,9 @@ export default function useAutoFocusInput(): UseAutoFocusInput {
+         if (!isScreenTransitionEnded || !isInputInitialized || !inputRef.current || splashScreenState !== CONST.BOOT_SPLASH_STATE.HIDDEN) {
+             return;
+         }
+-        const focusTaskHandle = InteractionManager.runAfterInteractions(() => {
+-            inputRef.current?.focus();
+-            setIsScreenTransitionEnded(false);
+-        });
+ 
+         return () => {
+-            focusTaskHandle.cancel();
++            
+         };
+     }, [isScreenTransitionEnded, isInputInitialized, splashScreenState]);
+ 

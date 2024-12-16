@@ -1,0 +1,19 @@
+diff --git a/src/languages/es.ts b/src/languages/es.ts
+index c27714b1231..bd585be2d73 100644
+--- a/src/languages/es.ts
++++ b/src/languages/es.ts
+@@ -1030,7 +1030,6 @@ const translations = {
+         bookingArchived: 'Esta reserva está archivada',
+         bookingArchivedDescription: 'Esta reserva está archivada porque la fecha del viaje ha pasado. Agregue un gasto por el monto final si es necesario.',
+         attendees: 'Asistentes',
+-        paymentComplete: 'Pago completo',
+         justTrackIt: 'Solo guardarlo (no enviarlo)',
+     },
+     notificationPreferencesPage: {
+@@ -5688,4 +5687,4 @@ const translations = {
+     },
+ };
+ 
+-export default translations satisfies TranslationDeepObject<typeof en>;
++export default translations;
+\ No newline at end of file

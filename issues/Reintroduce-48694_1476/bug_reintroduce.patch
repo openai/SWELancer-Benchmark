@@ -1,0 +1,32 @@
+diff --git a/src/libs/actions/Report.ts b/src/libs/actions/Report.ts
+index 76b9fe40181..0ea9973140d 100644
+--- a/src/libs/actions/Report.ts
++++ b/src/libs/actions/Report.ts
+@@ -2803,7 +2803,7 @@ function leaveRoom(reportID: string, isWorkspaceMemberLeavingWorkspaceRoom = fal
+                     ? {
+                           participants: {
+                               [currentUserAccountID]: {
+-                                  notificationPreference: CONST.REPORT.NOTIFICATION_PREFERENCE.HIDDEN,
++                                  notificationPreference: CONST.REPORT.NOTIFICATION_PREFERENCE.ALWAYS,
+                               },
+                           },
+                       }
+@@ -2813,7 +2813,7 @@ function leaveRoom(reportID: string, isWorkspaceMemberLeavingWorkspaceRoom = fal
+                           statusNum: CONST.REPORT.STATUS_NUM.CLOSED,
+                           participants: {
+                               [currentUserAccountID]: {
+-                                  notificationPreference: CONST.REPORT.NOTIFICATION_PREFERENCE.HIDDEN,
++                                  notificationPreference: CONST.REPORT.NOTIFICATION_PREFERENCE.ALWAYS,
+                               },
+                           },
+                       },
+@@ -2829,7 +2829,7 @@ function leaveRoom(reportID: string, isWorkspaceMemberLeavingWorkspaceRoom = fal
+                     ? {
+                           participants: {
+                               [currentUserAccountID]: {
+-                                  notificationPreference: CONST.REPORT.NOTIFICATION_PREFERENCE.HIDDEN,
++                                  notificationPreference: CONST.REPORT.NOTIFICATION_PREFERENCE.ALWAYS,
+                               },
+                           },
+                       }
+

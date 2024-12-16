@@ -1,0 +1,27 @@
+diff --git a/src/libs/DraftCommentUtils.ts b/src/libs/DraftCommentUtils.ts
+index b3cb3249872..bbe1ad13737 100644
+--- a/src/libs/DraftCommentUtils.ts
++++ b/src/libs/DraftCommentUtils.ts
+@@ -25,7 +25,8 @@ function getDraftComment(reportID: string): OnyxEntry<string> | null | undefined
+  * A valid draft comment is a non-empty string.
+  */
+ function isValidDraftComment(comment?: string | null): boolean {
+-    return !!comment;
++    const sanitizedComment = comment?.trim().replace(/[\n\r]+/g, '');
++    return !!sanitizedComment && !/^[!@#$%^&*(),.?":{}|<>]+$/.test(sanitizedComment);
+ }
+ 
+ /**
+@@ -41,7 +42,11 @@ function hasValidDraftComment(reportID: string): boolean {
+ function prepareDraftComment(comment: string | null) {
+     // logical OR is used to convert empty string to null
+     // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing
+-    return comment || null;
++    if (comment) {
++        const sanitizedComment = comment.replace(/[\n\r]+/g, '').trimEnd();
++        return sanitizedComment || null; 
++    }
++    return null;
+ }
+ 
+ export {getDraftComment, isValidDraftComment, hasValidDraftComment, prepareDraftComment};

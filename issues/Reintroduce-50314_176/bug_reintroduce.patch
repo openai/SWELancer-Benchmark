@@ -1,0 +1,23 @@
+diff --git a/src/components/PopoverProvider/index.tsx b/src/components/PopoverProvider/index.tsx
+index b59d1604a5a..df9b1bdf78f 100644
+--- a/src/components/PopoverProvider/index.tsx
++++ b/src/components/PopoverProvider/index.tsx
+@@ -23,14 +23,11 @@ function PopoverContextProvider(props: PopoverContextProps) {
+     const activePopoverRef = useRef<AnchorRef | null>(null);
+ 
+     const closePopover = useCallback((anchorRef?: RefObject<View | HTMLElement | Text>): boolean => {
+-        if (!activePopoverRef.current || (anchorRef && anchorRef !== activePopoverRef.current.anchorRef)) {
+-            return false;
++        if (activePopoverRef.current) {
++            activePopoverRef.current.close();
++            activePopoverRef.current = null;
+         }
+-
+-        activePopoverRef.current.close();
+-        activePopoverRef.current = null;
+-        setIsOpen(false);
+-        return true;
++        setIsOpen(false); 
+     }, []);
+ 
+     useEffect(() => {

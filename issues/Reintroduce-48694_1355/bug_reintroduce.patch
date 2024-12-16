@@ -1,0 +1,26 @@
+diff --git a/src/libs/ReportUtils.ts b/src/libs/ReportUtils.ts
+index 2623fab86a0..69acd210e29 100644
+--- a/src/libs/ReportUtils.ts
++++ b/src/libs/ReportUtils.ts
+@@ -1163,6 +1163,11 @@ function isWorkspaceTaskReport(report: OnyxEntry<Report>): boolean {
+     return isPolicyExpenseChat(parentReport);
+ }
+ 
++
++function isPolicyRoomChat(report: OnyxInputOrEntry<Report>): report is Thread {
++    return (report?.type === CONST.REPORT.TYPE.CHAT) && isUserCreatedPolicyRoom(report);
++}
++
+ /**
+  * Returns true if report has a parent
+  */
+@@ -1212,6 +1217,9 @@ function getDefaultNotificationPreferenceForReport(report: OnyxEntry<Report>): V
+     if (isSelfDM(report)) {
+         return CONST.REPORT.NOTIFICATION_PREFERENCE.MUTE;
+     }
++    if (isPolicyRoomChat(report)) {
++        return CONST.REPORT.NOTIFICATION_PREFERENCE.ALWAYS;
++    }
+     return CONST.REPORT.NOTIFICATION_PREFERENCE.DAILY;
+ }
+ 

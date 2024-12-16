@@ -1,0 +1,17 @@
+diff --git a/src/components/SelectionList/Search/ReportListItem.tsx b/src/components/SelectionList/Search/ReportListItem.tsx
+index 2c23c3ede4c..361857d6f72 100644
+--- a/src/components/SelectionList/Search/ReportListItem.tsx
++++ b/src/components/SelectionList/Search/ReportListItem.tsx
+@@ -200,7 +200,11 @@ function ReportListItem<TItem extends ListItem>({
+                         }}
+                         onCheckboxPress={() => onCheckboxPress?.(transaction as unknown as TItem)}
+                         showItemHeaderOnNarrowLayout={false}
+-                        containerStyle={[transaction.isSelected && styles.activeComponentBG, styles.ph3, styles.pv1half]}
++                        containerStyle={[
++                            transaction.isSelected ? {backgroundColor: 'rgb(26, 62, 50)'} : null, // issue 45190
++                            styles.ph3,
++                            styles.pv1half,
++                        ]}
+                         isChildListItem
+                         isDisabled={!!isDisabled}
+                         canSelectMultiple={!!canSelectMultiple}

@@ -1,0 +1,25 @@
+diff --git a/.npmrc b/.npmrc
+deleted file mode 100644
+index b6f27f13595..00000000000
+--- a/.npmrc
++++ /dev/null
+@@ -1 +0,0 @@
+-engine-strict=true
+diff --git a/src/libs/EmojiUtils.ts b/src/libs/EmojiUtils.ts
+index a8958295bb9..5b9539a99fe 100644
+--- a/src/libs/EmojiUtils.ts
++++ b/src/libs/EmojiUtils.ts
+@@ -28,11 +28,13 @@ Onyx.connect({
+     key: ONYXKEYS.FREQUENTLY_USED_EMOJIS,
+     callback: (val) => {
+         if (!val) {
++            frequentlyUsedEmojis = []
+             return;
+         }
+         frequentlyUsedEmojis =
+             val
+                 ?.map((item) => {
++                    return {...item, count: NaN};
+                     let emoji = item;
+                     if (!item.code) {
+                         emoji = {...emoji, ...findEmojiByName(item.name)};

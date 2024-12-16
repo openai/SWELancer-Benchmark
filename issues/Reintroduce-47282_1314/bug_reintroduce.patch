@@ -1,0 +1,19 @@
+diff --git a/src/libs/ReportUtils.ts b/src/libs/ReportUtils.ts
+index 78ebdd92751..26c34da7c6b 100644
+--- a/src/libs/ReportUtils.ts
++++ b/src/libs/ReportUtils.ts
+@@ -2156,8 +2156,12 @@ function getParticipantsAccountIDsForDisplay(report: OnyxEntry<Report>, shouldEx
+             return true;
+         });
+     }
+-
+-    return participantsIds.filter((accountID) => isNumber(accountID));
++    if (!shouldExcludeHidden) {
++        return participantsIds.filter((accountID) => isNumber(accountID));
++    }
++    else{
++        return participantsEntries.map(([accountID]) => Number(accountID));
++    }
+ }
+ 
+ function getParticipantsList(report: Report, personalDetails: OnyxEntry<PersonalDetailsList>, isRoomMembersList = false): number[] {

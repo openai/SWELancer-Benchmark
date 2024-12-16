@@ -1,0 +1,13 @@
+diff --git a/src/components/Search/index.tsx b/src/components/Search/index.tsx
+index b415d91b7ab..99704db0773 100644
+--- a/src/components/Search/index.tsx
++++ b/src/components/Search/index.tsx
+@@ -196,7 +196,7 @@ function Search({queryJSON}: SearchProps) {
+             return;
+         }
+         turnOffMobileSelectionMode();
+-    }, [isSearchResultsEmpty, prevIsSearchResultEmpty]);
++    }, [prevIsSearchResultEmpty]);
+ 
+     if (shouldShowLoadingState) {
+         return (

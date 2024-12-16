@@ -1,0 +1,46 @@
+diff --git a/.npmrc b/.npmrc
+deleted file mode 100644
+index b6f27f13595..00000000000
+--- a/.npmrc
++++ /dev/null
+@@ -1 +0,0 @@
+-engine-strict=true
+diff --git a/src/pages/workspace/tags/WorkspaceTagsPage.tsx b/src/pages/workspace/tags/WorkspaceTagsPage.tsx
+index ffdfdead759..5466bcb8313 100644
+--- a/src/pages/workspace/tags/WorkspaceTagsPage.tsx
++++ b/src/pages/workspace/tags/WorkspaceTagsPage.tsx
+@@ -70,6 +70,7 @@ function WorkspaceTagsPage({route}: WorkspaceTagsPageProps) {
+     const currentConnectionName = PolicyUtils.getCurrentConnectionName(policy);
+     const [policyTagLists, isMultiLevelTags] = useMemo(() => [PolicyUtils.getTagLists(policyTags), PolicyUtils.isMultiLevelTags(policyTags)], [policyTags]);
+     const canSelectMultiple = !isMultiLevelTags && (shouldUseNarrowLayout ? selectionMode?.isEnabled : true);
++    const [isTagDeleted, setIsTagDeleted] = useState(false);
+ 
+     const fetchTags = useCallback(() => {
+         Tag.openPolicyTagsPage(policyID);
+@@ -190,6 +191,9 @@ function WorkspaceTagsPage({route}: WorkspaceTagsPageProps) {
+     const selectedTagsArray = Object.keys(selectedTags).filter((key) => selectedTags[key]);
+ 
+     const deleteTags = () => {
++        if (!isTagDeleted && selectedTagsArray.length === 1) {
++            setIsTagDeleted(true);
++        }
+         setSelectedTags({});
+         Tag.deletePolicyTags(policyID, selectedTagsArray);
+         setIsDeleteTagsConfirmModalVisible(false);
+@@ -349,6 +353,7 @@ function WorkspaceTagsPage({route}: WorkspaceTagsPageProps) {
+         </View>
+     );
+ 
++    const shouldShowEmptyState = !hasVisibleTags && !isLoading && !isTagDeleted;
+     const selectionModeHeader = selectionMode?.isEnabled && shouldUseNarrowLayout;
+ 
+     return (
+@@ -401,7 +406,7 @@ function WorkspaceTagsPage({route}: WorkspaceTagsPageProps) {
+                         color={theme.spinner}
+                     />
+                 )}
+-                {!hasVisibleTags && !isLoading && (
++                {shouldShowEmptyState && (
+                     <EmptyStateComponent
+                         SkeletonComponent={TableListItemSkeleton}
+                         headerMediaType={CONST.EMPTY_STATE_MEDIA.ANIMATION}

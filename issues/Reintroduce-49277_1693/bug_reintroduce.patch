@@ -1,0 +1,52 @@
+diff --git a/.npmrc b/.npmrc
+deleted file mode 100644
+index b6f27f13595..00000000000
+--- a/.npmrc
++++ /dev/null
+@@ -1 +0,0 @@
+-engine-strict=true
+diff --git a/package-lock.json b/package-lock.json
+index 787d411f9cf..1d216abb0d0 100644
+--- a/package-lock.json
++++ b/package-lock.json
+@@ -1,12 +1,12 @@
+ {
+   "name": "new.expensify",
+-  "version": "9.0.45-3",
++  "version": "9.0.41-1",
+   "lockfileVersion": 3,
+   "requires": true,
+   "packages": {
+     "": {
+       "name": "new.expensify",
+-      "version": "9.0.45-3",
++      "version": "9.0.41-1",
+       "hasInstallScript": true,
+       "license": "MIT",
+       "dependencies": {
+diff --git a/package.json b/package.json
+index e9113b21307..657d77d106a 100644
+--- a/package.json
++++ b/package.json
+@@ -1,6 +1,6 @@
+ {
+   "name": "new.expensify",
+-  "version": "9.0.45-3",
++  "version": "9.0.41-1",
+   "author": "Expensify, Inc.",
+   "homepage": "https://new.expensify.com",
+   "description": "New Expensify is the next generation of Expensify: a reimagination of payments based atop a foundation of chat.",
+diff --git a/src/pages/workspace/categories/CategorySettingsPage.tsx b/src/pages/workspace/categories/CategorySettingsPage.tsx
+index e03412d8eaf..b96452b7cb3 100644
+--- a/src/pages/workspace/categories/CategorySettingsPage.tsx
++++ b/src/pages/workspace/categories/CategorySettingsPage.tsx
+@@ -80,7 +80,7 @@ function CategorySettingsPage({
+     const approverText = useMemo(() => {
+         const categoryApprover = CategoryUtils.getCategoryApproverRule(policy?.rules?.approvalRules ?? [], categoryName)?.approver ?? '';
+         const approver = PersonalDetailsUtils.getPersonalDetailByEmail(categoryApprover);
+-        return approver?.displayName ?? categoryApprover;
++        return categoryApprover ?? approver?.displayName;
+     }, [categoryName, policy?.rules?.approvalRules]);
+ 
+     const defaultTaxRateText = useMemo(() => {
+

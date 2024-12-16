@@ -1,0 +1,1 @@
+{"price": 250.0, "title": "[WAITING ON SOBIT - CHECKLIST] [$250] Selected row in onboarding modal should not get :hover style", "issue_repo_steps": "Action performed: 1. Sign up for a new account\r\n2. In the onboarding modal, select an option\r\n3. Hover over the selected option\n\nExpected result: Selected row should not get a hover style\n\nActual result: None"}

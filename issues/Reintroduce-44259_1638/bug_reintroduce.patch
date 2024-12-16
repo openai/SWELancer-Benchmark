@@ -1,0 +1,27 @@
+diff --git a/src/components/Composer/index.tsx b/src/components/Composer/index.tsx
+index 72116a346c0..b5ed97d3111 100755
+--- a/src/components/Composer/index.tsx
++++ b/src/components/Composer/index.tsx
+@@ -105,8 +105,8 @@ function Composer(
+     const isReportFlatListScrolling = useRef(false);
+ 
+     useEffect(() => {
+-        if (!!selection && selectionProp.start === selection.start && selectionProp.end === selection.end) {
+-            return;
++        if (!!selection && selectionProp.positionX !== selection.start && selectionProp.positionY !== selection.end){
++            resetSelection(selectionProp);
+         }
+         setSelection(selectionProp);
+         // eslint-disable-next-line react-compiler/react-compiler, react-hooks/exhaustive-deps
+@@ -276,6 +276,11 @@ function Composer(
+         setIsRendered(true);
+     }, []);
+ 
++    function resetSelection(selection: typeof selectionProp, start: number = 0, end: number = 0) {
++        selection.start = start;
++        selection.end = end;
++    }
++
+     const clear = useCallback(() => {
+         if (!textInput.current) {
+             return;

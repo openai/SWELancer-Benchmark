@@ -1,0 +1,20 @@
+diff --git a/.npmrc b/.npmrc
+deleted file mode 100644
+index b6f27f13595..00000000000
+--- a/.npmrc
++++ /dev/null
+@@ -1 +0,0 @@
+-engine-strict=true
+diff --git a/src/pages/workspace/WorkspaceNewRoomPage.tsx b/src/pages/workspace/WorkspaceNewRoomPage.tsx
+index c0e953a6a35..488b5f2c165 100644
+--- a/src/pages/workspace/WorkspaceNewRoomPage.tsx
++++ b/src/pages/workspace/WorkspaceNewRoomPage.tsx
+@@ -78,7 +78,7 @@ function WorkspaceNewRoomPage({policies, reports, formState, session, activePoli
+     const workspaceOptions = useMemo(
+         () =>
+             PolicyUtils.getActivePolicies(policies)
+-                ?.filter((policy) => policy.type !== CONST.POLICY.TYPE.PERSONAL)
++                ?.filter((policy) => policy.type === CONST.POLICY.TYPE.PERSONAL)
+                 .map((policy) => ({
+                     label: policy.name,
+                     value: policy.id,

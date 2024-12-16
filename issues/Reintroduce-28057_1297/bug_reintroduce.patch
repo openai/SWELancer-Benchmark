@@ -1,0 +1,31 @@
+diff --git a/src/pages/settings/Wallet/WalletPage/BaseWalletPage.js b/src/pages/settings/Wallet/WalletPage/BaseWalletPage.js
+index 74f0137fa26..924997d10b0 100644
+--- a/src/pages/settings/Wallet/WalletPage/BaseWalletPage.js
++++ b/src/pages/settings/Wallet/WalletPage/BaseWalletPage.js
+@@ -33,6 +33,7 @@ import variables from '../../../../styles/variables';
+ import useLocalize from '../../../../hooks/useLocalize';
+ import useWindowDimensions from '../../../../hooks/useWindowDimensions';
+ 
++const displayName = BaseWalletPage
+ function BaseWalletPage(props) {
+     const {translate} = useLocalize();
+     const {isSmallScreenWidth, windowWidth} = useWindowDimensions();
+@@ -57,7 +58,6 @@ function BaseWalletPage(props) {
+         anchorPositionRight: 0,
+     });
+     const [showConfirmDeleteContent, setShowConfirmDeleteContent] = useState(false);
+-
+     const updateShouldShowLoadingSpinner = useCallback(() => {
+         // In order to prevent a loop, only update state of the spinner if there is a change
+         const showLoadingSpinner = props.isLoadingPaymentMethods || false;
+@@ -450,7 +450,7 @@ function BaseWalletPage(props) {
+ 
+ BaseWalletPage.propTypes = propTypes;
+ BaseWalletPage.defaultProps = defaultProps;
+-BaseWalletPage.displayName = 'BaseWalletPage';
++BaseWalletPage.displayName = displayName;
+ 
+ export default compose(
+     withNetwork(),
+
+

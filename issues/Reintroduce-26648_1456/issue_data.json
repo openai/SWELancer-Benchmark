@@ -1,0 +1,1 @@
+{"price": 1000.0, "title": "[HOLD for payment 2023-10-18] [$1000] Web - Request money - No hover indicator for top tab options", "issue_repo_steps": "Action performed: 1. Click on FAB\r\n2. Request money\r\n3. Hover over the top tab options (\"Manual\", \"Scan\", and \"Distance\")\n\nExpected result: There should be a hover indicator\n\nActual result: None"}

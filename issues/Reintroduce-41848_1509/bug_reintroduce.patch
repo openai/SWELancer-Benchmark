@@ -1,0 +1,125 @@
+diff --git a/package-lock.json b/package-lock.json
+index df337fdd663..bab591fb936 100644
+--- a/package-lock.json
++++ b/package-lock.json
+@@ -1,12 +1,12 @@
+ {
+   "name": "new.expensify",
+-  "version": "9.0.10-2",
++  "version": "9.0.41-1",
+   "lockfileVersion": 3,
+   "requires": true,
+   "packages": {
+     "": {
+       "name": "new.expensify",
+-      "version": "9.0.10-2",
++      "version": "9.0.41-1",
+       "hasInstallScript": true,
+       "license": "MIT",
+       "dependencies": {
+diff --git a/package.json b/package.json
+index 29030d14885..fb6c78d1c9a 100644
+--- a/package.json
++++ b/package.json
+@@ -1,6 +1,6 @@
+ {
+   "name": "new.expensify",
+-  "version": "9.0.10-2",
++  "version": "9.0.41-1",
+   "author": "Expensify, Inc.",
+   "homepage": "https://new.expensify.com",
+   "description": "New Expensify is the next generation of Expensify: a reimagination of payments based atop a foundation of chat.",
+diff --git a/src/components/ButtonWithDropdownMenu/index.tsx b/src/components/ButtonWithDropdownMenu/index.tsx
+index d1e36327a1a..1b650cb8d9c 100644
+--- a/src/components/ButtonWithDropdownMenu/index.tsx
++++ b/src/components/ButtonWithDropdownMenu/index.tsx
+@@ -67,6 +67,8 @@ function ButtonWithDropdownMenu<IValueType>({
+             });
+         }
+     }, [windowWidth, windowHeight, isMenuVisible, anchorAlignment.vertical]);
++    
++    const isButtonFocused = buttonRef?.current === document.activeElement;
+ 
+     useKeyboardShortcut(
+         CONST.KEYBOARD_SHORTCUTS.CTRL_ENTER,
+@@ -76,7 +78,7 @@ function ButtonWithDropdownMenu<IValueType>({
+         {
+             captureOnInputs: true,
+             shouldBubble: false,
+-            isActive: useKeyboardShortcuts,
++            isActive: useKeyboardShortcuts && isButtonFocused,
+         },
+     );
+ 
+diff --git a/src/components/MoneyRequestConfirmationList.tsx b/src/components/MoneyRequestConfirmationList.tsx
+index ab62febbf95..601f13be582 100755
+--- a/src/components/MoneyRequestConfirmationList.tsx
++++ b/src/components/MoneyRequestConfirmationList.tsx
+@@ -1,4 +1,4 @@
+-import {useFocusEffect, useIsFocused} from '@react-navigation/native';
++import { useIsFocused} from '@react-navigation/native';
+ import lodashIsEqual from 'lodash/isEqual';
+ import React, {memo, useCallback, useEffect, useMemo, useRef, useState} from 'react';
+ import {View} from 'react-native';
+@@ -739,16 +739,7 @@ function MoneyRequestConfirmationList({
+         ],
+     );
+ 
+-    const focusTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+     const confirmButtonRef = useRef<View>(null);
+-    useFocusEffect(
+-        useCallback(() => {
+-            focusTimeoutRef.current = setTimeout(() => {
+-                confirmButtonRef.current?.focus();
+-            }, CONST.ANIMATED_TRANSITION);
+-            return () => focusTimeoutRef.current && clearTimeout(focusTimeoutRef.current);
+-        }, []),
+-    );
+ 
+     const footerContent = useMemo(() => {
+         if (isReadOnly) {
+@@ -879,13 +870,13 @@ function MoneyRequestConfirmationList({
+                 sections={sections}
+                 ListItem={UserListItem}
+                 onSelectRow={navigateToReportOrUserDetail}
++                initiallyFocusedOptionKey={sections?.[0]?.data?.[0]?.keyForList ?? ""}
+                 shouldDebounceRowSelect
+                 canSelectMultiple={false}
+                 shouldPreventDefaultFocusOnSelectRow
+                 footerContent={footerContent}
+                 listFooterContent={listFooterContent}
+                 containerStyle={[styles.flexBasisAuto]}
+-                disableKeyboardShortcuts
+                 removeClippedSubviews={false}
+             />
+         </MouseProvider>
+diff --git a/src/components/SelectionList/BaseSelectionList.tsx b/src/components/SelectionList/BaseSelectionList.tsx
+index 6cc6b403dc7..ab56d96f8f9 100644
+--- a/src/components/SelectionList/BaseSelectionList.tsx
++++ b/src/components/SelectionList/BaseSelectionList.tsx
+@@ -628,11 +628,15 @@ function BaseSelectionList<TItem extends ListItem>(
+         isActive: !disableKeyboardShortcuts && !disableEnterShortcut && isFocused,
+     });
+ 
++
+     /** Calls confirm action when pressing CTRL (CMD) + Enter */
++    let focusedOption = flattenedSections.allOptions[focusedIndex];
++    if (!focusedOption) {
++        focusedOption = flattenedSections.allOptions[0]
++    }
+     useKeyboardShortcut(
+         CONST.KEYBOARD_SHORTCUTS.CTRL_ENTER,
+         (e) => {
+-            const focusedOption = flattenedSections.allOptions[focusedIndex];
+             if (onConfirm) {
+                 onConfirm(e, focusedOption);
+                 return;
+@@ -641,8 +645,8 @@ function BaseSelectionList<TItem extends ListItem>(
+         },
+         {
+             captureOnInputs: true,
+-            shouldBubble: !flattenedSections.allOptions[focusedIndex],
+             isActive: !disableKeyboardShortcuts && isFocused,
++            shouldBubble: !focusedOption,
+         },
+     );

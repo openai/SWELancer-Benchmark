@@ -1,0 +1,13 @@
+diff --git a/src/libs/ReportActionsUtils.ts b/src/libs/ReportActionsUtils.ts
+index 15d7728ba35..6ef04946a35 100644
+--- a/src/libs/ReportActionsUtils.ts
++++ b/src/libs/ReportActionsUtils.ts
+@@ -713,7 +713,7 @@ function shouldReportActionBeVisibleAsLastAction(reportAction: OnyxInputOrEntry<
+         shouldReportActionBeVisible(reportAction, reportAction.reportActionID) &&
+         !(isWhisperAction(reportAction) && !isReportPreviewAction(reportAction) && !isMoneyRequestAction(reportAction)) &&
+         !(isDeletedAction(reportAction) && !isDeletedParentAction(reportAction)) &&
+-        !isResolvedActionTrackExpense(reportAction)
++        isResolvedActionTrackExpense(reportAction)
+     );
+ }
+ 

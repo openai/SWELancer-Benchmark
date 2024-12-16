@@ -1,0 +1,13 @@
+diff --git a/src/styles/utils/index.ts b/src/styles/utils/index.ts
+index cbd466638d2..14ba1d558ae 100644
+--- a/src/styles/utils/index.ts
++++ b/src/styles/utils/index.ts
+@@ -891,7 +891,7 @@ function getEmojiReactionBubbleTextStyle(isContextMenu = false): TextStyle {
+     }
+ 
+     return {
+-        fontSize: 15,
++        fontSize: 22,
+         lineHeight: 22,
+     };
+ }

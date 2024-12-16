@@ -1,0 +1,21 @@
+diff --git a/src/libs/actions/Report.ts b/src/libs/actions/Report.ts
+index 0fe2bfbf8d4..92c2faf7638 100644
+--- a/src/libs/actions/Report.ts
++++ b/src/libs/actions/Report.ts
+@@ -2524,14 +2524,14 @@ function addEmojiReaction(reportID: string, reportActionID: string, emoji: Emoji
+                     users: {
+                         [currentUserAccountID]: {
+                             skinTones: {
+-                                [skinTone ?? CONST.EMOJI_DEFAULT_SKIN_TONE]: createdAt,
++                                [skinTone ?? CONST.EMOJI_DEFAULT_SKIN_TONE]: null, // issue 28059
+                             },
+                         },
+                     },
+                 },
+             },
+         },
+-    ];
++    ];    
+ 
+     const failureData: OnyxUpdate[] = [
+         {

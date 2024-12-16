@@ -1,0 +1,13 @@
+diff --git a/src/libs/OptionsListUtils.ts b/src/libs/OptionsListUtils.ts
+index 51db5a693f9..a21b42f7a93 100644
+--- a/src/libs/OptionsListUtils.ts
++++ b/src/libs/OptionsListUtils.ts
+@@ -796,7 +796,7 @@ function createOption(
+     result.isIOUReportOwner = ReportUtils.isIOUOwnedByCurrentUser(result);
+     result.iouReportAmount = ReportUtils.getMoneyRequestSpendBreakdown(result).totalDisplaySpend;
+ 
+-    if (!hasMultipleParticipants && (!report || (report && !ReportUtils.isGroupChat(report) && !ReportUtils.isChatRoom(report)))) {
++    if (hasMultipleParticipants && (!report || (report && !ReportUtils.isGroupChat(report) && !ReportUtils.isChatRoom(report)))) {
+         result.login = personalDetail?.login;
+         result.accountID = Number(personalDetail?.accountID);
+         result.phoneNumber = personalDetail?.phoneNumber;

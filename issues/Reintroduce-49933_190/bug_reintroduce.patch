@@ -1,0 +1,40 @@
+diff --git a/src/libs/ReportUtils.ts b/src/libs/ReportUtils.ts
+index 223e94e0bdd..23d3fe0af7f 100644
+--- a/src/libs/ReportUtils.ts
++++ b/src/libs/ReportUtils.ts
+@@ -2151,23 +2151,24 @@ function getParticipantsAccountIDsForDisplay(report: OnyxEntry<Report>, shouldEx
+     // For system chat, we want to display Expensify as the only participant
+     const shouldExcludeCurrentUser = isOneOnOneChat(report) || isSystemChat(report) || shouldForceExcludeCurrentUser;
+ 
+-    if (shouldExcludeCurrentUser || shouldExcludeHidden || shouldExcludeDeleted) {
++    if (shouldExcludeCurrentUser) {
+         participantsIds = participantsIds.filter((accountID) => {
+             if (shouldExcludeCurrentUser && accountID === currentUserAccountID) {
+                 return false;
+             }
+ 
+-            if (shouldExcludeHidden && reportParticipants[accountID]?.notificationPreference === CONST.REPORT.NOTIFICATION_PREFERENCE.HIDDEN) {
+-                return false;
+-            }
++            if (shouldExcludeHidden && shouldExcludeDeleted){
++                if (shouldExcludeHidden && reportParticipants[accountID]?.notificationPreference === CONST.REPORT.NOTIFICATION_PREFERENCE.HIDDEN) {
++                    return false;
++                }
+ 
+-            if (
+-                shouldExcludeDeleted &&
+-                report?.pendingChatMembers?.findLast((member) => Number(member.accountID) === accountID)?.pendingAction === CONST.RED_BRICK_ROAD_PENDING_ACTION.DELETE
+-            ) {
+-                return false;
++                if (
++                    shouldExcludeDeleted &&
++                    report?.pendingChatMembers?.findLast((member) => Number(member.accountID) === accountID)?.pendingAction === CONST.RED_BRICK_ROAD_PENDING_ACTION.DELETE
++                ) {
++                    return false;
++                }
+             }
+-
+             return true;
+         });
+     }
+

@@ -1,0 +1,20 @@
+diff --git a/.npmrc b/.npmrc
+deleted file mode 100644
+index b6f27f13595..00000000000
+--- a/.npmrc
++++ /dev/null
+@@ -1 +0,0 @@
+-engine-strict=true
+diff --git a/src/libs/MoneyRequestUtils.ts b/src/libs/MoneyRequestUtils.ts
+index 206bb8509af..ab1b5aef1ea 100644
+--- a/src/libs/MoneyRequestUtils.ts
++++ b/src/libs/MoneyRequestUtils.ts
+@@ -34,7 +34,7 @@ function stripDecimalsFromAmount(amount: string): string {
+  * @param amount - Changed amount from user input
+  */
+ function addLeadingZero(amount: string): string {
+-    return amount.startsWith('.') ? `0${amount}` : amount;
++    return amount.startsWith('.') ? `0.${amount}` : amount;
+ }
+ 
+ /**

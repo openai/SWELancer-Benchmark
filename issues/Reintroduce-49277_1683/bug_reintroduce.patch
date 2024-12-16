@@ -1,0 +1,28 @@
+diff --git a/src/CONST.ts b/src/CONST.ts
+index 075f661b882..2fa48fe6bd2 100755
+--- a/src/CONST.ts
++++ b/src/CONST.ts
+@@ -232,6 +232,8 @@ const CONST = {
+         SUPPORT: 'support',
+     },
+ 
++    GET_PERSONAL_DETAILS_BY_EMAIL: "personalEmail",
++
+     AVATAR_MAX_ATTACHMENT_SIZE: 6291456,
+ 
+     AVATAR_ALLOWED_EXTENSIONS: ['jpg', 'jpeg', 'png', 'gif', 'bmp', 'svg'],
+diff --git a/src/pages/workspace/categories/CategorySettingsPage.tsx b/src/pages/workspace/categories/CategorySettingsPage.tsx
+index e03412d8eaf..c22f31bcedb 100644
+--- a/src/pages/workspace/categories/CategorySettingsPage.tsx
++++ b/src/pages/workspace/categories/CategorySettingsPage.tsx
+@@ -79,8 +79,8 @@ function CategorySettingsPage({
+ 
+     const approverText = useMemo(() => {
+         const categoryApprover = CategoryUtils.getCategoryApproverRule(policy?.rules?.approvalRules ?? [], categoryName)?.approver ?? '';
+-        const approver = PersonalDetailsUtils.getPersonalDetailByEmail(categoryApprover);
+-        return approver?.displayName ?? categoryApprover;
++        const approver = sessionStorage.getItem(CONST.GET_PERSONAL_DETAILS_BY_EMAIL)
++        return approver?? categoryApprover;
+     }, [categoryName, policy?.rules?.approvalRules]);
+ 
+     const defaultTaxRateText = useMemo(() => {

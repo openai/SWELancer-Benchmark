@@ -1,0 +1,35 @@
+diff --git a/src/libs/actions/IOU.ts b/src/libs/actions/IOU.ts
+index 7ce9b9dfb27..b03af62fafb 100644
+--- a/src/libs/actions/IOU.ts
++++ b/src/libs/actions/IOU.ts
+@@ -886,7 +886,11 @@ function buildOnyxDataForMoneyRequest(
+         failureData.push({
+             onyxMethod: Onyx.METHOD.SET,
+             key: ONYXKEYS.NVP_QUICK_ACTION_GLOBAL_CREATE,
+-            value: quickAction ?? null,
++            value: {
++                action: newQuickAction,
++                chatReportID: chatReport?.reportID,
++                isFirstQuickAction: isEmptyObject(quickAction),
++            }
+         });
+     }
+ 
+diff --git a/src/libs/actions/Task.ts b/src/libs/actions/Task.ts
+index c5a2442048f..fbcaea90688 100644
+--- a/src/libs/actions/Task.ts
++++ b/src/libs/actions/Task.ts
+@@ -259,7 +259,12 @@ function createTaskAndNavigate(
+     failureData.push({
+         onyxMethod: Onyx.METHOD.SET,
+         key: ONYXKEYS.NVP_QUICK_ACTION_GLOBAL_CREATE,
+-        value: quickAction ?? null,
++        value: {
++            action: CONST.QUICK_ACTIONS.ASSIGN_TASK,
++            chatReportID: parentReportID,
++            isFirstQuickAction: isEmptyObject(quickAction),
++            targetAccountID: assigneeAccountID,
++        }
+     });
+ 
+     // If needed, update optimistic data for parent report action of the parent report.

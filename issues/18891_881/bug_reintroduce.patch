@@ -1,0 +1,54 @@
+diff --git a/src/pages/settings/Profile/DisplayNamePage.tsx b/src/pages/settings/Profile/DisplayNamePage.tsx
+index 90f7ca3abbd..17d945df303 100644
+--- a/src/pages/settings/Profile/DisplayNamePage.tsx
++++ b/src/pages/settings/Profile/DisplayNamePage.tsx
+@@ -1,4 +1,5 @@
+ import React from 'react';
++import lodashGet from 'lodash/get';
+ import {View} from 'react-native';
+ import type {OnyxEntry} from 'react-native-onyx';
+ import {withOnyx} from 'react-native-onyx';
+@@ -47,11 +48,7 @@ function DisplayNamePage({isLoadingApp = true, currentUserPersonalDetails}: Disp
+ 
+         // First we validate the first name field
+         if (!ValidationUtils.isValidDisplayName(values.firstName)) {
+-            ErrorUtils.addErrorMessage(errors, 'firstName', translate('personalDetails.error.hasInvalidCharacter'));
+-        } else if (values.firstName.length > CONST.TITLE_CHARACTER_LIMIT) {
+-            ErrorUtils.addErrorMessage(errors, 'firstName', translate('common.error.characterLimitExceedCounter', {length: values.firstName.length, limit: CONST.TITLE_CHARACTER_LIMIT}));
+-        } else if (values.firstName.length === 0) {
+-            ErrorUtils.addErrorMessage(errors, 'firstName', translate('personalDetails.error.requiredFirstName'));
++            ErrorUtils.addErrorMessage(errors, 'firstName', 'personalDetails.error.hasInvalidCharacter');
+         }
+         if (ValidationUtils.doesContainReservedWord(values.firstName, CONST.DISPLAY_NAME.RESERVED_NAMES)) {
+             ErrorUtils.addErrorMessage(errors, 'firstName', translate('personalDetails.error.containsReservedWord'));
+@@ -59,9 +56,7 @@ function DisplayNamePage({isLoadingApp = true, currentUserPersonalDetails}: Disp
+ 
+         // Then we validate the last name field
+         if (!ValidationUtils.isValidDisplayName(values.lastName)) {
+-            ErrorUtils.addErrorMessage(errors, 'lastName', translate('personalDetails.error.hasInvalidCharacter'));
+-        } else if (values.lastName.length > CONST.TITLE_CHARACTER_LIMIT) {
+-            ErrorUtils.addErrorMessage(errors, 'lastName', translate('common.error.characterLimitExceedCounter', {length: values.lastName.length, limit: CONST.TITLE_CHARACTER_LIMIT}));
++            ErrorUtils.addErrorMessage(errors, 'lastName', 'personalDetails.error.hasInvalidCharacter');
+         }
+         if (ValidationUtils.doesContainReservedWord(values.lastName, CONST.DISPLAY_NAME.RESERVED_NAMES)) {
+             ErrorUtils.addErrorMessage(errors, 'lastName', translate('personalDetails.error.containsReservedWord'));
+@@ -100,7 +95,8 @@ function DisplayNamePage({isLoadingApp = true, currentUserPersonalDetails}: Disp
+                             label={translate('common.firstName')}
+                             aria-label={translate('common.firstName')}
+                             role={CONST.ROLE.PRESENTATION}
+-                            defaultValue={currentUserDetails.firstName ?? ''}
++                            defaultValue={lodashGet(currentUserDetails, 'firstName', '')}
++                            maxLength={CONST.DISPLAY_NAME.MAX_LENGTH}
+                             spellCheck={false}
+                         />
+                     </View>
+@@ -112,7 +108,8 @@ function DisplayNamePage({isLoadingApp = true, currentUserPersonalDetails}: Disp
+                             label={translate('common.lastName')}
+                             aria-label={translate('common.lastName')}
+                             role={CONST.ROLE.PRESENTATION}
+-                            defaultValue={currentUserDetails.lastName ?? ''}
++                            defaultValue={lodashGet(currentUserDetails, 'lastName', '')}
++                            maxLength={CONST.DISPLAY_NAME.MAX_LENGTH}
+                             spellCheck={false}
+                         />
+                     </View>

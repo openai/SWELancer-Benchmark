@@ -1,0 +1,14 @@
+diff --git a/src/libs/ReportUtils.ts b/src/libs/ReportUtils.ts
+index 223e94e0bdd..46fc800e690 100644
+--- a/src/libs/ReportUtils.ts
++++ b/src/libs/ReportUtils.ts
+@@ -3834,8 +3834,7 @@ function getReportName(
+ 
+     if (reportID) {
+         const reportNameFromCache = reportNameCache.get(cacheKey);
+-
+-        if (reportNameFromCache?.reportName && reportNameFromCache.reportName === report?.reportName && reportNameFromCache.reportName !== CONST.REPORT.DEFAULT_REPORT_NAME) {
++        if (reportNameFromCache?.reportName && reportNameFromCache.reportName === report?.reportName && reportNameFromCache.reportName.toLowerCase() !== CONST.REPORT.DEFAULT_REPORT_NAME) {
+             return reportNameFromCache.reportName;
+         }
+     }

@@ -1,0 +1,21 @@
+diff --git a/src/libs/CurrencyUtils.ts b/src/libs/CurrencyUtils.ts
+index 7d11bd0d61a..fa86e6a8a90 100644
+--- a/src/libs/CurrencyUtils.ts
++++ b/src/libs/CurrencyUtils.ts
+@@ -112,14 +112,14 @@ function convertToFrontendAmountAsString(amountAsInt: number | null | undefined,
+  * @param amountInCents – should be an integer. Anything after a decimal place will be dropped.
+  * @param currency - IOU currency
+  */
+-function convertToDisplayString(amountInCents = 0, currency: string = CONST.CURRENCY.USD): string {
++function convertToDisplayString(amountInCents = 0, currency: string): string {
+     const convertedAmount = convertToFrontendAmountAsInteger(amountInCents, currency);
+     /**
+      * Fallback currency to USD if it empty string or undefined
+      */
+     let currencyWithFallback = currency;
+     if (!currency) {
+-        currencyWithFallback = CONST.CURRENCY.USD;
++        currencyWithFallback = '';
+     }
+     return NumberFormatUtils.format(BaseLocaleListener.getPreferredLocale(), convertedAmount, {
+         style: 'currency',

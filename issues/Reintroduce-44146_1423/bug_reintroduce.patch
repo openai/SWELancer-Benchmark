@@ -1,0 +1,30 @@
+diff --git a/.npmrc b/.npmrc
+deleted file mode 100644
+index b6f27f13595..00000000000
+--- a/.npmrc
++++ /dev/null
+@@ -1 +0,0 @@
+-engine-strict=true
+diff --git a/src/libs/SidebarUtils.ts b/src/libs/SidebarUtils.ts
+index e120f7026fc..ccb12798349 100644
+--- a/src/libs/SidebarUtils.ts
++++ b/src/libs/SidebarUtils.ts
+@@ -410,6 +410,7 @@ function getOptionData({
+         } else if (ReportActionsUtils.isInviteOrRemovedAction(lastAction)) {
+             const lastActionOriginalMessage = lastAction?.actionName ? ReportActionsUtils.getOriginalMessage(lastAction) : null;
+             const targetAccountIDs = lastActionOriginalMessage?.targetAccountIDs ?? [];
++            console.log("lastActionOriginalMessage", lastActionOriginalMessage)
+             const targetAccountIDsLength = targetAccountIDs.length !== 0 ? targetAccountIDs.length : report.lastMessageHtml?.match(/<mention-user[^>]*><\/mention-user>/g)?.length ?? 0;
+             const verb =
+                 lastActionName === CONST.REPORT.ACTIONS.TYPE.ROOM_CHANGE_LOG.INVITE_TO_ROOM || lastActionName === CONST.REPORT.ACTIONS.TYPE.POLICY_CHANGE_LOG.INVITE_TO_ROOM
+@@ -500,7 +501,7 @@ function getOptionData({
+ 
+ function getWelcomeMessage(report: OnyxEntry<Report>, policy: OnyxEntry<Policy>): WelcomeMessage {
+     const welcomeMessage: WelcomeMessage = {showReportName: true};
+-    if (ReportUtils.isChatThread(report) || ReportUtils.isTaskReport(report)) {
++    if (!ReportUtils.isChatThread(report) || ReportUtils.isTaskReport(report)) {
+         return welcomeMessage;
+     }
+ 
+
+ 

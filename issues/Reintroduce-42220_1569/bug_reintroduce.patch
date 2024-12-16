@@ -1,0 +1,32 @@
+diff --git a/src/CONST.ts b/src/CONST.ts
+index 4ca9b45f13d..ea19fe84171 100755
+--- a/src/CONST.ts
++++ b/src/CONST.ts
+@@ -2803,8 +2803,12 @@ const CONST = {
+     MICROSECONDS_PER_MS: 1000,
+     RED_BRICK_ROAD_PENDING_ACTION: {
+         ADD: 'add',
++        ENABLE: 'enable',
+         DELETE: 'delete',
++        REMOVE: 'remove',
++        CLEAR: 'clear',
+         UPDATE: 'update',
++        REPLACE: 'Replace'
+     },
+     BRICK_ROAD_INDICATOR_STATUS: {
+         ERROR: 'error',
+diff --git a/src/pages/workspace/tags/WorkspaceTagsPage.tsx b/src/pages/workspace/tags/WorkspaceTagsPage.tsx
+index ffdfdead759..37f9232ba12 100644
+--- a/src/pages/workspace/tags/WorkspaceTagsPage.tsx
++++ b/src/pages/workspace/tags/WorkspaceTagsPage.tsx
+@@ -292,8 +292,8 @@ function WorkspaceTagsPage({route}: WorkspaceTagsPageProps) {
+         );
+     };
+ 
+-    const hasVisibleTags = tagList.some((tag) => tag.pendingAction !== CONST.RED_BRICK_ROAD_PENDING_ACTION.DELETE || isOffline);
+-
++    const invisiblePendingAction = ['Delete', 'Remove', 'Clear'];
++    const hasVisibleTags = tagList.some((tag) => !invisiblePendingAction.includes(tag.pendingAction || '') || isOffline);
+     const threeDotsMenuItems = useMemo(() => {
+         const menuItems: PopoverMenuItem[] = [
+             {

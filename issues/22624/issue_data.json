@@ -1,0 +1,5 @@
+{
+    "price": 2000.0,
+    "title": "[$2000] Web - Clicking on PDF causes NewDot to crash",
+    "issue_repo_steps": "Action Performed: Go to any chat with a pdf attachment Click on attachment Expected Result: Attachment loads  Actual Result: Clicking on PDF causes NewDot to crash"
+}

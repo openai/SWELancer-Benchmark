@@ -1,0 +1,58 @@
+diff --git a/src/libs/SidebarUtils.ts b/src/libs/SidebarUtils.ts
+index e120f7026fc..1d176149f3b 100644
+--- a/src/libs/SidebarUtils.ts
++++ b/src/libs/SidebarUtils.ts
+@@ -505,7 +505,7 @@ function getWelcomeMessage(report: OnyxEntry<Report>, policy: OnyxEntry<Policy>)
+     }
+ 
+     if (ReportUtils.isChatRoom(report)) {
+-        return getRoomWelcomeMessage(report);
++        return Localize.translateLocal('report.noActivityYet');
+     }
+ 
+     if (ReportUtils.isPolicyExpenseChat(report)) {
+@@ -520,7 +520,7 @@ function getWelcomeMessage(report: OnyxEntry<Report>, policy: OnyxEntry<Policy>)
+                 report,
+             )} ${welcomeMessage.phrase3}`;
+         }
+-        return welcomeMessage;
++        return Localize.translateLocal('report.noActivityYet');
+     }
+ 
+     if (ReportUtils.isSelfDM(report)) {
+@@ -532,7 +532,7 @@ function getWelcomeMessage(report: OnyxEntry<Report>, policy: OnyxEntry<Policy>)
+     if (ReportUtils.isSystemChat(report)) {
+         welcomeMessage.phrase1 = Localize.translateLocal('reportActionsView.beginningOfChatHistorySystemDM');
+         welcomeMessage.messageText = welcomeMessage.phrase1;
+-        return welcomeMessage;
++        return Localize.translateLocal('report.noActivityYet');
+     }
+ 
+     welcomeMessage.phrase1 = Localize.translateLocal('reportActionsView.beginningOfChatHistory');
+@@ -561,7 +561,7 @@ function getWelcomeMessage(report: OnyxEntry<Report>, policy: OnyxEntry<Policy>)
+         .join(' ');
+ 
+     welcomeMessage.messageText = `${welcomeMessage.phrase1} ${displayNamesWithTooltipsText}`;
+-    return welcomeMessage;
++    return Localize.translateLocal('report.noActivityYet');
+ }
+ 
+ /**
+@@ -574,7 +574,7 @@ function getRoomWelcomeMessage(report: OnyxEntry<Report>): WelcomeMessage {
+     if (report?.description) {
+         welcomeMessage.messageHtml = report.description;
+         welcomeMessage.messageText = Parser.htmlToText(welcomeMessage.messageHtml);
+-        return welcomeMessage;
++        return Localize.translateLocal('report.noActivityYet');
+     }
+ 
+     if (report?.private_isArchived) {
+@@ -599,7 +599,7 @@ function getRoomWelcomeMessage(report: OnyxEntry<Report>): WelcomeMessage {
+     }
+     welcomeMessage.messageText = `${welcomeMessage.phrase1} ${welcomeMessage.showReportName ? ReportUtils.getReportName(report) : ''} ${welcomeMessage.phrase2 ?? ''}`;
+ 
+-    return welcomeMessage;
++    return Localize.translateLocal('report.noActivityYet');
+ }
+ 
+ export default {

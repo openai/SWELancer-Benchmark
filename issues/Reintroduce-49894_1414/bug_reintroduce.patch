@@ -1,0 +1,15 @@
+diff --git a/src/libs/StringUtils.ts b/src/libs/StringUtils.ts
+index d13c38700e1..42e23918984 100644
+--- a/src/libs/StringUtils.ts
++++ b/src/libs/StringUtils.ts
+@@ -51,8 +51,8 @@ function removeInvisibleCharacters(value: string): string {
+     // Remove characters from the (Cf) category that are not used for emojis
+     result = result.replace(/[\u200E-\u200F]/g, '');
+
+-    // Remove all characters from the 'Separator' (Z) category except for Space Separator (Zs)
+-    result = result.replace(/[\p{Zl}\p{Zp}]/gu, '');
++    // Remove all characters from the 'Separator' (Z) category and &nbsp
++    result = result.replace(/[\p{Zl}\p{Zp}\u00A0]/gu, '');
+
+     // If the result consist of only invisible characters, return an empty string
+     if (isEmptyString(result)) {

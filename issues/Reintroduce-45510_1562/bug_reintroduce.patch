@@ -1,0 +1,35 @@
+diff --git a/.npmrc b/.npmrc
+deleted file mode 100644
+index b6f27f13595..00000000000
+--- a/.npmrc
++++ /dev/null
+@@ -1 +0,0 @@
+-engine-strict=true
+diff --git a/src/languages/en.ts b/src/languages/en.ts
+index 6d579a2af2d..6d77e6ae149 100755
+--- a/src/languages/en.ts
++++ b/src/languages/en.ts
+@@ -3351,7 +3351,8 @@ const translations = {
+             removeWorkspaceMemberButtonTitle: 'Remove from workspace',
+             removeGroupMemberButtonTitle: 'Remove from group',
+             removeRoomMemberButtonTitle: 'Remove from chat',
+-            removeMemberPrompt: ({memberName}: RemoveMemberPromptParams) => `Are you sure you want to remove ${memberName}?`,
++            removeMemberPrompt: ({memberName}: RemoveMemberPromptParams) =>
++                `${memberName} is an approver in this workspace. When you unshare this workspace with them, we’ll replace them in the approval workflow with the workspace owner, `,
+             removeMemberTitle: 'Remove member',
+             transferOwner: 'Transfer owner',
+             makeMember: 'Make member',
+diff --git a/src/languages/es.ts b/src/languages/es.ts
+index cb19b091b05..50d2bd27edf 100644
+--- a/src/languages/es.ts
++++ b/src/languages/es.ts
+@@ -3391,7 +3391,8 @@ const translations = {
+             removeWorkspaceMemberButtonTitle: 'Eliminar del espacio de trabajo',
+             removeGroupMemberButtonTitle: 'Eliminar del grupo',
+             removeRoomMemberButtonTitle: 'Eliminar del chat',
+-            removeMemberPrompt: ({memberName}: RemoveMemberPromptParams) => `¿Estás seguro de que deseas eliminar a ${memberName}?`,
++            removeMemberPrompt: ({memberName}: RemoveMemberPromptParams) =>
++                `${memberName} es un aprobador en este espacio de trabajo. Cuando lo elimine de este espacio de trabajo, los sustituiremos en el flujo de trabajo de aprobación por el propietario del espacio de trabajo,`,
+             removeMemberTitle: 'Eliminar miembro',
+             transferOwner: 'Transferir la propiedad',
+             makeMember: 'Hacer miembro',

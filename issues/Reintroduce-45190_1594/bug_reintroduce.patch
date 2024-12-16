@@ -1,0 +1,28 @@
+diff --git a/src/components/SelectionList/Search/ReportListItem.tsx b/src/components/SelectionList/Search/ReportListItem.tsx
+index 7e283557819..d8e1211e6f2 100644
+--- a/src/components/SelectionList/Search/ReportListItem.tsx
++++ b/src/components/SelectionList/Search/ReportListItem.tsx
+@@ -206,8 +206,6 @@ function ReportListItem<TItem extends ListItem>({
+                 </View>
+                 {reportItem.transactions.map((transaction) => (
+                     <TransactionListItemRow
+-                        key={transaction.transactionID}
+-                        parentAction={reportItem.action}
+                         item={transaction}
+                         showTooltip={showTooltip}
+                         onButtonPress={() => {
+@@ -215,12 +213,11 @@ function ReportListItem<TItem extends ListItem>({
+                         }}
+                         onCheckboxPress={() => onCheckboxPress?.(transaction as unknown as TItem)}
+                         showItemHeaderOnNarrowLayout={false}
+-                        containerStyle={[transaction.isSelected && styles.activeComponentBG, styles.ph3, styles.pv1half]}
++                        containerStyle={[item.isSelected && styles.activeComponentBG, styles.ph3, styles.pv1half]}
+                         isChildListItem
+                         isDisabled={!!isDisabled}
+                         canSelectMultiple={!!canSelectMultiple}
+-                        isButtonSelected={transaction.isSelected}
+-                        shouldShowTransactionCheckbox
++                        isButtonSelected={item.isSelected}
+                     />
+                 ))}
+             </View>

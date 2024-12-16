@@ -1,0 +1,17 @@
+diff --git a/src/components/LHNOptionsList/LHNOptionsList.tsx b/src/components/LHNOptionsList/LHNOptionsList.tsx
+index 624e8f18e69..9d191134fb0 100644
+--- a/src/components/LHNOptionsList/LHNOptionsList.tsx
++++ b/src/components/LHNOptionsList/LHNOptionsList.tsx
+@@ -204,9 +204,10 @@ function LHNOptionsList({style, contentContainerStyles, data, onSelectRow, optio
+         ],
+     );
+ 
++    const constantPreferredLocale = useRef(preferredLocale).current;
+     const extraData = useMemo(
+-        () => [reportActions, reports, transactionViolations, policy, personalDetails, data.length, draftComments, optionMode, preferredLocale],
+-        [reportActions, reports, transactionViolations, policy, personalDetails, data.length, draftComments, optionMode, preferredLocale],
++        () => [reportActions, reports, transactionViolations, policy, personalDetails, data.length, draftComments, optionMode, constantPreferredLocale],
++        [reportActions, reports, transactionViolations, policy, personalDetails, data.length, draftComments, optionMode],
+     );
+ 
+     const previousOptionMode = usePrevious(optionMode);

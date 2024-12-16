@@ -1,0 +1,22 @@
+diff --git a/src/components/AttachmentModal.tsx b/src/components/AttachmentModal.tsx
+index 8de7f4575e7..aa52d3594cd 100644
+--- a/src/components/AttachmentModal.tsx
++++ b/src/components/AttachmentModal.tsx
+@@ -275,7 +275,7 @@ function AttachmentModal({
+      */
+     const closeConfirmModal = useCallback(() => {
+         setIsAttachmentInvalid(false);
+-        setIsDeleteReceiptConfirmModalVisible(false);
++        onModalClose();
+     }, []);
+ 
+     /**
+@@ -437,7 +437,6 @@ function AttachmentModal({
+             !TransactionUtils.hasEReceipt(transaction) &&
+             TransactionUtils.hasReceipt(transaction) &&
+             !TransactionUtils.isReceiptBeingScanned(transaction) &&
+-            canEditReceipt &&
+             !TransactionUtils.hasMissingSmartscanFields(transaction)
+         ) {
+             menuItems.push({
+

@@ -1,0 +1,13 @@
+diff --git a/src/pages/workspace/members/WorkspaceMemberDetailsPage.tsx b/src/pages/workspace/members/WorkspaceMemberDetailsPage.tsx
+index 075cfc55a0c..3610fe9c5b8 100644
+--- a/src/pages/workspace/members/WorkspaceMemberDetailsPage.tsx
++++ b/src/pages/workspace/members/WorkspaceMemberDetailsPage.tsx
+@@ -92,7 +92,7 @@ function WorkspaceMemberDetailsPage({personalDetails, policy, route}: WorkspaceM
+ 
+     const confirmModalPrompt = useMemo(() => {
+         const isApprover = Member.isApprover(policy, accountID);
+-        if (!isApprover) {
++        if (isApprover) {
+             return translate('workspace.people.removeMemberPrompt', {memberName: displayName});
+         }
+         return translate('workspace.people.removeMembersWarningPrompt', {

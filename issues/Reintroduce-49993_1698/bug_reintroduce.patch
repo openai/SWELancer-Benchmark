@@ -1,0 +1,23 @@
+diff --git a/src/libs/TransactionUtils/index.ts b/src/libs/TransactionUtils/index.ts
+index bf5073aba27..808fa081221 100644
+--- a/src/libs/TransactionUtils/index.ts
++++ b/src/libs/TransactionUtils/index.ts
+@@ -452,8 +452,16 @@ function getMerchant(transaction: OnyxInputOrEntry<Transaction>): string {
+     return transaction?.modifiedMerchant ? transaction.modifiedMerchant : transaction?.merchant ?? '';
+ }
+ 
+-function getMerchantOrDescription(transaction: OnyxEntry<Transaction>) {
+-    return !isMerchantMissing(transaction) ? getMerchant(transaction) : getDescription(transaction);
++function getMerchantOrDescription(transaction: OnyxEntry<Transaction>): string {
++    const merchantExists = !isMerchantMissing(transaction);
++    if (merchantExists && getDescription(transaction)) {
++        return getDescription(transaction);
++    }
++    if (merchantExists) {
++        return getMerchant(transaction);
++    }
++    // Fallback case if no merchant or description is found
++    return null as unknown as string;
+ }
+ 
+ /**

@@ -1,0 +1,30 @@
+diff --git a/.npmrc b/.npmrc
+deleted file mode 100644
+index b6f27f13595..00000000000
+--- a/.npmrc
++++ /dev/null
+@@ -1 +0,0 @@
+-engine-strict=true
+diff --git a/src/components/FormAlertWithSubmitButton.tsx b/src/components/FormAlertWithSubmitButton.tsx
+index 205bea93f84..baf31e17add 100644
+--- a/src/components/FormAlertWithSubmitButton.tsx
++++ b/src/components/FormAlertWithSubmitButton.tsx
+@@ -86,7 +86,7 @@ function FormAlertWithSubmitButton({
+     enterKeyEventListenerPriority = 0,
+ }: FormAlertWithSubmitButtonProps) {
+     const styles = useThemeStyles();
+-    const style = [!footerContent ? {} : styles.mb3, buttonStyles];
++    const style = [styles.mb3];
+     const safePaddingBottomStyle = useSafePaddingBottomStyle();
+ 
+     // Disable pressOnEnter for Android Native to avoid issues with the Samsung keyboard,
+@@ -123,7 +123,6 @@ function FormAlertWithSubmitButton({
+                             pressOnEnter={pressOnEnter}
+                             enterKeyEventListenerPriority={enterKeyEventListenerPriority}
+                             text={buttonText}
+-                            style={style}
+                             onPress={onSubmit}
+                             isDisabled={isDisabled}
+                             isLoading={isLoading}
+
+

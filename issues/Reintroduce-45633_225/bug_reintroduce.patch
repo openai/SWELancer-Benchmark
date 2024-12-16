@@ -1,0 +1,13 @@
+diff --git a/src/pages/iou/request/step/IOURequestStepConfirmation.tsx b/src/pages/iou/request/step/IOURequestStepConfirmation.tsx
+index b08f9a6ced5..d08c1d2722e 100644
+--- a/src/pages/iou/request/step/IOURequestStepConfirmation.tsx
++++ b/src/pages/iou/request/step/IOURequestStepConfirmation.tsx
+@@ -363,6 +363,7 @@ function IOURequestStepConfirmation({
+ 
+             formHasBeenSubmitted.current = true;
+             playSound(SOUNDS.DONE);
++            playSound(SOUNDS.DONE);
+ 
+             if (iouType !== CONST.IOU.TYPE.TRACK && isDistanceRequest && !isMovingTransactionFromTrackExpense) {
+                 createDistanceRequest(iouType === CONST.IOU.TYPE.SPLIT ? splitParticipants : selectedParticipants, trimmedComment);
+

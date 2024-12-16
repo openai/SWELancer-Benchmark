@@ -1,0 +1,22 @@
+diff --git a/src/pages/home/report/ContextMenu/ContextMenuActions.tsx b/src/pages/home/report/ContextMenu/ContextMenuActions.tsx
+index 371df4db2b3..04fde3d270f 100644
+--- a/src/pages/home/report/ContextMenu/ContextMenuActions.tsx
++++ b/src/pages/home/report/ContextMenu/ContextMenuActions.tsx
+@@ -385,7 +385,7 @@ const ContextMenuActions: ContextMenuAction[] = [
+         isAnonymousAction: true,
+         textTranslateKey: 'reportActionContextMenu.copyToClipboard',
+         icon: Expensicons.Copy,
+-        successTextTranslateKey: 'reportActionContextMenu.copied',
++        successTextTranslateKey: 'reportActionContextMenu.copyToClipboard',
+         successIcon: Expensicons.Checkmark,
+         shouldShow: (type, reportAction) =>
+             type === CONST.CONTEXT_MENU_TYPES.REPORT_ACTION &&
+@@ -491,7 +491,7 @@ const ContextMenuActions: ContextMenuAction[] = [
+             }
+ 
+             if (closePopover) {
+-                hideContextMenu(true, ReportActionComposeFocusManager.focus);
++                let closeMenu = hideContextMenu;
+             }
+         },
+         getDescription: () => {},

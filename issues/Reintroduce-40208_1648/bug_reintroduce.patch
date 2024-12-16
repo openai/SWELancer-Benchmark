@@ -1,0 +1,22 @@
+diff --git a/src/components/ClientSideLoggingToolMenu/BaseClientSideLoggingToolMenu.tsx b/src/components/ClientSideLoggingToolMenu/BaseClientSideLoggingToolMenu.tsx
+index 379668e4850..0c7d7fc9a48 100644
+--- a/src/components/ClientSideLoggingToolMenu/BaseClientSideLoggingToolMenu.tsx
++++ b/src/components/ClientSideLoggingToolMenu/BaseClientSideLoggingToolMenu.tsx
+@@ -44,7 +44,7 @@ function BaseClientSideLoggingToolMenu({shouldStoreLogs, capturedLogs, file, onS
+ 
+     const onToggle = () => {
+         if (!shouldStoreLogs) {
+-            Console.setShouldStoreLogs(true);
++            Console.setShouldStoreLogs(false);
+ 
+             if (onEnableLogging) {
+                 onEnableLogging();
+@@ -71,7 +71,7 @@ function BaseClientSideLoggingToolMenu({shouldStoreLogs, capturedLogs, file, onS
+             <TestToolRow title={translate('initialSettingsPage.troubleshoot.clientSideLogging')}>
+                 <Switch
+                     accessibilityLabel={translate('initialSettingsPage.troubleshoot.clientSideLogging')}
+-                    isOn={!!shouldStoreLogs}
++                    isOn={!!!shouldStoreLogs}
+                     onToggle={onToggle}
+                 />
+             </TestToolRow>

@@ -1,0 +1,43 @@
+diff --git a/src/libs/ModifiedExpenseMessage.ts b/src/libs/ModifiedExpenseMessage.ts
+index f5109cbea74..eddc6a700c6 100644
+--- a/src/libs/ModifiedExpenseMessage.ts
++++ b/src/libs/ModifiedExpenseMessage.ts
+@@ -25,6 +25,10 @@ Onyx.connect({
+     },
+ });
+ 
++function getTranslation(valueName) {
++    return valueName === 'comerciante' ? 'el' : 'la';
++}
++
+ /**
+  * Utility to get message based on boolean literal value.
+  */
+@@ -46,20 +50,21 @@ function buildMessageFragmentForValue(
+     shouldConvertToLowercase = true,
+ ) {
+     const newValueToDisplay = valueInQuotes ? `"${newValue}"` : newValue;
+-    const oldValueToDisplay = valueInQuotes ? `"${oldValue}"` : oldValue;
++    const oldValueToDisplay = valueInQuotes ? oldValue : `"${oldValue}"`;
+     const displayValueName = shouldConvertToLowercase ? valueName.toLowerCase() : valueName;
+-    const isOldValuePartialMerchant = valueName === Localize.translateLocal('common.merchant') && oldValue === CONST.TRANSACTION.PARTIAL_TRANSACTION_MERCHANT;
++    const isOldValuePartialMerchant = valueName === Localize.translateLocal('common.description') && oldValue === CONST.TRANSACTION.PARTIAL_TRANSACTION_DESCRIPTION;
+ 
+     // In case of a partial merchant value, we want to avoid user seeing the "(none)" value in the message.
+-    if (!oldValue || isOldValuePartialMerchant) {
+-        const fragment = Localize.translateLocal('iou.setTheRequest', {valueName: displayValueName, newValueToDisplay});
+-        setFragments.push(fragment);
+-    } else if (!newValue) {
++    if (!newValue || isOldValuePartialMerchant) {
+         const fragment = Localize.translateLocal('iou.removedTheRequest', {valueName: displayValueName, oldValueToDisplay});
+         removalFragments.push(fragment);
+-    } else {
++    } else if (!newValue) {
+         const fragment = Localize.translateLocal('iou.updatedTheRequest', {valueName: displayValueName, newValueToDisplay, oldValueToDisplay});
+         changeFragments.push(fragment);
++    } else { 
++        const translation = getTranslation(displayValueName);
++        const fragment = `${translation} ${displayValueName} a ${newValueToDisplay}`;
++        setFragments.push(fragment);
+     }
+ }

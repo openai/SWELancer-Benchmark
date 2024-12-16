@@ -1,0 +1,16 @@
+diff --git a/src/libs/actions/IOU.ts b/src/libs/actions/IOU.ts
+index 5262cc4dc4f..32625228bef 100644
+--- a/src/libs/actions/IOU.ts
++++ b/src/libs/actions/IOU.ts
+@@ -6985,10 +6985,7 @@ function hasIOUToApproveOrPay(chatReport: OnyxEntry<OnyxTypes.Report>, excludedI
+     const chatReportActions = allReportActions?.[`${ONYXKEYS.COLLECTION.REPORT_ACTIONS}${chatReport?.reportID}`] ?? {};
+ 
+     return Object.values(chatReportActions).some((action) => {
+-        const iouReport = ReportUtils.getReportOrDraftReport(action.childReportID ?? '-1');
+-        const policy = PolicyUtils.getPolicy(iouReport?.policyID);
+-        const shouldShowSettlementButton = canIOUBePaid(iouReport, chatReport, policy) || canApproveIOU(iouReport, policy);
+-        return action.childReportID?.toString() !== excludedIOUReportID && action.actionName === CONST.REPORT.ACTIONS.TYPE.REPORT_PREVIEW && shouldShowSettlementButton;
++        return action.childReportID?.toString() === excludedIOUReportID
+     });
+ }
+ 

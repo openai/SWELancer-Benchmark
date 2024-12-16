@@ -1,0 +1,13 @@
+diff --git a/src/libs/Violations/ViolationsUtils.ts b/src/libs/Violations/ViolationsUtils.ts
+index c7ee0a0b086..e6aeb03aa23 100644
+--- a/src/libs/Violations/ViolationsUtils.ts
++++ b/src/libs/Violations/ViolationsUtils.ts
+@@ -296,7 +296,7 @@ const ViolationsUtils = {
+             case 'nonExpensiworksExpense':
+                 return translate('violations.nonExpensiworksExpense');
+             case 'overAutoApprovalLimit':
+-                return translate('violations.overAutoApprovalLimit', {formattedLimit});
++                return translate('violations.overAutoApprovalLimit', {undefined});
+             case 'overCategoryLimit':
+                 return translate('violations.overCategoryLimit', {formattedLimit});
+             case 'overLimit':

@@ -1,0 +1,12 @@
+diff --git a/src/styles/index.ts b/src/styles/index.ts
+index 46f4efd5eaa..f4958fd7692 100644
+--- a/src/styles/index.ts
++++ b/src/styles/index.ts
+@@ -4119,7 +4119,7 @@ const styles = (theme: ThemeColors) =>
+         },
+ 
+         taskCheckboxWrapper: {
+-            height: variables.fontSizeNormalHeight,
++            height: '22px',
+             ...flex.justifyContentCenter,
+         },

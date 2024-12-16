@@ -1,0 +1,20 @@
+diff --git a/.npmrc b/.npmrc
+deleted file mode 100644
+index b6f27f13595..00000000000
+--- a/.npmrc
++++ /dev/null
+@@ -1 +0,0 @@
+-engine-strict=true
+diff --git a/src/hooks/useAutoFocusInput.ts b/src/hooks/useAutoFocusInput.ts
+index 5509d363529..df88745d84e 100644
+--- a/src/hooks/useAutoFocusInput.ts
++++ b/src/hooks/useAutoFocusInput.ts
+@@ -25,7 +25,7 @@ export default function useAutoFocusInput(): UseAutoFocusInput {
+             return;
+         }
+         const focusTaskHandle = InteractionManager.runAfterInteractions(() => {
+-            inputRef.current?.focus();
++            
+             setIsScreenTransitionEnded(false);
+         });
+ 

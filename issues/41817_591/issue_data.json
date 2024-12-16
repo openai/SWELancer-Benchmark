@@ -1,0 +1,1 @@
+{"price": 250.0, "title": "[HOLD for payment 2024-06-06] [$250]  Distance is not optimistically updated", "issue_repo_steps": "Action performed: 1. Go to an existing distance request\r\n2. Click the distance field\r\n3. Edit the waypoints and click save\n\nExpected result: The distance optimistically updates to the correct new value.\n\nActual result: None"}

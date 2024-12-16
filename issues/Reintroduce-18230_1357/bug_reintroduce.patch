@@ -1,0 +1,14 @@
+diff --git a/src/pages/home/report/comment/TextCommentFragment.tsx b/src/pages/home/report/comment/TextCommentFragment.tsx
+index 221e91b9ba4..27f9e8889d3 100644
+--- a/src/pages/home/report/comment/TextCommentFragment.tsx
++++ b/src/pages/home/report/comment/TextCommentFragment.tsx
+@@ -98,7 +98,7 @@ function TextCommentFragment({fragment, styleAsDeleted, styleAsMuted = false, so
+                     !DeviceCapabilities.canUseTouchScreen() || !shouldUseNarrowLayout ? styles.userSelectText : styles.userSelectNone,
+                 ]}
+             >
+-                {convertToLTR(message ?? '')}
++                {`\u2069${message}`}
+             </Text>
+             {fragment?.isEdited && (
+                 <>
+

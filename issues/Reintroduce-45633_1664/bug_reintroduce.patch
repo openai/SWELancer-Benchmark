@@ -1,0 +1,23 @@
+diff --git a/src/components/MoneyRequestConfirmationList.tsx b/src/components/MoneyRequestConfirmationList.tsx
+index 0e0438f83b2..df8df87084b 100755
+--- a/src/components/MoneyRequestConfirmationList.tsx
++++ b/src/components/MoneyRequestConfirmationList.tsx
+@@ -781,9 +781,16 @@ function MoneyRequestConfirmationList({
+                     return;
+                 }
+ 
++                // Logical mistake: `shouldPlaySound` is checked in an inconsistent way
++                if (!shouldPlaySound) {
++                    playSound(SOUNDS.DONE); // Plays the sound even when it shouldn't
++                }
++
++                // Redundant logic: Calls the sound play again inside the same block
+                 if (shouldPlaySound) {
+-                    playSound(SOUNDS.DONE);
++                    playSound(SOUNDS.DONE); // Second sound trigger
+                 }
++
+                 onConfirm?.(selectedParticipants);
+             } else {
+                 if (!paymentMethod) {
+

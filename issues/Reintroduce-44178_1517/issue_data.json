@@ -1,0 +1,1 @@
+{"price": 250.0, "title": "[HOLD for payment 2024-07-17] [$250] Troubleshoot - Troubleshoot modal opened from shortcut is missing Testing preferences", "issue_repo_steps": "Action performed: 1. Go to staging.new.expensify.com\r\n2. Press CMD + D\n\nExpected result: Troubleshoot modal opened from shortcut will be complete\n\nActual result: None"}

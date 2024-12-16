@@ -1,0 +1,44 @@
+diff --git a/package-lock.json b/package-lock.json
+index e08766b5e49..3ffebaa8614 100644
+--- a/package-lock.json
++++ b/package-lock.json
+@@ -1,12 +1,12 @@
+ {
+   "name": "new.expensify",
+-  "version": "9.0.48-0",
++  "version": "9.0.41-1",
+   "lockfileVersion": 3,
+   "requires": true,
+   "packages": {
+     "": {
+       "name": "new.expensify",
+-      "version": "9.0.48-0",
++      "version": "9.0.41-1",
+       "hasInstallScript": true,
+       "license": "MIT",
+       "dependencies": {
+diff --git a/package.json b/package.json
+index b944cd94149..74d164140f1 100644
+--- a/package.json
++++ b/package.json
+@@ -1,6 +1,6 @@
+ {
+   "name": "new.expensify",
+-  "version": "9.0.48-0",
++  "version": "9.0.41-1",
+   "author": "Expensify, Inc.",
+   "homepage": "https://new.expensify.com",
+   "description": "New Expensify is the next generation of Expensify: a reimagination of payments based atop a foundation of chat.",
+diff --git a/src/libs/StringUtils.ts b/src/libs/StringUtils.ts
+index d13c38700e1..9657421f38d 100644
+--- a/src/libs/StringUtils.ts
++++ b/src/libs/StringUtils.ts
+@@ -59,7 +59,7 @@ function removeInvisibleCharacters(value: string): string {
+         return '';
+     }
+ 
+-    return result.trim();
++    return result.replace(/\B\s+|\s+\B/g, '');
+ }
+ 
+ /**

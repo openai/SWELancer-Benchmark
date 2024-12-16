@@ -1,0 +1,32 @@
+diff --git a/.npmrc b/.npmrc
+deleted file mode 100644
+index b6f27f13595..00000000000
+--- a/.npmrc
++++ /dev/null
+@@ -1 +0,0 @@
+-engine-strict=true
+diff --git a/src/pages/home/report/ReportActionItemMessageEdit.tsx b/src/pages/home/report/ReportActionItemMessageEdit.tsx
+index d1eb78bcc00..d1f7f60e6a2 100644
+--- a/src/pages/home/report/ReportActionItemMessageEdit.tsx
++++ b/src/pages/home/report/ReportActionItemMessageEdit.tsx
+@@ -229,7 +229,6 @@ function ReportActionItemMessageEdit(
+     );
+ 
+     // show the composer after editing is complete for devices that hide the composer during editing.
+-    useEffect(() => () => ComposerActions.setShouldShowComposeInput(true), []);
+ 
+     /**
+      * Save the draft of the comment. This debounced so that we're not ceaselessly saving your edit. Saving the draft
+diff --git a/src/pages/home/report/ReportFooter.tsx b/src/pages/home/report/ReportFooter.tsx
+index 2bf744868a9..116aa0a8e89 100644
+--- a/src/pages/home/report/ReportFooter.tsx
++++ b/src/pages/home/report/ReportFooter.tsx
+@@ -204,7 +204,7 @@ function ReportFooter({
+                     )}
+                 </View>
+             )}
+-            {!shouldHideComposer && (!!shouldShowComposeInput || !shouldUseNarrowLayout) && (
++            {!shouldHideComposer && !!shouldShowComposeInput && (
+                 <View style={[chatFooterStyles, isComposerFullSize && styles.chatFooterFullCompose]}>
+                     <SwipeableView onSwipeDown={Keyboard.dismiss}>
+                         <ReportActionCompose

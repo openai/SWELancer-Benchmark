@@ -1,0 +1,14 @@
+diff --git a/src/pages/OnboardingPurpose/BaseOnboardingPurpose.tsx b/src/pages/OnboardingPurpose/BaseOnboardingPurpose.tsx
+index 509ad28e645..06b230d79f4 100644
+--- a/src/pages/OnboardingPurpose/BaseOnboardingPurpose.tsx
++++ b/src/pages/OnboardingPurpose/BaseOnboardingPurpose.tsx
+@@ -103,7 +103,7 @@ function BaseOnboardingPurpose({shouldUseNativeStyles, shouldEnableMaxHeight}: B
+                 Welcome.setOnboardingPurposeSelected(choice);
+                 Welcome.setOnboardingErrorMessage('');
+             },
+-            focused: isSelected,
++            focused: !isSelected,
+         };
+     });
+     const isFocused = useIsFocused();
+

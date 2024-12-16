@@ -1,0 +1,13 @@
+diff --git a/src/pages/workspace/WorkspaceMembersPage.tsx b/src/pages/workspace/WorkspaceMembersPage.tsx
+index 52b8a06ba93..a8098764aee 100644
+--- a/src/pages/workspace/WorkspaceMembersPage.tsx
++++ b/src/pages/workspace/WorkspaceMembersPage.tsx
+@@ -368,7 +368,7 @@ function WorkspaceMembersPage({personalDetails, route, policy, currentUserPerson
+                         source: details.avatar ?? Expensicons.FallbackAvatar,
+                         name: formatPhoneNumber(details?.login ?? ''),
+                         type: CONST.ICON_TYPE_AVATAR,
+-                        id: accountID,
++                        id: '',
+                     },
+                 ],
+                 errors: policyEmployee.errors,

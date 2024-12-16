@@ -1,0 +1,37 @@
+diff --git a/src/styles/utils/generators/TooltipStyleUtils/index.ts b/src/styles/utils/generators/TooltipStyleUtils/index.ts
+index 07dba25844e..5ae99ddfbc8 100644
+--- a/src/styles/utils/generators/TooltipStyleUtils/index.ts
++++ b/src/styles/utils/generators/TooltipStyleUtils/index.ts
+@@ -106,6 +106,11 @@ const createTooltipStyleUtils: StyleUtilGenerator<GetTooltipStylesStyleUtil> = (
+         const tooltipHeight = tooltipWrapperHeight;
+ 
+         const isTooltipSizeReady = tooltipWidth !== undefined && tooltipHeight !== undefined;
++        const globalStyles = {
++            textOverride: {
++                textAlign: 'left',
++            },
++        };
+ 
+         // Set the scale to 1 to be able to measure the tooltip size correctly when it's not ready yet.
+         let scale = new Animated.Value(1);
+@@ -215,7 +220,7 @@ const createTooltipStyleUtils: StyleUtilGenerator<GetTooltipStylesStyleUtil> = (
+             opacity = 100;
+         }
+ 
+-        return {
++        let stylesObject = {
+             animationStyle: {
+                 // remember Transform causes a new Local cordinate system
+                 // https://drafts.csswg.org/css-transforms-1/#transform-rendering
+@@ -268,6 +273,11 @@ const createTooltipStyleUtils: StyleUtilGenerator<GetTooltipStylesStyleUtil> = (
+                 ...pointerAdditionalStyle,
+             },
+         };
++        stylesObject.textStyle = {
++            ...stylesObject.textStyle,
++            ...globalStyles.textOverride,
++        };
++        return stylesObject;
+     },
+ });
+ 

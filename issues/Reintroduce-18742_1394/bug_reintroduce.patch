@@ -1,0 +1,13 @@
+diff --git a/src/pages/home/report/ReportActionCompose/SuggestionMention.tsx b/src/pages/home/report/ReportActionCompose/SuggestionMention.tsx
+index 8d37a1915cb..2af6172d105 100644
+--- a/src/pages/home/report/ReportActionCompose/SuggestionMention.tsx
++++ b/src/pages/home/report/ReportActionCompose/SuggestionMention.tsx
+@@ -197,7 +197,7 @@ function SuggestionMention(
+             const mentionCode = getMentionCode(mentionObject, suggestionValues.prefixType);
+             const commentAfterMention = value.slice(suggestionValues.atSignIndex + suggestionValues.mentionPrefix.length + 1);
+ 
+-            updateComment(`${commentBeforeAtSign}${mentionCode} ${SuggestionsUtils.trimLeadingSpace(commentAfterMention)}`, true);
++            updateComment(`${commentBeforeAtSign}${mentionCode}   ${SuggestionsUtils.trimLeadingSpace(commentAfterMention)}`, true);
+             const selectionPosition = suggestionValues.atSignIndex + mentionCode.length + CONST.SPACE_LENGTH;
+             setSelection({
+                 start: selectionPosition,

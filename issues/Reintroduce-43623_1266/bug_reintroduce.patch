@@ -1,0 +1,38 @@
+
+diff --git a/src/libs/OptionsListUtils.ts b/src/libs/OptionsListUtils.ts
+index 51db5a693f9..7dfa43c3299 100644
+--- a/src/libs/OptionsListUtils.ts
++++ b/src/libs/OptionsListUtils.ts
+@@ -1715,6 +1715,18 @@ function shouldShowViolations(report: Report, transactionViolations: OnyxCollect
+     return ReportUtils.shouldDisplayTransactionThreadViolations(report, transactionViolations, parentReportAction);
+ }
+ 
++/**
++ * Determines if a report option should be added to recent reports based on the action type
++ * and policy categories
++ */
++function shouldAddToRecentReports(reportOption: ReportUtils.OptionData, action?: IOUAction): boolean {
++    if (action === CONST.IOU.ACTION.CATEGORIZE) {
++        const policyCategories = allPolicyCategories?.[`${ONYXKEYS.COLLECTION.POLICY_CATEGORIES}${reportOption.policyID}`] ?? {};
++        return getEnabledCategoriesCount(policyCategories) !== 0;
++    }
++    return true;
++}
++
+ /**
+  * filter options based on specific conditions
+  */
+@@ -1990,12 +2002,7 @@ function getOptions(
+             reportOption.isSelected = isReportSelected(reportOption, selectedOptions);
+             reportOption.isBold = shouldBoldTitleByDefault || shouldUseBoldText(reportOption);
+ 
+-            if (action === CONST.IOU.ACTION.CATEGORIZE) {
+-                const policyCategories = allPolicyCategories?.[`${ONYXKEYS.COLLECTION.POLICY_CATEGORIES}${reportOption.policyID}`] ?? {};
+-                if (getEnabledCategoriesCount(policyCategories) !== 0) {
+-                    recentReportOptions.push(reportOption);
+-                }
+-            } else {
++            if (!shouldAddToRecentReports(reportOption, action)) {
+                 recentReportOptions.push(reportOption);
+             }
+ 

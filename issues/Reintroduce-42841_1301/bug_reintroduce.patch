@@ -1,0 +1,59 @@
+diff --git a/src/components/MoneyRequestConfirmationList.tsx b/src/components/MoneyRequestConfirmationList.tsx
+index 884435959b8..4f6f0424b17 100755
+--- a/src/components/MoneyRequestConfirmationList.tsx
++++ b/src/components/MoneyRequestConfirmationList.tsx
+@@ -302,8 +302,7 @@ function MoneyRequestConfirmationList({
+         if (ReportUtils.isDraftReport(participant.reportID)) {
+             return true;
+         }
+-
+-        if (!participant.isInvoiceRoom && !participant.isPolicyExpenseChat && !participant.isSelfDM && ReportUtils.isOptimisticPersonalDetail(participant.accountID ?? -1)) {
++        if (!participant.isInvoiceRoom && !participant.isPolicyExpenseChat && !participant.isSelfDM && ReportUtils.isOptimisticPersonalLoginDetail(participant.accountID ?? -1)) {
+             return true;
+         }
+ 
+diff --git a/src/libs/ReportUtils.ts b/src/libs/ReportUtils.ts
+index 11350d724eb..b2c3f6b07e2 100644
+--- a/src/libs/ReportUtils.ts
++++ b/src/libs/ReportUtils.ts
+@@ -500,12 +500,20 @@ Onyx.connect({
+ let allPersonalDetails: OnyxEntry<PersonalDetailsList>;
+ let allPersonalDetailLogins: string[];
+ let currentUserPersonalDetails: OnyxEntry<PersonalDetails>;
++let allPersonalLogins: OnyxEntry<PersonalDetailsList>;
+ Onyx.connect({
+     key: ONYXKEYS.PERSONAL_DETAILS_LIST,
+     callback: (value) => {
+         currentUserPersonalDetails = value?.[currentUserAccountID ?? -1] ?? undefined;
+         allPersonalDetails = value ?? {};
+         allPersonalDetailLogins = Object.values(allPersonalDetails).map((personalDetail) => personalDetail?.login ?? '');
++        allPersonalLogins = Object.entries(allPersonalDetails).reduce(
++            (acc, [key, personalDetail]) => {
++                const login = personalDetail?.login || '';
++                acc[login] = personalDetail;
++                return acc;
++            }, {} as PersonalDetailsList
++        );
+     },
+ });
+ 
+@@ -1051,6 +1059,11 @@ function isOptimisticPersonalDetail(accountID: number): boolean {
+     return isEmptyObject(allPersonalDetails?.[accountID]) || !!allPersonalDetails?.[accountID]?.isOptimisticPersonalDetail;
+ }
+ 
++
++function isOptimisticPersonalLoginDetail(loginID: number): boolean {
++    return !!allPersonalLogins?.[loginID]?.isOptimisticPersonalDetail;
++}
++
+ /**
+  * Checks if a report is a task report from a policy expense chat.
+  */
+@@ -7334,6 +7347,7 @@ export {
+     isOpenExpenseReport,
+     isOpenTaskReport,
+     isOptimisticPersonalDetail,
++    isOptimisticPersonalLoginDetail,
+     isPaidGroupPolicy,
+     isPaidGroupPolicyExpenseChat,
+     isPaidGroupPolicyExpenseReport,

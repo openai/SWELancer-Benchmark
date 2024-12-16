@@ -1,0 +1,1 @@
+{"price": 1000.0, "title": "[HOLD for payment 2023-06-23] [$1000] Allow adding newlines in description for tasks", "issue_repo_steps": "Action performed: 1. Create a new task\r\n2. Add a description\r\n3. Try to add multiple lines\n\nExpected result: Text input should expand to allow for multiple lines\n\nActual result: None"}

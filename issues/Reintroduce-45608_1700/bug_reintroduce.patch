@@ -1,0 +1,12 @@
+diff --git a/src/components/LHNOptionsList/LHNOptionsList.tsx b/src/components/LHNOptionsList/LHNOptionsList.tsx
+index 624e8f18e69..a5c8896dbe9 100644
+--- a/src/components/LHNOptionsList/LHNOptionsList.tsx
++++ b/src/components/LHNOptionsList/LHNOptionsList.tsx
+@@ -275,7 +275,6 @@ function LHNOptionsList({style, contentContainerStyles, data, onSelectRow, optio
+                     keyExtractor={keyExtractor}
+                     renderItem={renderItem}
+                     estimatedItemSize={optionMode === CONST.OPTION_MODE.COMPACT ? variables.optionRowHeightCompact : variables.optionRowHeight}
+-                    extraData={extraData}
+                     showsVerticalScrollIndicator={false}
+                     onLayout={onLayout}
+                     onScroll={onScroll}

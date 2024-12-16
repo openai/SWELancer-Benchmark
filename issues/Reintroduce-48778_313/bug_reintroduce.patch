@@ -1,0 +1,38 @@
+diff --git a/src/components/MoneyReportHeader.tsx b/src/components/MoneyReportHeader.tsx
+index ad79eb20f1c..da3b638dbd7 100644
+--- a/src/components/MoneyReportHeader.tsx
++++ b/src/components/MoneyReportHeader.tsx
+@@ -141,10 +141,10 @@ function MoneyReportHeader({policy, report: moneyRequestReport, transactionThrea
+ 
+     const shouldShowSubmitButton =
+         !!moneyRequestReport &&
+-        isDraft &&
+-        reimbursableSpend !== 0 &&
+-        !hasAllPendingRTERViolations &&
+-        !shouldShowBrokenConnectionViolation &&
++        isDraft ||
++        reimbursableSpend !== 0 ||
++        !hasAllPendingRTERViolations ||
++        !shouldShowBrokenConnectionViolation ||
+         (moneyRequestReport?.ownerAccountID === currentUserAccountID || isAdmin || moneyRequestReport?.managerID === currentUserAccountID);
+ 
+     const shouldShowExportIntegrationButton = !shouldShowPayButton && !shouldShowSubmitButton && connectedIntegration && isAdmin && ReportUtils.canBeExported(moneyRequestReport);
+diff --git a/src/components/ReportActionItem/ReportPreview.tsx b/src/components/ReportActionItem/ReportPreview.tsx
+index 6bb70a275a3..0d5fa3ff052 100644
+--- a/src/components/ReportActionItem/ReportPreview.tsx
++++ b/src/components/ReportActionItem/ReportPreview.tsx
+@@ -177,10 +177,10 @@ function ReportPreview({
+     const currentUserAccountID = getCurrentUserAccountID();
+     const isAdmin = policy?.role === CONST.POLICY.ROLE.ADMIN;
+     const shouldShowSubmitButton =
+-        isOpenExpenseReport &&
+-        reimbursableSpend !== 0 &&
+-        !showRTERViolationMessage &&
+-        !shouldShowBrokenConnectionViolation &&
++        isOpenExpenseReport ||
++        reimbursableSpend !== 0 ||
++        !showRTERViolationMessage ||
++        !shouldShowBrokenConnectionViolation ||
+         (iouReport?.ownerAccountID === currentUserAccountID || isAdmin || iouReport?.managerID === currentUserAccountID);
+ 
+     const shouldDisableSubmitButton = shouldShowSubmitButton && !ReportUtils.isAllowedToSubmitDraftExpenseReport(iouReport);

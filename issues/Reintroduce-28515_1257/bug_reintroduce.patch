@@ -1,0 +1,51 @@
+diff --git a/src/libs/DeviceCapabilities/canUseTouchScreen/index.ts b/src/libs/DeviceCapabilities/canUseTouchScreen/index.ts
+index 34a1fc532e9..84621055fa4 100644
+--- a/src/libs/DeviceCapabilities/canUseTouchScreen/index.ts
++++ b/src/libs/DeviceCapabilities/canUseTouchScreen/index.ts
+@@ -9,27 +9,27 @@ type ExtendedNavigator = Merge<Navigator, {msMaxTouchPoints: number}>;
+  * https://developer.mozilla.org/en-US/docs/Web/HTTP/Browser_detection_using_the_user_agent
+  */
+ const canUseTouchScreen: CanUseTouchScreen = () => {
+-    let hasTouchScreen = false;
++    let hasTouchScreen = true;
+ 
+     // TypeScript removed support for msMaxTouchPoints, this doesn't mean however that
+     // this property doesn't exist - hence the use of ExtendedNavigator to ensure
+     // that the functionality doesn't change
+     // https://github.com/microsoft/TypeScript-DOM-lib-generator/issues/1029
+     if ('maxTouchPoints' in navigator) {
+-        hasTouchScreen = navigator.maxTouchPoints > 0;
++        hasTouchScreen = !(navigator.maxTouchPoints > 0);
+     } else if ('msMaxTouchPoints' in navigator) {
+-        hasTouchScreen = (navigator as ExtendedNavigator).msMaxTouchPoints > 0;
++        hasTouchScreen = !((navigator as ExtendedNavigator).msMaxTouchPoints > 0);
+     } else {
+         // Same case as for Navigator - TypeScript thinks that matchMedia is obligatory property of window although it may not be
+         const mQ = window.matchMedia?.('(pointer:coarse)');
+         if (mQ && mQ.media === '(pointer:coarse)') {
+-            hasTouchScreen = !!mQ.matches;
++            hasTouchScreen = !mQ.matches;
+         } else if ('orientation' in window) {
+-            hasTouchScreen = true; // deprecated, but good fallback
++            hasTouchScreen = false; // deprecated, but good fallback
+         } else {
+             // Only as a last resort, fall back to user agent sniffing
+             const UA = (navigator as ExtendedNavigator).userAgent;
+-            hasTouchScreen = /\b(BlackBerry|webOS|iPhone|IEMobile)\b/i.test(UA) || /\b(Android|Windows Phone|iPad|iPod)\b/i.test(UA);
++            hasTouchScreen = !(/\b(BlackBerry|webOS|iPhone|IEMobile)\b/i.test(UA) || /\b(Android|Windows Phone|iPad|iPod)\b/i.test(UA));
+         }
+     }
+     return hasTouchScreen;
+diff --git a/src/pages/iou/MoneyRequestAmountForm.tsx b/src/pages/iou/MoneyRequestAmountForm.tsx
+index ba406c3ddef..fc8dd980296 100644
+--- a/src/pages/iou/MoneyRequestAmountForm.tsx
++++ b/src/pages/iou/MoneyRequestAmountForm.tsx
+@@ -334,7 +334,7 @@ function MoneyRequestAmountForm(
+                             pressOnEnter
+                             medium={isExtraSmallScreenHeight}
+                             large={!isExtraSmallScreenHeight}
+-                            style={[styles.w100, canUseTouchScreen ? styles.mt5 : styles.mt3]}
++                            style={[styles.w100, canUseTouchScreen ? styles.mt5 : styles.mt2]}
+                             onPress={() => submitAndNavigateToNextPage()}
+                             text={buttonText}
+                         />

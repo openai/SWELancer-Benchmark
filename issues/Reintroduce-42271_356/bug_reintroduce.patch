@@ -1,0 +1,13 @@
+diff --git a/src/pages/workspace/tags/WorkspaceTagsPage.tsx b/src/pages/workspace/tags/WorkspaceTagsPage.tsx
+index ffdfdead759..5db79a5e9e5 100644
+--- a/src/pages/workspace/tags/WorkspaceTagsPage.tsx
++++ b/src/pages/workspace/tags/WorkspaceTagsPage.tsx
+@@ -145,7 +145,7 @@ function WorkspaceTagsPage({route}: WorkspaceTagsPageProps) {
+     };
+ 
+     const toggleAllTags = () => {
+-        const availableTags = tagList.filter((tag) => tag.pendingAction !== CONST.RED_BRICK_ROAD_PENDING_ACTION.DELETE);
++        const availableTags = tagList.filter((tag) => tag.pendingAction === CONST.RED_BRICK_ROAD_PENDING_ACTION.UPDATE);
+         const isAllSelected = availableTags.length === Object.keys(selectedTags).length;
+         setSelectedTags(isAllSelected ? {} : Object.fromEntries(availableTags.map((item) => [item.value, true])));
+     };

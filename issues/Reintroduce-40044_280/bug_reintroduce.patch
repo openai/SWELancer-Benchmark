@@ -1,0 +1,51 @@
+diff --git a/.npmrc b/.npmrc
+deleted file mode 100644
+index b6f27f13595..00000000000
+--- a/.npmrc
++++ /dev/null
+@@ -1 +0,0 @@
+-engine-strict=true
+diff --git a/package-lock.json b/package-lock.json
+index e2d9b6d2988..5594c863418 100644
+--- a/package-lock.json
++++ b/package-lock.json
+@@ -1,12 +1,12 @@
+ {
+   "name": "new.expensify",
+-  "version": "1.4.72-1",
++  "version": "9.0.41-1",
+   "lockfileVersion": 3,
+   "requires": true,
+   "packages": {
+     "": {
+       "name": "new.expensify",
+-      "version": "1.4.72-1",
++      "version": "9.0.41-1",
+       "hasInstallScript": true,
+       "license": "MIT",
+       "dependencies": {
+diff --git a/package.json b/package.json
+index c91a7a6acc4..764a1b21342 100644
+--- a/package.json
++++ b/package.json
+@@ -1,6 +1,6 @@
+ {
+   "name": "new.expensify",
+-  "version": "1.4.72-1",
++  "version": "9.0.41-1",
+   "author": "Expensify, Inc.",
+   "homepage": "https://new.expensify.com",
+   "description": "New Expensify is the next generation of Expensify: a reimagination of payments based atop a foundation of chat.",
+diff --git a/src/libs/ActiveClientManager/index.ts b/src/libs/ActiveClientManager/index.ts
+index b364f08508b..c71fa801fe6 100644
+--- a/src/libs/ActiveClientManager/index.ts
++++ b/src/libs/ActiveClientManager/index.ts
+@@ -59,7 +59,7 @@ const init: Init = () => {
+     activeClients.push(clientID);
+     ActiveClients.setActiveClients(activeClients).then(resolveSavedSelfPromise);
+
+-    window.addEventListener('beforeunload', cleanUpClientId);
++    window.addEventListener('unload', cleanUpClientId);
+ };
+
+ /**

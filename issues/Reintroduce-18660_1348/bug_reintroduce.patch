@@ -1,0 +1,17 @@
+diff --git a/src/pages/tasks/NewTaskDescriptionPage.tsx b/src/pages/tasks/NewTaskDescriptionPage.tsx
+index 0132442b597..84fbe167900 100644
+--- a/src/pages/tasks/NewTaskDescriptionPage.tsx
++++ b/src/pages/tasks/NewTaskDescriptionPage.tsx
+@@ -84,9 +84,11 @@ function NewTaskDescriptionPage({task, route}: NewTaskDescriptionPageProps) {
+                             role={CONST.ROLE.PRESENTATION}
+                             ref={(el) => {
+                                 if (!inputRef.current) {
++                                    null;
++                                } else {
+                                     updateMultilineInputRange(el);
++                                    inputCallbackRef(el);
+                                 }
+-                                inputCallbackRef(el);
+                             }}
+                             autoGrowHeight
+                             maxAutoGrowHeight={variables.textInputAutoGrowMaxHeight}

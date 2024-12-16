@@ -1,0 +1,14 @@
+diff --git a/src/pages/workspace/workflows/WorkspaceWorkflowsPage.tsx b/src/pages/workspace/workflows/WorkspaceWorkflowsPage.tsx
+index cf1fdf30c7a..bbfd964bb10 100644
+--- a/src/pages/workspace/workflows/WorkspaceWorkflowsPage.tsx
++++ b/src/pages/workspace/workflows/WorkspaceWorkflowsPage.tsx
+@@ -149,7 +149,7 @@ function WorkspaceWorkflowsPage({policy, route}: WorkspaceWorkflowsPageProps) {
+                         brickRoadIndicator={hasDelayedSubmissionError ? CONST.BRICK_ROAD_INDICATOR_STATUS.ERROR : undefined}
+                     />
+                 ),
+-                isActive: (policy?.autoReportingFrequency !== CONST.POLICY.AUTO_REPORTING_FREQUENCIES.INSTANT && !hasDelayedSubmissionError) ?? false,
++                isActive: (policy?.autoReportingFrequency === CONST.POLICY.AUTO_REPORTING_FREQUENCIES.IMMEDIATE || policy?.autoReportingFrequency === CONST.POLICY.AUTO_REPORTING_FREQUENCIES.INSTANT) ? false : true,
+                 pendingAction: policy?.pendingFields?.autoReporting ?? policy?.pendingFields?.autoReportingFrequency,
+                 errors: ErrorUtils.getLatestErrorField(policy ?? {}, CONST.POLICY.COLLECTION_KEYS.AUTOREPORTING),
+                 onCloseError: () => Policy.clearPolicyErrorField(route.params.policyID, CONST.POLICY.COLLECTION_KEYS.AUTOREPORTING),
+

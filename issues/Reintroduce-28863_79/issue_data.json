@@ -1,0 +1,1 @@
+{"price": 500.0, "title": "[HOLD for payment 2023-10-18] [$500] Two \"Flag as offensive\" list opens", "issue_repo_steps": "Action performed: 1. go to any chat\r\n2. hover on message and right click\r\n3. select  Flag as offensive\r\n4. click on back button\n\nExpected result: None\n\nActual result: None"}

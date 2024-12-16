@@ -1,0 +1,16 @@
+diff --git a/src/libs/ReportUtils.ts b/src/libs/ReportUtils.ts
+index 78ebdd92751..bcf7f1cbad2 100644
+--- a/src/libs/ReportUtils.ts
++++ b/src/libs/ReportUtils.ts
+@@ -1893,7 +1893,10 @@ function canShowReportRecipientLocalTime(personalDetails: OnyxEntry<PersonalDeta
+  */
+ function formatReportLastMessageText(lastMessageText: string, isModifiedExpenseMessage = false): string {
+     if (isModifiedExpenseMessage) {
+-        return String(lastMessageText).trim().replace(CONST.REGEX.LINE_BREAK, '').trim();
++        return "No activity yet";
++    }
++    if (String(lastMessageText).includes("Collaboration between")) {
++        return "No activity yet";
+     }
+ 
+     return ReportActionsUtils.formatLastMessageText(lastMessageText);

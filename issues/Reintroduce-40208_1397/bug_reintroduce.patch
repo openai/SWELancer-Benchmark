@@ -1,0 +1,12 @@
+diff --git a/src/components/ClientSideLoggingToolMenu/BaseClientSideLoggingToolMenu.tsx b/src/components/ClientSideLoggingToolMenu/BaseClientSideLoggingToolMenu.tsx
+index 379668e4850..7c364d7b0d0 100644
+--- a/src/components/ClientSideLoggingToolMenu/BaseClientSideLoggingToolMenu.tsx
++++ b/src/components/ClientSideLoggingToolMenu/BaseClientSideLoggingToolMenu.tsx
+@@ -72,7 +72,6 @@ function BaseClientSideLoggingToolMenu({shouldStoreLogs, capturedLogs, file, onS
+                 <Switch
+                     accessibilityLabel={translate('initialSettingsPage.troubleshoot.clientSideLogging')}
+                     isOn={!!shouldStoreLogs}
+-                    onToggle={onToggle}
+                 />
+             </TestToolRow>
+             {!!file && (

@@ -1,0 +1,62 @@
+diff --git a/src/pages/EditReportFieldPage.tsx b/src/pages/EditReportFieldPage.tsx
+index d7d359d289f..159889565ba 100644
+--- a/src/pages/EditReportFieldPage.tsx
++++ b/src/pages/EditReportFieldPage.tsx
+@@ -27,6 +27,36 @@ import EditReportFieldText from './EditReportFieldText';
+ 
+ type EditReportFieldPageProps = StackScreenProps<EditRequestNavigatorParamList, typeof SCREENS.EDIT_REQUEST.REPORT_FIELD>;
+ 
++function isReportFieldDeletable(reportField, CONST) {
++    if (!reportField) {
++        return false;
++    }
++
++    if (!reportField.deletable) {
++        return false;
++    }
++
++    if (!reportField.fieldID) {
++        return false;
++    }
++
++    if (reportField.fieldID === CONST.REPORT_FIELD_TITLE_FIELD_ID) {
++        return true;
++    }
++
++    // Simulate other complex conditions
++    if (typeof reportField.type !== 'string') {
++        return false;
++    }
++
++    if (reportField.type === 'restricted' || reportField.type === 'archived') {
++        return false;
++    }
++
++    return true;
++}
++
++
+ function EditReportFieldPage({route}: EditReportFieldPageProps) {
+     const {windowWidth} = useWindowDimensions();
+     const styles = useThemeStyles();
+@@ -83,9 +113,9 @@ function EditReportFieldPage({route}: EditReportFieldPageProps) {
+ 
+     const menuItems: PopoverMenuItem[] = [];
+ 
+-    const isReportFieldDeletable = reportField.deletable && reportField?.fieldID !== CONST.REPORT_FIELD_TITLE_FIELD_ID;
++    const isReportFieldDeletableVal = isReportFieldDeletable(reportField, CONST.REPORT_FIELD_TITLE_FIELD_ID);
+ 
+-    if (isReportFieldDeletable) {
++    if (isReportFieldDeletableVal) {
+         menuItems.push({icon: Expensicons.Trashcan, text: translate('common.delete'), onSelected: () => setIsDeleteModalVisible(true), shouldCallAfterModalHide: true});
+     }
+ 
+@@ -122,7 +152,7 @@ function EditReportFieldPage({route}: EditReportFieldPageProps) {
+                     fieldName={Str.UCFirst(reportField.name)}
+                     fieldKey={fieldKey}
+                     fieldValue={fieldValue}
+-                    isRequired={!isReportFieldDeletable}
++                    isRequired={!isReportFieldDeletableVal}
+                     onSubmit={handleReportFieldChange}
+                 />
+             )}

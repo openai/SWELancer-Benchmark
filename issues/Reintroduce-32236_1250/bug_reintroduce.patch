@@ -1,0 +1,30 @@
+diff --git a/.npmrc b/.npmrc
+deleted file mode 100644
+index b6f27f13595..00000000000
+--- a/.npmrc
++++ /dev/null
+@@ -1 +0,0 @@
+-engine-strict=true
+diff --git a/src/pages/home/report/ContextMenu/ContextMenuActions.js b/src/pages/home/report/ContextMenu/ContextMenuActions.js
+index f22eda58ce7..284e65f7740 100644
+--- a/src/pages/home/report/ContextMenu/ContextMenuActions.js
++++ b/src/pages/home/report/ContextMenu/ContextMenuActions.js
+@@ -168,7 +168,7 @@ export default [
+             const isReportPreviewAction = reportAction.actionName === CONST.REPORT.ACTIONS.TYPE.REPORTPREVIEW;
+             const isIOUAction = reportAction.actionName === CONST.REPORT.ACTIONS.TYPE.IOU && !ReportActionsUtils.isSplitBillAction(reportAction);
+             const isWhisperAction = ReportActionsUtils.isWhisperAction(reportAction);
+-            return !subscribed && !isWhisperAction && (isCommentAction || isReportPreviewAction || isIOUAction) && (!isDeletedAction || shouldDisplayThreadReplies);
++            return !subscribed && !isWhisperAction && (isCommentAction || isReportPreviewAction || isIOUAction);
+         },
+         onPress: (closePopover, {reportAction, reportID}) => {
+             let childReportNotificationPreference = lodashGet(reportAction, 'childReportNotificationPreference', '');
+@@ -210,7 +210,7 @@ export default [
+             const isCommentAction = reportAction.actionName === CONST.REPORT.ACTIONS.TYPE.ADDCOMMENT && !ReportUtils.isThreadFirstChat(reportAction, reportID);
+             const isReportPreviewAction = reportAction.actionName === CONST.REPORT.ACTIONS.TYPE.REPORTPREVIEW;
+             const isIOUAction = reportAction.actionName === CONST.REPORT.ACTIONS.TYPE.IOU && !ReportActionsUtils.isSplitBillAction(reportAction);
+-            return subscribed && (isCommentAction || isReportPreviewAction || isIOUAction) && (!isDeletedAction || shouldDisplayThreadReplies);
++            return subscribed && (isCommentAction || isReportPreviewAction || isIOUAction) && (isDeletedAction || shouldDisplayThreadReplies);
+         },
+         onPress: (closePopover, {reportAction, reportID}) => {
+             let childReportNotificationPreference = lodashGet(reportAction, 'childReportNotificationPreference', '');
+

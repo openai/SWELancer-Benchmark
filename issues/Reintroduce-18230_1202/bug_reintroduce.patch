@@ -1,0 +1,13 @@
+diff --git a/src/pages/home/report/comment/TextCommentFragment.tsx b/src/pages/home/report/comment/TextCommentFragment.tsx
+index 221e91b9ba4..4a21f4fc4f0 100644
+--- a/src/pages/home/report/comment/TextCommentFragment.tsx
++++ b/src/pages/home/report/comment/TextCommentFragment.tsx
+@@ -80,7 +80,7 @@ function TextCommentFragment({fragment, styleAsDeleted, styleAsMuted = false, so
+         );
+     }
+ 
+-    const message = isEmpty(iouMessage) ? text : iouMessage;
++    const message = isEmpty(iouMessage) ? `\u2066${text}` : iouMessage;
+ 
+     return (
+         <Text style={[containsOnlyEmojis && styles.onlyEmojisText, styles.ltr, style]}>

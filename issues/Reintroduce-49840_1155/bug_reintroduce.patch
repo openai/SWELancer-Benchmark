@@ -1,0 +1,33 @@
+diff --git a/.npmrc b/.npmrc
+deleted file mode 100644
+index b6f27f13595..00000000000
+--- a/.npmrc
++++ /dev/null
+@@ -1 +0,0 @@
+-engine-strict=true
+diff --git a/src/components/SettlementButton/AnimatedSettlementButton.tsx b/src/components/SettlementButton/AnimatedSettlementButton.tsx
+index 5de528d741a..d35799d9bed 100644
+--- a/src/components/SettlementButton/AnimatedSettlementButton.tsx
++++ b/src/components/SettlementButton/AnimatedSettlementButton.tsx
+@@ -79,7 +79,7 @@ function AnimatedSettlementButton({isPaidAnimationRunning, onAnimationFinish, is
+         <Animated.View style={containerStyles}>
+             {isPaidAnimationRunning && (
+                 <Animated.View style={paymentCompleteTextStyles}>
+-                    <Text style={[styles.buttonMediumText]}>{translate('iou.paymentComplete')}</Text>
++                    <Text style={[styles.buttonMediumText]}>{translate('iou.paymentComplete') || "Payment complete"}</Text>
+                 </Animated.View>
+             )}
+             <Animated.View style={buttonStyles}>
+diff --git a/src/languages/es.ts b/src/languages/es.ts
+index c27714b1231..98dff9d295f 100644
+--- a/src/languages/es.ts
++++ b/src/languages/es.ts
+@@ -1030,7 +1030,7 @@ const translations = {
+         bookingArchived: 'Esta reserva está archivada',
+         bookingArchivedDescription: 'Esta reserva está archivada porque la fecha del viaje ha pasado. Agregue un gasto por el monto final si es necesario.',
+         attendees: 'Asistentes',
+-        paymentComplete: 'Pago completo',
++        paymentComplte: 'Pago completo',
+         justTrackIt: 'Solo guardarlo (no enviarlo)',
+     },
+     notificationPreferencesPage: {

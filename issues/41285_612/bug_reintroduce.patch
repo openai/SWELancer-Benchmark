@@ -1,0 +1,15 @@
+diff --git a/src/pages/iou/request/step/IOURequestStepMerchant.tsx b/src/pages/iou/request/step/IOURequestStepMerchant.tsx
+index a47e4d19be5..2b049e86895 100644
+--- a/src/pages/iou/request/step/IOURequestStepMerchant.tsx
++++ b/src/pages/iou/request/step/IOURequestStepMerchant.tsx
+@@ -63,9 +63,7 @@ function IOURequestStepMerchant({
+     const merchant = ReportUtils.getTransactionDetails(isEditingSplitBill && !isEmptyObject(splitDraftTransaction) ? splitDraftTransaction : transaction)?.merchant;
+     const isEmptyMerchant = merchant === '' || merchant === CONST.TRANSACTION.PARTIAL_TRANSACTION_MERCHANT;
+ 
+-    const isMerchantRequired =
+-        ReportUtils.isPolicyExpenseChat(report) || ReportUtils.isExpenseRequest(report) || transaction?.participants?.some((participant) => !!participant.isPolicyExpenseChat);
+-
++    const isMerchantRequired = ReportUtils.isReportInGroupPolicy(report) || transaction?.participants?.some((participant) => Boolean(participant.isPolicyExpenseChat));
+     const navigateBack = () => {
+         Navigation.goBack(backTo);
+     };

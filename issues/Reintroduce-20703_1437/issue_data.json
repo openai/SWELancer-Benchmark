@@ -1,0 +1,1 @@
+{"price": 1000.0, "title": "[HOLD for payment 2023-07-03] [$1000] The current report is not showing in the LHN when using #focus mode", "issue_repo_steps": "Action performed: 1. Log in to NewDot\r\n2. Set preference to #focus mode\r\n3. Open a new chat or search for any account to start a chat\n\nExpected result: Current chat report should be shown in LHN\n\nActual result: None"}

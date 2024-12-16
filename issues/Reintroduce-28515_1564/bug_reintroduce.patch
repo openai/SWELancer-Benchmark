@@ -1,0 +1,13 @@
+diff --git a/src/pages/iou/MoneyRequestAmountForm.tsx b/src/pages/iou/MoneyRequestAmountForm.tsx
+index ba406c3ddef..e1f9e97ed39 100644
+--- a/src/pages/iou/MoneyRequestAmountForm.tsx
++++ b/src/pages/iou/MoneyRequestAmountForm.tsx
+@@ -244,7 +244,7 @@ function MoneyRequestAmountForm(
+         return isEditing ? translate('common.save') : translate('common.next');
+     }, [skipConfirmation, iouType, isEditing, translate]);
+ 
+-    const canUseTouchScreen = DeviceCapabilities.canUseTouchScreen();
++    const canUseTouchScreen = DeviceCapabilities.hasHoverSupport();
+ 
+     useEffect(() => {
+         setFormError('');

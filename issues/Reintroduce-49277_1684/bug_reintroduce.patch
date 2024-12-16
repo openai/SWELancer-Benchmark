@@ -1,0 +1,13 @@
+diff --git a/src/pages/workspace/categories/CategorySettingsPage.tsx b/src/pages/workspace/categories/CategorySettingsPage.tsx
+index e03412d8eaf..b27467f3cf3 100644
+--- a/src/pages/workspace/categories/CategorySettingsPage.tsx
++++ b/src/pages/workspace/categories/CategorySettingsPage.tsx
+@@ -79,7 +79,7 @@ function CategorySettingsPage({
+ 
+     const approverText = useMemo(() => {
+         const categoryApprover = CategoryUtils.getCategoryApproverRule(policy?.rules?.approvalRules ?? [], categoryName)?.approver ?? '';
+-        const approver = PersonalDetailsUtils.getPersonalDetailByEmail(categoryApprover);
++        const approver = PersonalDetailsUtils.getPersonalDetailByEmail(categoryName);
+         return approver?.displayName ?? categoryApprover;
+     }, [categoryName, policy?.rules?.approvalRules]);
+ 

@@ -1,0 +1,13 @@
+diff --git a/src/libs/TransactionUtils/index.ts b/src/libs/TransactionUtils/index.ts
+index bf5073aba27..1bb248de156 100644
+--- a/src/libs/TransactionUtils/index.ts
++++ b/src/libs/TransactionUtils/index.ts
+@@ -453,7 +453,7 @@ function getMerchant(transaction: OnyxInputOrEntry<Transaction>): string {
+ }
+ 
+ function getMerchantOrDescription(transaction: OnyxEntry<Transaction>) {
+-    return !isMerchantMissing(transaction) ? getMerchant(transaction) : getDescription(transaction);
++    return isMerchantMissing(transaction) ? getMerchant(transaction) : getDescription(transaction);
+ }
+ 
+ /**

@@ -1,0 +1,20 @@
+diff --git a/.npmrc b/.npmrc
+deleted file mode 100644
+index b6f27f13595..00000000000
+--- a/.npmrc
++++ /dev/null
+@@ -1 +0,0 @@
+-engine-strict=true
+diff --git a/src/libs/actions/Welcome/OnboardingFlow.ts b/src/libs/actions/Welcome/OnboardingFlow.ts
+index b052214fe78..f6460f0cda6 100644
+--- a/src/libs/actions/Welcome/OnboardingFlow.ts
++++ b/src/libs/actions/Welcome/OnboardingFlow.ts
+@@ -111,7 +111,7 @@ function startOnboardingFlow() {
+         return;
+     }
+     navigationRef.resetRoot({
+-        ...navigationRef.getRootState(),
++        ...navigationRef.getRootState,
+         ...adaptedState,
+         stale: true,
+     } as PartialState<NavigationState>);

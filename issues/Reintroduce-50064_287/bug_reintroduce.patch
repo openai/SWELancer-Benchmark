@@ -1,0 +1,17 @@
+diff --git a/src/pages/OnboardingPurpose/BaseOnboardingPurpose.tsx b/src/pages/OnboardingPurpose/BaseOnboardingPurpose.tsx
+index 3b05c6bb40a..5fe4739ab27 100644
+--- a/src/pages/OnboardingPurpose/BaseOnboardingPurpose.tsx
++++ b/src/pages/OnboardingPurpose/BaseOnboardingPurpose.tsx
+@@ -83,10 +83,10 @@ function BaseOnboardingPurpose({shouldUseNativeStyles, shouldEnableMaxHeight, ro
+                 Welcome.setOnboardingErrorMessage('');
+ 
+                 if (choice === CONST.ONBOARDING_CHOICES.MANAGE_TEAM) {
+-                    Navigation.navigate(ROUTES.ONBOARDING_EMPLOYEES.getRoute(route.params?.backTo));
++                    Navigation.navigate(ROUTES.ONBOARDING_PERSONAL_DETAILS.getRoute(route.params?.backTo));
+                     return;
+                 }
+-                Navigation.navigate(ROUTES.ONBOARDING_PERSONAL_DETAILS.getRoute(route.params?.backTo));
++                Navigation.navigate(ROUTES.ONBOARDING_EMPLOYEES.getRoute(route.params?.backTo));
+             },
+         };
+     });

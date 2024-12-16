@@ -1,0 +1,23 @@
+diff --git a/src/libs/TransactionUtils/index.ts b/src/libs/TransactionUtils/index.ts
+index f14703fabdc..51ab13be19c 100644
+--- a/src/libs/TransactionUtils/index.ts
++++ b/src/libs/TransactionUtils/index.ts
+@@ -151,6 +151,9 @@ function buildOptimisticTransaction(
+     if (originalTransactionID) {
+         commentJSON.originalTransactionID = originalTransactionID;
+     }
++    if (!receipt?.name) {
++        filename = receipt?.source;
++    }
+
+     return {
+         ...(!isEmptyObject(pendingFields) ? {pendingFields} : {}),
+@@ -163,7 +166,7 @@ function buildOptimisticTransaction(
+         created: created || DateUtils.getDBTime(),
+         pendingAction: CONST.RED_BRICK_ROAD_PENDING_ACTION.ADD,
+         receipt: receipt?.source ? {source: receipt.source, state: receipt.state ?? CONST.IOU.RECEIPT_STATE.SCANREADY} : {},
+-        filename: (receipt?.source ? receipt?.name ?? filename : filename).toString(),
++        filename: filename,
+         category,
+         tag,
+         taxCode,

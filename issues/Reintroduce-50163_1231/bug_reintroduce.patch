@@ -1,0 +1,44 @@
+diff --git a/src/pages/GroupChatNameEditPage.tsx b/src/pages/GroupChatNameEditPage.tsx
+index 425e8a421cb..a5745752cbc 100644
+--- a/src/pages/GroupChatNameEditPage.tsx
++++ b/src/pages/GroupChatNameEditPage.tsx
+@@ -43,6 +43,8 @@ function GroupChatNameEditPage({groupChatDraft, report}: GroupChatNameEditPagePr
+     const styles = useThemeStyles();
+     const {translate} = useLocalize();
+     const {inputCallbackRef} = useAutoFocusInput();
++    const testId = GroupChatNameEditPage.displayName;
++    const shouldClearButtonisDisplayed:boolean = (testId=="GroupChatNameEditPage")? true: false;
+ 
+     const existingReportName = useMemo(
+         () => (report ? ReportUtils.getGroupChatName(undefined, false, report) : ReportUtils.getGroupChatName(groupChatDraft?.participants)),
+@@ -108,7 +110,7 @@ function GroupChatNameEditPage({groupChatDraft, report}: GroupChatNameEditPagePr
+                     inputID={INPUT_IDS.NEW_CHAT_NAME}
+                     role={CONST.ROLE.PRESENTATION}
+                     ref={inputCallbackRef}
+-                    shouldShowClearButton
++                    shouldShowClearButton = {shouldClearButtonisDisplayed}
+                 />
+             </FormProvider>
+         </ScreenWrapper>
+diff --git a/src/pages/Search/SavedSearchRenamePage.tsx b/src/pages/Search/SavedSearchRenamePage.tsx
+index 98a33759682..d534390dad4 100644
+--- a/src/pages/Search/SavedSearchRenamePage.tsx
++++ b/src/pages/Search/SavedSearchRenamePage.tsx
+@@ -22,6 +22,8 @@ function SavedSearchRenamePage({route}: {route: {params: {q: string; name: strin
+     const {q, name} = route.params;
+     const [newName, setNewName] = useState(name);
+     const {inputCallbackRef} = useAutoFocusInput();
++    const testId = SavedSearchRenamePage.displayName;
++    const shouldClearButtonisDisplayed:boolean = (testId=="GroupChatNameEditPage")? true: false;
+ 
+     const applyFiltersAndNavigate = () => {
+         SearchActions.clearAdvancedFilters();
+@@ -68,7 +70,7 @@ function SavedSearchRenamePage({route}: {route: {params: {q: string; name: strin
+                     onChangeText={(renamedName) => setNewName(renamedName)}
+                     ref={inputCallbackRef}
+                     defaultValue={name}
+-                    shouldShowClearButton
++                    shouldShowClearButton = {shouldClearButtonisDisplayed}
+                 />
+             </FormProvider>
+         </ScreenWrapper>

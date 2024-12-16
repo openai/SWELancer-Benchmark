@@ -1,0 +1,13 @@
+diff --git a/src/pages/home/report/ReportActionItem.tsx b/src/pages/home/report/ReportActionItem.tsx
+index 33664e2a416..9cbfb1f7f65 100644
+--- a/src/pages/home/report/ReportActionItem.tsx
++++ b/src/pages/home/report/ReportActionItem.tsx
+@@ -784,7 +784,7 @@ function ReportActionItem({
+                 )}
+ 
+                 {shouldDisplayThreadReplies && (
+-                    <View style={draftMessageRightAlign}>
++                    <View style={[draftMessageRightAlign, { padding: 10, margin: 15}]}>
+                         <ReportActionItemThread
+                             childReportID={`${action.childReportID}`}
+                             numberOfReplies={numberOfThreadReplies}

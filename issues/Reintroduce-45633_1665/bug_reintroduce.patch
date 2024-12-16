@@ -1,0 +1,17 @@
+diff --git a/src/components/MoneyRequestConfirmationList.tsx b/src/components/MoneyRequestConfirmationList.tsx
+index 0e0438f83b2..b43fe5426bd 100755
+--- a/src/components/MoneyRequestConfirmationList.tsx
++++ b/src/components/MoneyRequestConfirmationList.tsx
+@@ -781,9 +781,9 @@ function MoneyRequestConfirmationList({
+                     return;
+                 }
+ 
+-                if (shouldPlaySound) {
+-                    playSound(SOUNDS.DONE);
+-                }
++
++                playSound(SOUNDS.DONE);
++
+                 onConfirm?.(selectedParticipants);
+             } else {
+                 if (!paymentMethod) {

@@ -1,0 +1,14 @@
+diff --git a/src/libs/actions/IOU.ts b/src/libs/actions/IOU.ts
+index 7ce9b9dfb27..d47c74e6550 100644
+--- a/src/libs/actions/IOU.ts
++++ b/src/libs/actions/IOU.ts
+@@ -2474,7 +2474,7 @@ function calculateDiffAmount(
+         return updatedAmount - currentAmount;
+     }
+ 
+-    return 0;
++    return -currentAmount;
+ }
+ 
+ /**
+

@@ -1,0 +1,13 @@
+diff --git a/src/libs/SidebarUtils.ts b/src/libs/SidebarUtils.ts
+index e120f7026fc..e24679e9085 100644
+--- a/src/libs/SidebarUtils.ts
++++ b/src/libs/SidebarUtils.ts
+@@ -523,7 +523,7 @@ function getWelcomeMessage(report: OnyxEntry<Report>, policy: OnyxEntry<Policy>)
+         return welcomeMessage;
+     }
+ 
+-    if (ReportUtils.isSelfDM(report)) {
++    if (ReportUtils.isDM(report)) {
+         welcomeMessage.phrase1 = Localize.translateLocal('reportActionsView.beginningOfChatHistorySelfDM');
+         welcomeMessage.messageText = welcomeMessage.phrase1;
+         return welcomeMessage;

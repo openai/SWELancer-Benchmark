@@ -1,0 +1,15 @@
+diff --git a/src/pages/home/report/ReportActionCompose/ComposerWithSuggestions/ComposerWithSuggestions.tsx b/src/pages/home/report/ReportActionCompose/ComposerWithSuggestions/ComposerWithSuggestions.tsx
+index e63bd952b4a..f21e38668e6 100644
+--- a/src/pages/home/report/ReportActionCompose/ComposerWithSuggestions/ComposerWithSuggestions.tsx
++++ b/src/pages/home/report/ReportActionCompose/ComposerWithSuggestions/ComposerWithSuggestions.tsx
+@@ -820,8 +820,8 @@ function ComposerWithSuggestions(
+             {ReportUtils.isValidReportIDFromPath(reportID) && (
+                 <SilentCommentUpdater
+                     reportID={reportID}
+-                    value={value}
+-                    updateComment={updateComment}
++                    value={value.trim()}
++                    updateComment={(comment) => updateComment(comment.trim())}
+                     commentRef={commentRef}
+                     isCommentPendingSaved={isCommentPendingSaved}
+                 />

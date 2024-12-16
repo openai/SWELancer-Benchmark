@@ -1,0 +1,5 @@
+{
+    "price": 16000.0,
+    "title": "[$16000] Feature Request: App should play the uploaded videos inline - reported by @murataka",
+    "issue_repo_steps": "Action performed: 1. Open any chat \r\n2. Send a video file \r\n3. Try to play video in chat\n\nExpected result: App should play the uploaded videos inline\n\nActual result: None"
+}

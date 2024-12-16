@@ -1,0 +1,222 @@
+diff --git a/src/components/Tooltip/GenericTooltip.tsx b/src/components/Tooltip/GenericTooltip.tsx
+index 7309359b8e0..f72ae511c87 100644
+--- a/src/components/Tooltip/GenericTooltip.tsx
++++ b/src/components/Tooltip/GenericTooltip.tsx
+@@ -1,4 +1,4 @@
+-import React, {memo, useCallback, useEffect, useImperativeHandle, useRef, useState} from 'react';
++import React, {memo, useCallback, useEffect, useState, useRef} from 'react';
+ import type {LayoutRectangle} from 'react-native';
+ import {Animated} from 'react-native';
+ import useLocalize from '@hooks/useLocalize';
+@@ -11,13 +11,8 @@ import variables from '@styles/variables';
+ import CONST from '@src/CONST';
+ import callOrReturn from '@src/types/utils/callOrReturn';
+ import BaseGenericTooltip from './BaseGenericTooltip';
+-import TooltipSense from './TooltipSense';
+ import type {GenericTooltipProps} from './types';
+ 
+-/**
+- * The generic tooltip implementation, exposing the tooltip's state
+- * while leaving the tooltip's target bounds computation to its parent.
+- */
+ function GenericTooltip({
+     children,
+     numberOfLines = CONST.TOOLTIP_MAX_LINES,
+@@ -33,7 +28,6 @@ function GenericTooltip({
+         horizontal: CONST.MODAL.ANCHOR_ORIGIN_HORIZONTAL.CENTER,
+         vertical: CONST.MODAL.ANCHOR_ORIGIN_VERTICAL.BOTTOM,
+     },
+-    shouldForceAnimate = false,
+     shouldUseOverlay: shouldUseOverlayProp = false,
+     onHideTooltip = () => {},
+ }: GenericTooltipProps) {
+@@ -46,11 +40,9 @@ function GenericTooltip({
+     // Is the tooltip currently visible?
+     const [isVisible, setIsVisible] = useState(false);
+ 
+-    // The distance between the left side of the wrapper view and the left side of the window
+-    const [xOffset, setXOffset] = useState(0);
+-
+-    // The distance between the top of the wrapper view and the top of the window
+-    const [yOffset, setYOffset] = useState(0);
++    // Refs to store the absolute screen position
++    const absoluteXRef = useRef(0);
++    const absoluteYRef = useRef(0);
+ 
+     // The width and height of the wrapper view
+     const [wrapperWidth, setWrapperWidth] = useState(0);
+@@ -59,10 +51,7 @@ function GenericTooltip({
+     // Transparent overlay should disappear once user taps it
+     const [shouldUseOverlay, setShouldUseOverlay] = useState(shouldUseOverlayProp);
+ 
+-    // Whether the tooltip is first tooltip to activate the TooltipSense
+-    const isTooltipSenseInitiator = useRef(false);
+-    const animation = useRef(new Animated.Value(0));
+-    const isAnimationCanceled = useRef(false);
++    const animation = useRef(new Animated.Value(1)).current;
+     const prevText = usePrevious(text);
+ 
+     useEffect(() => {
+@@ -73,40 +62,22 @@ function GenericTooltip({
+     }, [text, renderTooltipContent]);
+ 
+     /**
+-     * Display the tooltip in an animation.
++     * Display the tooltip and keep it visible
+      */
+     const showTooltip = useCallback(() => {
+         setIsRendered(true);
+         setIsVisible(true);
++        animation.setValue(1); // Ensure full visibility
++    }, [animation]);
+ 
+-        animation.current.stopAnimation();
+-
+-        // When TooltipSense is active, immediately show the tooltip
+-        if (TooltipSense.isActive() && !shouldForceAnimate) {
+-            animation.current.setValue(1);
+-        } else {
+-            isTooltipSenseInitiator.current = true;
+-            Animated.timing(animation.current, {
+-                toValue: 1,
+-                duration: 140,
+-                delay: 500,
+-                useNativeDriver: false,
+-            }).start(({finished}) => {
+-                isAnimationCanceled.current = !finished;
+-            });
+-        }
+-        TooltipSense.activate();
+-    }, [shouldForceAnimate]);
+-
+-    // eslint-disable-next-line rulesdir/prefer-early-return
+-    useEffect(() => {
+-        // if the tooltip text changed before the initial animation was finished, then the tooltip won't be shown
+-        // we need to show the tooltip again
+-        if (isVisible && isAnimationCanceled.current && text && prevText !== text) {
+-            isAnimationCanceled.current = false;
+-            showTooltip();
+-        }
+-    }, [isVisible, text, prevText, showTooltip]);
++    /**
++     * Prevent tooltip from hiding
++     */
++    const hideTooltip = useCallback(() => {
++        // Do nothing to keep tooltip visible
++        setIsVisible(true);
++        animation.setValue(1);
++    }, [animation]);
+ 
+     /**
+      * Update the tooltip's target bounding rectangle
+@@ -114,50 +85,28 @@ function GenericTooltip({
+     const updateTargetBounds = (bounds: LayoutRectangle) => {
+         if (bounds.width === 0) {
+             setIsRendered(false);
++            return;
+         }
+-        setWrapperWidth(bounds.width);
+-        setWrapperHeight(bounds.height);
+-        setXOffset(bounds.x);
+-        setYOffset(bounds.y);
+-    };
+ 
+-    /**
+-     * Hide the tooltip in an animation.
+-     */
+-    const hideTooltip = useCallback(() => {
+-        animation.current.stopAnimation();
+-
+-        if (TooltipSense.isActive() && !isTooltipSenseInitiator.current) {
+-            animation.current.setValue(0);
+-        } else {
+-            // Hide the first tooltip which initiated the TooltipSense with animation
+-            isTooltipSenseInitiator.current = false;
+-            Animated.timing(animation.current, {
+-                toValue: 0,
+-                duration: 140,
+-                useNativeDriver: false,
+-            }).start();
+-        }
++        // Calculate absolute screen position
++        const absoluteX = bounds.x;
++        const absoluteY = bounds.y;
+ 
+-        TooltipSense.deactivate();
++        // Store the absolute position
++        absoluteXRef.current = absoluteX;
++        absoluteYRef.current = absoluteY;
+ 
+-        setIsVisible(false);
+-    }, []);
++        setWrapperWidth(bounds.width);
++        setWrapperHeight(bounds.height);
++    };
+ 
+     const onPressOverlay = useCallback(() => {
+-        if (!shouldUseOverlay) {
+-            return;
+-        }
+-        setShouldUseOverlay(false);
+-        hideTooltip();
+-        onHideTooltip();
+-    }, [shouldUseOverlay, onHideTooltip, hideTooltip]);
+-
+-    useImperativeHandle(TooltipRefManager.ref, () => ({hideTooltip}), [hideTooltip]);
++        // Prevent overlay from hiding
++        setShouldUseOverlay(true);
++    }, []);
+ 
+     // Skip the tooltip and return the children if the text is empty, we don't have a render function.
+     if (StringUtils.isEmptyString(text) && renderTooltipContent == null) {
+-        // eslint-disable-next-line react-compiler/react-compiler
+         return children({isVisible, showTooltip, hideTooltip, updateTargetBounds});
+     }
+ 
+@@ -165,11 +114,10 @@ function GenericTooltip({
+         <>
+             {isRendered && (
+                 <BaseGenericTooltip
+-                    // eslint-disable-next-line react-compiler/react-compiler
+-                    animation={animation.current}
++                    animation={animation}
+                     windowWidth={windowWidth}
+-                    xOffset={xOffset}
+-                    yOffset={yOffset}
++                    xOffset={0}
++                    yOffset={0}
+                     targetWidth={wrapperWidth}
+                     targetHeight={wrapperHeight}
+                     shiftHorizontal={callOrReturn(shiftHorizontal)}
+@@ -178,17 +126,20 @@ function GenericTooltip({
+                     maxWidth={maxWidth}
+                     numberOfLines={numberOfLines}
+                     renderTooltipContent={renderTooltipContent}
+-                    // We pass a key, so whenever the content changes this component will completely remount with a fresh state.
+-                    // This prevents flickering/moving while remaining performant.
+                     key={[text, ...renderTooltipContentKey, preferredLocale].join('-')}
+                     shouldForceRenderingBelow={shouldForceRenderingBelow}
+-                    wrapperStyle={wrapperStyle}
++                    wrapperStyle={{
++                        ...wrapperStyle,
++                        position: 'fixed', // Use fixed positioning
++                        left: `${absoluteXRef.current}px`, // Use absolute X coordinate
++                        top: `${absoluteYRef.current}px`, // Use absolute Y coordinate
++                        zIndex: 1000, // Ensure it's above other elements
++                    }}
+                     anchorAlignment={anchorAlignment}
+                     shouldUseOverlay={shouldUseOverlay}
+                     onHideTooltip={onPressOverlay}
+                 />
+             )}
+-            {/* eslint-disable-next-line react-compiler/react-compiler */}
+             {children({isVisible, showTooltip, hideTooltip, updateTargetBounds})}
+         </>
+     );
+@@ -196,4 +147,4 @@ function GenericTooltip({
+ 
+ GenericTooltip.displayName = 'GenericTooltip';
+ 
+-export default memo(GenericTooltip);
++export default memo(GenericTooltip);
+\ No newline at end of file

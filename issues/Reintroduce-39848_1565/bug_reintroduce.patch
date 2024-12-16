@@ -1,0 +1,13 @@
+diff --git a/src/pages/settings/Profile/CustomStatus/StatusPage.tsx b/src/pages/settings/Profile/CustomStatus/StatusPage.tsx
+index 26c2a909213..1518045a6a9 100644
+--- a/src/pages/settings/Profile/CustomStatus/StatusPage.tsx
++++ b/src/pages/settings/Profile/CustomStatus/StatusPage.tsx
+@@ -94,7 +94,7 @@ function StatusPage({draftStatus, currentUserPersonalDetails}: StatusPageProps)
+         [],
+     );
+ 
+-    const navigateBackToPreviousScreen = useCallback(() => Navigation.goBack(), []);
++    const navigateBackToPreviousScreen = useCallback(() => Navigation.navigate(ROUTES.REPORT), []);
+     const updateStatus = useCallback(
+         ({emojiCode, statusText}: FormOnyxValues<typeof ONYXKEYS.FORMS.SETTINGS_STATUS_SET_FORM>) => {
+             // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing

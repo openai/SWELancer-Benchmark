@@ -1,0 +1,87 @@
+diff --git a/src/libs/ReportUtils.ts b/src/libs/ReportUtils.ts
+index 78ebdd92751..c052b70d85c 100644
+--- a/src/libs/ReportUtils.ts
++++ b/src/libs/ReportUtils.ts
+@@ -2191,6 +2191,43 @@ function getParticipantsList(report: Report, personalDetails: OnyxEntry<Personal
+     });
+ }
+ 
++
++
++
++function getUpdateParticipantsList(report: Report, personalDetails: OnyxEntry<PersonalDetailsList>, isRoomMembersList = false, shouldExcludeDeleted = false) {
++    const isReportGroupChat = isGroupChat(report);
++    const isReportIOU = isIOUReport(report);
++    const shouldExcludeHiddenParticipants = !isReportGroupChat && !isReportIOU && !isRoomMembersList;
++    const reportParticipants = report?.participants ?? {};
++    let participantsEntries = Object.entries(reportParticipants);
++    let participantsIds = participantsEntries.map(([accountID]) => Number(accountID));
++    const shouldExcludeCurrentUser = isOneOnOneChat(report) || isSystemChat(report);
++    let currentUserID = [];
++    for (const accountID of participantsIds) {
++        if (accountID === currentUserAccountID && !(shouldExcludeCurrentUser)){
++            currentUserID.push(Number(accountID));
++        }
++    }
++    if (shouldExcludeHiddenParticipants || shouldExcludeDeleted) {
++        participantsIds = participantsIds.filter((accountID) => {
++            if (shouldExcludeHiddenParticipants && reportParticipants[accountID]?.notificationPreference === CONST.REPORT.NOTIFICATION_PREFERENCE.HIDDEN) {
++                return false;
++            }
++            if (
++                shouldExcludeDeleted &&
++                report?.pendingChatMembers?.findLast((member) => Number(member.accountID) === accountID)?.pendingAction === CONST.RED_BRICK_ROAD_PENDING_ACTION.DELETE
++            ) {
++                return false;
++            }
++            return true;
++        });
++    }
++    const updatedParticipants = [...currentUserID, ...participantsIds];
++    return updatedParticipants;
++}
++
++
++
+ function buildParticipantsFromAccountIDs(accountIDs: number[]): Participants {
+     const finalParticipants: Participants = {};
+     return accountIDs.reduce((participants, accountID) => {
+@@ -8118,6 +8155,7 @@ export {
+     getParsedComment,
+     getParticipantsAccountIDsForDisplay,
+     getParticipantsList,
++    getUpdateParticipantsList,
+     getParticipants,
+     getPendingChatMembers,
+     getPersonalDetailsForAccountID,
+diff --git a/src/pages/ReportDetailsPage.tsx b/src/pages/ReportDetailsPage.tsx
+index 195c14698f7..aef41099eba 100644
+--- a/src/pages/ReportDetailsPage.tsx
++++ b/src/pages/ReportDetailsPage.tsx
+@@ -296,15 +296,15 @@ function ReportDetailsPage({policies, report, route}: ReportDetailsPageProps) {
+         if (isArchivedRoom) {
+             return items;
+         }
+-
+         // The Members page is only shown when:
+         // - The report is a thread in a chat report
+         // - The report is not a user created room with participants to show i.e. DM, Group Chat, etc
+         // - The report is a user created room and the room and the current user is a workspace member i.e. non-workspace members should not see this option.
++        const updatedParticipants = ReportUtils.getUpdateParticipantsList(report, personalDetails, shouldOpenRoomMembersPage);
+         if (
+             (isGroupChat ||
+                 (isDefaultRoom && isChatThread && isPolicyEmployee) ||
+-                (!isUserCreatedPolicyRoom && participants.length) ||
++                (!isUserCreatedPolicyRoom && updatedParticipants) ||
+                 (isUserCreatedPolicyRoom && (isPolicyEmployee || (isChatThread && !ReportUtils.isPublicRoom(report))))) &&
+             !ReportUtils.isConciergeChatReport(report) &&
+             !isSystemChat
+@@ -313,7 +313,7 @@ function ReportDetailsPage({policies, report, route}: ReportDetailsPageProps) {
+                 key: CONST.REPORT_DETAILS_MENU_ITEM.MEMBERS,
+                 translationKey: 'common.members',
+                 icon: Expensicons.Users,
+-                subtitle: activeChatMembers.length,
++                subtitle: updatedParticipants?.length || 0,
+                 isAnonymousAction: false,
+                 shouldShowRightIcon: true,
+                 action: () => {

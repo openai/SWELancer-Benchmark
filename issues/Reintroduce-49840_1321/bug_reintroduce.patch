@@ -1,0 +1,39 @@
+diff --git a/src/components/SettlementButton/AnimatedSettlementButton.tsx b/src/components/SettlementButton/AnimatedSettlementButton.tsx
+index 5de528d741a..4ed812a59a5 100644
+--- a/src/components/SettlementButton/AnimatedSettlementButton.tsx
++++ b/src/components/SettlementButton/AnimatedSettlementButton.tsx
+@@ -79,7 +79,7 @@ function AnimatedSettlementButton({isPaidAnimationRunning, onAnimationFinish, is
+         <Animated.View style={containerStyles}>
+             {isPaidAnimationRunning && (
+                 <Animated.View style={paymentCompleteTextStyles}>
+-                    <Text style={[styles.buttonMediumText]}>{translate('iou.paymentComplete')}</Text>
++                    <Text style={[styles.buttonMediumText]}>{translate('iou.complete')}</Text>
+                 </Animated.View>
+             )}
+             <Animated.View style={buttonStyles}>
+diff --git a/src/languages/en.ts b/src/languages/en.ts
+index 34b315882d3..2668bcc8cab 100755
+--- a/src/languages/en.ts
++++ b/src/languages/en.ts
+@@ -1033,7 +1033,7 @@ const translations = {
+         bookingArchived: 'This booking is archived',
+         bookingArchivedDescription: 'This booking is archived because the trip date has passed. Add an expense for the final amount if needed.',
+         attendees: 'Attendees',
+-        paymentComplete: 'Payment complete',
++        complete: 'Payment complete',
+         justTrackIt: 'Just track it (don’t submit it)',
+     },
+     notificationPreferencesPage: {
+diff --git a/src/languages/es.ts b/src/languages/es.ts
+index c27714b1231..fb32671c6c0 100644
+--- a/src/languages/es.ts
++++ b/src/languages/es.ts
+@@ -1030,7 +1030,7 @@ const translations = {
+         bookingArchived: 'Esta reserva está archivada',
+         bookingArchivedDescription: 'Esta reserva está archivada porque la fecha del viaje ha pasado. Agregue un gasto por el monto final si es necesario.',
+         attendees: 'Asistentes',
+-        paymentComplete: 'Pago completo',
++        complete: 'Payment complete',
+         justTrackIt: 'Solo guardarlo (no enviarlo)',
+     },
+     notificationPreferencesPage: {

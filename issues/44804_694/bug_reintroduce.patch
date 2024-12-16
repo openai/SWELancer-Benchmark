@@ -1,0 +1,13 @@
+diff --git a/src/libs/SubscriptionUtils.ts b/src/libs/SubscriptionUtils.ts
+index f2ceef9069f..8938089fda7 100644
+--- a/src/libs/SubscriptionUtils.ts
++++ b/src/libs/SubscriptionUtils.ts
+@@ -354,7 +354,7 @@ function hasSubscriptionRedDotError(): boolean {
+  * @returns Whether there is a subscription green dot info.
+  */
+ function hasSubscriptionGreenDotInfo(): boolean {
+-    return getSubscriptionStatus()?.isError === false;
++    return !getSubscriptionStatus()?.isError ?? false;
+ }
+ 
+ /**

@@ -1,0 +1,13 @@
+diff --git a/src/components/Tooltip/BaseGenericTooltip/index.tsx b/src/components/Tooltip/BaseGenericTooltip/index.tsx
+index 4477c991e3a..793dd04fd8a 100644
+--- a/src/components/Tooltip/BaseGenericTooltip/index.tsx
++++ b/src/components/Tooltip/BaseGenericTooltip/index.tsx
+@@ -111,7 +111,7 @@ function BaseGenericTooltip({
+                 style={textStyle}
+             >
+                 <Text
+-                    style={textStyle}
++                    style={{...textStyle, textAlign: 'left'}}
+                     ref={textRef(contentRef)}
+                 >
+                     {text}

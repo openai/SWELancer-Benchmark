@@ -1,0 +1,95 @@
+diff --git a/.npmrc b/.npmrc
+deleted file mode 100644
+index b6f27f13595..00000000000
+--- a/.npmrc
++++ /dev/null
+@@ -1 +0,0 @@
+-engine-strict=true
+diff --git a/src/pages/home/report/ReportActionCompose/ComposerWithSuggestions/ComposerWithSuggestions.tsx b/src/pages/home/report/ReportActionCompose/ComposerWithSuggestions/ComposerWithSuggestions.tsx
+index e63bd952b4a..038e7413953 100644
+--- a/src/pages/home/report/ReportActionCompose/ComposerWithSuggestions/ComposerWithSuggestions.tsx
++++ b/src/pages/home/report/ReportActionCompose/ComposerWithSuggestions/ComposerWithSuggestions.tsx
+@@ -415,15 +415,6 @@ function ComposerWithSuggestions(
+             const isEmojiInserted = diff.length && endIndex > startIndex && diff.trim() === diff && EmojiUtils.containsOnlyEmojis(diff);
+             const commentWithSpaceInserted = isEmojiInserted ? ComposerUtils.insertWhiteSpaceAtIndex(commentValue, endIndex) : commentValue;
+             const {text: newComment, emojis, cursorPosition} = EmojiUtils.replaceAndExtractEmojis(commentWithSpaceInserted, preferredSkinTone, preferredLocale);
+-            if (emojis.length) {
+-                const newEmojis = EmojiUtils.getAddedEmojis(emojis, emojisPresentBefore.current);
+-                if (newEmojis.length) {
+-                    // Ensure emoji suggestions are hidden after inserting emoji even when the selection is not changed
+-                    if (suggestionsRef.current) {
+-                        suggestionsRef.current.resetSuggestions();
+-                    }
+-                }
+-            }
+             const newCommentConverted = convertToLTRForComposer(newComment);
+             const isNewCommentEmpty = !!newCommentConverted.match(/^(\s)*$/);
+             const isPrevCommentEmpty = !!commentRef.current.match(/^(\s)*$/);
+@@ -461,7 +452,7 @@ function ComposerWithSuggestions(
+                 debouncedBroadcastUserIsTyping(reportID);
+             }
+         },
+-        [findNewlyAddedChars, preferredLocale, preferredSkinTone, reportID, setIsCommentEmpty, suggestionsRef, raiseIsScrollLikelyLayoutTriggered, debouncedSaveReportComment, selection.end],
++        [findNewlyAddedChars, preferredLocale, preferredSkinTone, reportID, setIsCommentEmpty, raiseIsScrollLikelyLayoutTriggered, debouncedSaveReportComment, selection.end],
+     );
+ 
+     /**
+diff --git a/src/pages/home/report/ReportActionCompose/SuggestionEmoji.tsx b/src/pages/home/report/ReportActionCompose/SuggestionEmoji.tsx
+index 3051bfb1689..9122b3f6749 100644
+--- a/src/pages/home/report/ReportActionCompose/SuggestionEmoji.tsx
++++ b/src/pages/home/report/ReportActionCompose/SuggestionEmoji.tsx
+@@ -98,7 +98,7 @@ function SuggestionEmoji(
+                 start: suggestionValues.colonIndex + emojiCode.length + CONST.SPACE_LENGTH,
+                 end: suggestionValues.colonIndex + emojiCode.length + CONST.SPACE_LENGTH,
+             });
+-            setSuggestionValues((prevState) => ({...prevState, suggestedEmojis: []}));
++            setSuggestionValues((prevState) => ({...prevState}));
+         },
+         [preferredSkinTone, resetKeyboardInput, selection.end, setSelection, suggestionValues.colonIndex, suggestionValues.suggestedEmojis, updateComment, value],
+     );
+@@ -107,13 +107,12 @@ function SuggestionEmoji(
+      * Clean data related to suggestions
+      */
+     const resetSuggestions = useCallback(() => {
+-        setSuggestionValues(defaultSuggestionsValues);
+     }, []);
+ 
+     const updateShouldShowSuggestionMenuToFalse = useCallback(() => {
+         setSuggestionValues((prevState) => {
+             if (prevState.shouldShowSuggestionMenu) {
+-                return {...prevState, shouldShowSuggestionMenu: false};
++                return {...prevState, shouldShowSuggestionMenu: true};
+             }
+             return prevState;
+         });
+@@ -154,7 +153,6 @@ function SuggestionEmoji(
+         (newValue: string, selectionStart?: number, selectionEnd?: number) => {
+             if (selectionStart !== selectionEnd || !selectionEnd || shouldBlockCalc.current || !newValue || (selectionStart === 0 && selectionEnd === 0)) {
+                 shouldBlockCalc.current = false;
+-                resetSuggestions();
+                 return;
+             }
+             const leftString = newValue.substring(0, selectionEnd);
+@@ -168,18 +166,17 @@ function SuggestionEmoji(
+             };
+             const newSuggestedEmojis = EmojiUtils.suggestEmojis(leftString, preferredLocale);
+ 
+-            if (newSuggestedEmojis?.length && isCurrentlyShowingEmojiSuggestion) {
++            if (newSuggestedEmojis?.length) {
+                 nextState.suggestedEmojis = newSuggestedEmojis;
+-                nextState.shouldShowSuggestionMenu = !isEmptyObject(newSuggestedEmojis);
++                nextState.shouldShowSuggestionMenu = true;
++                setSuggestionValues((prevState) => ({...prevState, ...nextState}));
+             }
+-
+             // Early return if there is no update
+             const currentState = suggestionValuesRef.current;
+             if (nextState.suggestedEmojis.length === 0 && currentState.suggestedEmojis.length === 0) {
+                 return;
+             }
+ 
+-            setSuggestionValues((prevState) => ({...prevState, ...nextState}));
+             setHighlightedEmojiIndex(0);
+         },
+         [preferredLocale, setHighlightedEmojiIndex, resetSuggestions],
+

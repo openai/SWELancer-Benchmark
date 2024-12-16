@@ -1,0 +1,21 @@
+diff --git a/src/components/TabSelector/TabSelectorItem.tsx b/src/components/TabSelector/TabSelectorItem.tsx
+index 274813d9a44..be7a70e3d12 100644
+--- a/src/components/TabSelector/TabSelectorItem.tsx
++++ b/src/components/TabSelector/TabSelectorItem.tsx
+@@ -34,7 +34,7 @@ type TabSelectorItemProps = {
+ 
+ function TabSelectorItem({icon, title = '', onPress = () => {}, backgroundColor = '', activeOpacity = 0, inactiveOpacity = 1, isActive = false}: TabSelectorItemProps) {
+     const styles = useThemeStyles();
+-    const [isHovered, setIsHovered] = useState(false);
++    const [isHovered, setIsHovered] = useState(true);
+ 
+     return (
+         <AnimatedPressableWithFeedback
+@@ -42,7 +42,6 @@ function TabSelectorItem({icon, title = '', onPress = () => {}, backgroundColor
+             style={[styles.tabSelectorButton, styles.tabBackground(isHovered, isActive, backgroundColor), styles.userSelectNone]}
+             wrapperStyle={[styles.flex1]}
+             onPress={onPress}
+-            onHoverIn={() => setIsHovered(true)}
+             onHoverOut={() => setIsHovered(false)}
+             role={CONST.ROLE.BUTTON}
+             dataSet={{[CONST.SELECTION_SCRAPER_HIDDEN_ELEMENT]: true}}

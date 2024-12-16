@@ -1,0 +1,13 @@
+diff --git a/src/hooks/useDeleteSavedSearch.tsx b/src/hooks/useDeleteSavedSearch.tsx
+index ddd2b83f5bc..5764731c8bd 100644
+--- a/src/hooks/useDeleteSavedSearch.tsx
++++ b/src/hooks/useDeleteSavedSearch.tsx
+@@ -19,7 +19,7 @@ export default function useDeleteSavedSearch() {
+ 
+     const handleDelete = () => {
+         SearchActions.deleteSavedSearch(hashToDelete);
+-        setIsDeleteModalVisible(false);
++        setIsDeleteModalVisible(true);
+         SearchActions.clearAdvancedFilters();
+         Navigation.navigate(
+             ROUTES.SEARCH_CENTRAL_PANE.getRoute({

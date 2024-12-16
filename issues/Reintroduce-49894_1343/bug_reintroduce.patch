@@ -1,0 +1,17 @@
+diff --git a/src/libs/StringUtils.ts b/src/libs/StringUtils.ts
+index d13c38700e1..45ce7e97461 100644
+--- a/src/libs/StringUtils.ts
++++ b/src/libs/StringUtils.ts
+@@ -44,7 +44,11 @@ function removeInvisibleCharacters(value: string): string {
+         .map((part) =>
+             // Remove all characters from the 'Other' (C) category except for format characters (Cf)
+             // because some of them are used for emojis
+-            part.replace(/[\p{Cc}\p{Cs}\p{Co}\p{Cn}]/gu, ''),
++            /`/.test(part)
++                ? (part.replace(/`([^`]*)`/g, (_, inner) => inner.trim()).trim() === '' 
++                    ? ''
++                    : `\`${part.replace(/`([^`]*)`/g, (_, inner) => inner.trim())}\``)
++                : part.replace(/[\p{Cc}\p{Cs}\p{Co}\p{Cn}]/gu, '')
+         )
+         .join('\n');
+ 

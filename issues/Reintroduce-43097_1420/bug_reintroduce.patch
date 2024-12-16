@@ -1,0 +1,32 @@
+
+diff --git a/src/libs/ExportOnyxState/index.ts b/src/libs/ExportOnyxState/index.ts
+index 66fa6744ecd..364907c9a5c 100644
+--- a/src/libs/ExportOnyxState/index.ts
++++ b/src/libs/ExportOnyxState/index.ts
+@@ -30,17 +30,20 @@ const readFromOnyxDatabase = () =>
+         };
+     });
+ 
+-const shareAsFile = (value: string) => {
+-    const element = document.createElement('a');
++const prepareDownloadElement = (element: HTMLAnchorElement, value: string) => {
+     element.setAttribute('href', `data:text/plain;charset=utf-8,${encodeURIComponent(value)}`);
+     element.setAttribute('download', CONST.DEFAULT_ONYX_DUMP_FILE_NAME);
+-
+     element.style.display = 'none';
+-    document.body.appendChild(element);
++    return document.createElement('a');
++};
+ 
+-    element.click();
++const shareAsFile = (value: string) => {
++    const element = document.createElement('a');
++    const downloadElement = prepareDownloadElement(element, value);
+ 
+-    document.body.removeChild(element);
++    document.body.appendChild(downloadElement);
++    downloadElement.click();
++    document.body.removeChild(downloadElement);
+ };
+ 
+ export default {

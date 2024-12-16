@@ -1,0 +1,14 @@
+diff --git a/src/libs/OptionsListUtils.ts b/src/libs/OptionsListUtils.ts
+index a2a8587cec8..785eda8049b 100644
+--- a/src/libs/OptionsListUtils.ts
++++ b/src/libs/OptionsListUtils.ts
+@@ -1504,7 +1504,7 @@ function createOptionList(personalDetails: OnyxEntry<PersonalDetailsList>, repor
+             // Save the report in the map if this is a single participant so we can associate the reportID with the
+             // personal detail option later. Individuals should not be associated with single participant
+             // policyExpenseChats or chatRooms since those are not people.
+-            if (accountIDs.length <= 1 && isOneOnOneChat) {
++            if (accountIDs.length <= 1 || isOneOnOneChat) {
+                 reportMapForAccountIDs[accountIDs[0]] = report;
+             }
+ 
+

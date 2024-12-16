@@ -1,0 +1,29 @@
+diff --git a/.npmrc b/.npmrc
+deleted file mode 100644
+index b6f27f13595..00000000000
+--- a/.npmrc
++++ /dev/null
+@@ -1 +0,0 @@
+-engine-strict=true
+diff --git a/src/pages/workspace/workflows/WorkspaceWorkflowsPage.tsx b/src/pages/workspace/workflows/WorkspaceWorkflowsPage.tsx
+index cf1fdf30c7a..6fa6e3fa90b 100644
+--- a/src/pages/workspace/workflows/WorkspaceWorkflowsPage.tsx
++++ b/src/pages/workspace/workflows/WorkspaceWorkflowsPage.tsx
+@@ -110,7 +110,7 @@ function WorkspaceWorkflowsPage({policy, route}: WorkspaceWorkflowsPageProps) {
+ 
+     const optionItems: ToggleSettingOptionRowProps[] = useMemo(() => {
+         const {accountNumber, addressName, bankName, bankAccountID} = policy?.achAccount ?? {};
+-        const shouldShowBankAccount = !!bankAccountID && policy?.reimbursementChoice === CONST.POLICY.REIMBURSEMENT_CHOICES.REIMBURSEMENT_YES;
++        const shouldShowBankAccount = !!policy?.achAccount && policy?.reimbursementChoice === CONST.POLICY.REIMBURSEMENT_CHOICES.REIMBURSEMENT_YES;
+         const bankIcon = getBankIcon({bankName: bankName as BankName, isCard: false, styles});
+ 
+         let bankDisplayName = bankName ?? addressName;
+@@ -224,7 +224,7 @@ function WorkspaceWorkflowsPage({policy, route}: WorkspaceWorkflowsPageProps) {
+                                 </View>
+                             )}
+                             <MenuItem
+-                                title={shouldShowBankAccount ? addressName : translate('workflowsPage.connectBankAccount')}
++                                title={shouldShowBankAccount ? translate('common.bankAccount') : translate('workflowsPage.connectBankAccount')}
+                                 titleStyle={shouldShowBankAccount ? undefined : styles.textLabelSupportingEmptyValue}
+                                 description={getPaymentMethodDescription(CONST.PAYMENT_METHODS.BUSINESS_BANK_ACCOUNT, policy?.achAccount ?? {})}
+                                 onPress={() => {

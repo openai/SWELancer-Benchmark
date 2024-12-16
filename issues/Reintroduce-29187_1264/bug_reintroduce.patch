@@ -1,0 +1,36 @@
+diff --git a/src/pages/home/report/ReportActionCompose/SuggestionMention.tsx b/src/pages/home/report/ReportActionCompose/SuggestionMention.tsx
+index 8d37a1915cb..fd656ac3124 100644
+--- a/src/pages/home/report/ReportActionCompose/SuggestionMention.tsx
++++ b/src/pages/home/report/ReportActionCompose/SuggestionMention.tsx
+@@ -187,17 +187,28 @@ function SuggestionMention(
+         [formatLoginPrivateDomain],
+     );
+ 
++    function replaceAtSymbol(input: string): string {
++        return input.replace(/^@/, "");
++    }
++
++    function insertAt(input: string, index: number, textToInsert: string): string {
++        if (index < 0 || index > input.length) {
++          return input;
++        }
++        return input.substring(0, index) + textToInsert + ' ' + replaceAtSymbol(input.substring(index));
++    }
++
+     /**
+      * Replace the code of mention and update selection
+      */
+     const insertSelectedMention = useCallback(
+         (highlightedMentionIndexInner: number) => {
++            debugger
+             const commentBeforeAtSign = value.slice(0, suggestionValues.atSignIndex);
+             const mentionObject = suggestionValues.suggestedMentions[highlightedMentionIndexInner];
+             const mentionCode = getMentionCode(mentionObject, suggestionValues.prefixType);
+-            const commentAfterMention = value.slice(suggestionValues.atSignIndex + suggestionValues.mentionPrefix.length + 1);
+-
+-            updateComment(`${commentBeforeAtSign}${mentionCode} ${SuggestionsUtils.trimLeadingSpace(commentAfterMention)}`, true);
++            const result = insertAt(value, commentBeforeAtSign.length, mentionCode);
++            updateComment(`${result}`, true);
+             const selectionPosition = suggestionValues.atSignIndex + mentionCode.length + CONST.SPACE_LENGTH;
+             setSelection({
+                 start: selectionPosition,

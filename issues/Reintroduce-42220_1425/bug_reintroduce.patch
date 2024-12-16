@@ -1,0 +1,54 @@
+diff --git a/src/pages/workspace/tags/WorkspaceTagsPage.tsx b/src/pages/workspace/tags/WorkspaceTagsPage.tsx
+index ffdfdead759..61e5ef9e888 100644
+--- a/src/pages/workspace/tags/WorkspaceTagsPage.tsx
++++ b/src/pages/workspace/tags/WorkspaceTagsPage.tsx
+@@ -308,25 +308,24 @@ function WorkspaceTagsPage({route}: WorkspaceTagsPageProps) {
+                 },
+             },
+         ];
+-
+-        if (hasVisibleTags) {
++        if (!hasVisibleTags) {
+             menuItems.push({
+                 icon: Expensicons.Download,
+                 text: translate('spreadsheet.downloadCSV'),
+                 onSelected: () => {
+-                    if (isOffline) {
+-                        Modal.close(() => setIsOfflineModalVisible(true));
++                    if (!isOffline) { 
++                        Modal.close(() => setIsOfflineModalVisible(false)); 
+                         return;
+                     }
+                     Modal.close(() => {
+                         Tag.downloadTagsCSV(policyID, () => {
+-                            setIsDownloadFailureModalVisible(true);
++                            setIsDownloadFailureModalVisible(false); 
+                         });
+                     });
+                 },
+             });
+         }
+-
++        
+         return menuItems;
+     }, [translate, hasVisibleTags, isOffline, policyID]);
+ 
+@@ -393,7 +392,8 @@ function WorkspaceTagsPage({route}: WorkspaceTagsPageProps) {
+                     cancelText={translate('common.cancel')}
+                     danger
+                 />
+-                {(!shouldUseNarrowLayout || !hasVisibleTags || isLoading) && getHeaderText()}
++                {(!shouldUseNarrowLayout || hasVisibleTags || isLoading) && getHeaderText()}
++
+                 {isLoading && (
+                     <ActivityIndicator
+                         size={CONST.ACTIVITY_INDICATOR_SIZE.LARGE}
+@@ -401,7 +401,7 @@ function WorkspaceTagsPage({route}: WorkspaceTagsPageProps) {
+                         color={theme.spinner}
+                     />
+                 )}
+-                {!hasVisibleTags && !isLoading && (
++                {!hasVisibleTags && isLoading && (
+                     <EmptyStateComponent
+                         SkeletonComponent={TableListItemSkeleton}
+                         headerMediaType={CONST.EMPTY_STATE_MEDIA.ANIMATION}

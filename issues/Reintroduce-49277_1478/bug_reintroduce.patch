@@ -1,0 +1,17 @@
+diff --git a/src/pages/workspace/categories/CategorySettingsPage.tsx b/src/pages/workspace/categories/CategorySettingsPage.tsx
+index e03412d8eaf..748d2e4fe02 100644
+--- a/src/pages/workspace/categories/CategorySettingsPage.tsx
++++ b/src/pages/workspace/categories/CategorySettingsPage.tsx
+@@ -78,9 +78,9 @@ function CategorySettingsPage({
+     }, [policyCategory?.maxExpenseAmount, policyCategoryExpenseLimitType, policyCurrency, translate]);
+ 
+     const approverText = useMemo(() => {
+-        const categoryApprover = CategoryUtils.getCategoryApproverRule(policy?.rules?.approvalRules ?? [], categoryName)?.approver ?? '';
+-        const approver = PersonalDetailsUtils.getPersonalDetailByEmail(categoryApprover);
+-        return approver?.displayName ?? categoryApprover;
++        const categoryApproverRule = CategoryUtils.getCategoryApproverRule(policy?.rules?.approvalRules ?? [], categoryName);
++        const approver = categoryApproverRule?.approver;
++        return approver && approver.includes('@') ? approver : '';
+     }, [categoryName, policy?.rules?.approvalRules]);
+ 
+     const defaultTaxRateText = useMemo(() => {

@@ -1,0 +1,41 @@
+diff --git a/src/components/EmojiPicker/EmojiPicker.tsx b/src/components/EmojiPicker/EmojiPicker.tsx
+index 79af5bc0a4f..64c24569da4 100644
+--- a/src/components/EmojiPicker/EmojiPicker.tsx
++++ b/src/components/EmojiPicker/EmojiPicker.tsx
+@@ -57,7 +57,7 @@ function EmojiPicker({viewportOffsetTop}: EmojiPickerProps, ref: ForwardedRef<Em
+      *
+      * Don't directly get the ref from emojiPopoverAnchorRef, instead use getEmojiPopoverAnchor()
+      */
+-    const getEmojiPopoverAnchor = useCallback(() => emojiPopoverAnchorRef.current ?? (emojiPopoverAnchorRef as EmojiPopoverAnchor), []);
++    const getEmojiPopoverAnchor = useCallback(() => emojiPopoverAnchorRef ?? (emojiPopoverAnchorRef as EmojiPopoverAnchor), []);
+ 
+     /**
+      * Show the emoji picker menu.
+@@ -83,7 +83,7 @@ function EmojiPicker({viewportOffsetTop}: EmojiPickerProps, ref: ForwardedRef<Em
+         onEmojiSelected.current = onEmojiSelectedValue;
+         activeEmoji.current = activeEmojiValue;
+         emojiPopoverAnchorRef.current = emojiPopoverAnchorValue;
+-        const emojiPopoverAnchor = getEmojiPopoverAnchor();
++        const emojiPopoverAnchor = getEmojiPopoverAnchor().current;
+         // Drop focus to avoid blue focus ring.
+         emojiPopoverAnchor?.current?.blur();
+ 
+@@ -163,7 +163,7 @@ function EmojiPicker({viewportOffsetTop}: EmojiPickerProps, ref: ForwardedRef<Em
+ 
+     useEffect(() => {
+         const emojiPopoverDimensionListener = Dimensions.addEventListener('change', () => {
+-            const emojiPopoverAnchor = getEmojiPopoverAnchor();
++            const emojiPopoverAnchor = getEmojiPopoverAnchor().current;
+             if (!emojiPopoverAnchor?.current) {
+                 // In small screen width, the window size change might be due to keyboard open/hide, we should avoid hide EmojiPicker in those cases
+                 if (isEmojiPickerVisible && !shouldUseNarrowLayout) {
+@@ -207,7 +207,7 @@ function EmojiPicker({viewportOffsetTop}: EmojiPickerProps, ref: ForwardedRef<Em
+                 vertical: emojiPopoverAnchorPosition.vertical,
+                 horizontal: emojiPopoverAnchorPosition.horizontal,
+             }}
+-            anchorRef={getEmojiPopoverAnchor() as RefObject<View | HTMLDivElement>}
++            anchorRef={getEmojiPopoverAnchor().current as RefObject<View | HTMLDivElement>}
+             withoutOverlay
+             popoverDimensions={{
+                 width: CONST.EMOJI_PICKER_SIZE.WIDTH,
+

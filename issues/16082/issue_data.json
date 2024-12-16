@@ -1,0 +1,5 @@
+{
+    "price": 4000.0,
+    "title": "[HOLD for payment 2023-05-16] [$4000] Web - Inputs are \"Flickering\" in VBA flow when clicked on",
+    "issue_repo_steps": "Action performed: 1. Access staging.new.expensify.com\r\n2. Sign into a valid account\r\n3. Click on Profile > Workspace > Connect to bank\r\n4. Proceed with flow until you reach the \"Date\" section\r\n5. Click on the date input fields\n\nExpected result: User expects the button to be clicked on with no flickering\n\nActual result: None"
+}

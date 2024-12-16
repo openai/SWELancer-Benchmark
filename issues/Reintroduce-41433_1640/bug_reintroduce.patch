@@ -1,0 +1,15 @@
+diff --git a/src/pages/home/report/ReportActionCompose/ComposerWithSuggestions/ComposerWithSuggestions.tsx b/src/pages/home/report/ReportActionCompose/ComposerWithSuggestions/ComposerWithSuggestions.tsx
+index d4c9f9cdefa..adfdd16327f 100644
+--- a/src/pages/home/report/ReportActionCompose/ComposerWithSuggestions/ComposerWithSuggestions.tsx
++++ b/src/pages/home/report/ReportActionCompose/ComposerWithSuggestions/ComposerWithSuggestions.tsx
+@@ -489,7 +489,7 @@ function ComposerWithSuggestions(
+         debouncedSaveReportComment.cancel();
+         isCommentPendingSaved.current = false;
+ 
+-        setSelection({start: 0, end: 0});
++        setSelection({start: 1, end: 5});
+         updateComment('');
+         setTextInputShouldClear(true);
+         if (isComposerFullSize) {
+
+

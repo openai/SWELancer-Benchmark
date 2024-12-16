@@ -1,0 +1,13 @@
+diff --git a/src/languages/es.ts b/src/languages/es.ts
+index c27714b1231..fc42baac09a 100644
+--- a/src/languages/es.ts
++++ b/src/languages/es.ts
+@@ -933,7 +933,7 @@ const translations = {
+         pendingConversionMessage: 'El total se actualizará cuando estés online',
+         changedTheExpense: 'cambió el gasto',
+         setTheRequest: ({valueName, newValueToDisplay}: SetTheRequestParams) =>
+-            `${valueName === 'comerciante' || valueName === 'importe' || valueName === 'gasto' ? 'el' : 'la'} ${valueName} a ${newValueToDisplay}`,
++            `la ${valueName} a ${newValueToDisplay}`,
+         setTheDistanceMerchant: ({translatedChangedField, newMerchant, newAmountToDisplay}: SetTheDistanceMerchantParams) =>
+             `estableció la ${translatedChangedField} a ${newMerchant}, lo que estableció el importe a ${newAmountToDisplay}`,
+         removedTheRequest: ({valueName, oldValueToDisplay}: RemovedTheRequestParams) =>

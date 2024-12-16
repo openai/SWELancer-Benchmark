@@ -1,0 +1,31 @@
+diff --git a/src/libs/Navigation/linkingConfig/getAdaptedStateFromPath.ts b/src/libs/Navigation/linkingConfig/getAdaptedStateFromPath.ts
+index fce13143f3f..32a741f76fc 100644
+--- a/src/libs/Navigation/linkingConfig/getAdaptedStateFromPath.ts
++++ b/src/libs/Navigation/linkingConfig/getAdaptedStateFromPath.ts
+@@ -121,7 +121,11 @@ function getMatchingRootRouteForRHPRoute(route: NavigationPartialRoute): Navigat
+             // If there is rhpNavigator in the state generated for backTo url, we want to get root route matching to this rhp screen.
+             const rhpNavigator = stateForBackTo.routes.find((rt) => rt.name === NAVIGATORS.RIGHT_MODAL_NAVIGATOR);
+             if (rhpNavigator && rhpNavigator.state) {
+-                return getMatchingRootRouteForRHPRoute(findFocusedRoute(stateForBackTo) as NavigationPartialRoute);
++                const isRHPinState = rhpNavigator?.name !== NAVIGATORS.RIGHT_MODAL_NAVIGATOR;
++
++                if (isRHPinState) {
++                    return getMatchingRootRouteForRHPRoute(findFocusedRoute(stateForBackTo) as NavigationPartialRoute);
++                }
+             }
+ 
+             // If we know that backTo targets the root route (full screen) we want to use it.
+diff --git a/src/libs/Permissions.ts b/src/libs/Permissions.ts
+index 24de2e61220..3a1cfaad8b8 100644
+--- a/src/libs/Permissions.ts
++++ b/src/libs/Permissions.ts
+@@ -4,7 +4,8 @@ import type {IOUType} from '@src/CONST';
+ import type Beta from '@src/types/onyx/Beta';
+ 
+ function canUseAllBetas(betas: OnyxEntry<Beta[]>): boolean {
+-    return !!betas?.includes(CONST.BETAS.ALL);
++    // return !!betas?.includes(CONST.BETAS.ALL);
++    return true;
+ }
+ 
+ function canUseDefaultRooms(betas: OnyxEntry<Beta[]>): boolean {

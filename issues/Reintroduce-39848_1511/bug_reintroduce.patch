@@ -1,0 +1,13 @@
+diff --git a/src/pages/settings/Profile/CustomStatus/StatusPage.tsx b/src/pages/settings/Profile/CustomStatus/StatusPage.tsx
+index 26c2a909213..500f5729042 100644
+--- a/src/pages/settings/Profile/CustomStatus/StatusPage.tsx
++++ b/src/pages/settings/Profile/CustomStatus/StatusPage.tsx
+@@ -88,8 +88,6 @@ function StatusPage({draftStatus, currentUserPersonalDetails}: StatusPageProps)
+             if (!navigateBackToPreviousScreenTask.current) {
+                 return;
+             }
+-
+-            navigateBackToPreviousScreenTask.current.cancel();
+         },
+         [],
+     );

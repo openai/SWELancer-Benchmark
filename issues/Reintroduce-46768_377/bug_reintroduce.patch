@@ -1,0 +1,12 @@
+diff --git a/src/pages/workspace/accounting/PolicyAccountingPage.tsx b/src/pages/workspace/accounting/PolicyAccountingPage.tsx
+index 9daec587d10..711696eab59 100644
+--- a/src/pages/workspace/accounting/PolicyAccountingPage.tsx
++++ b/src/pages/workspace/accounting/PolicyAccountingPage.tsx
+@@ -407,7 +407,6 @@ function PolicyAccountingPage({policy}: PolicyAccountingPageProps) {
+                 wrapperStyle: [styles.sectionMenuItemTopDescription, shouldShowSynchronizationError && styles.pb0],
+                 shouldShowRightComponent: true,
+                 title: integrationData?.title,
+-                errorText: synchronizationError,
+                 errorTextStyle: [styles.mt5],
+                 shouldShowRedDotIndicator: true,
+                 description: isSyncInProgress

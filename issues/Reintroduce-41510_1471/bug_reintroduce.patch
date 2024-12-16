@@ -1,0 +1,20 @@
+diff --git a/src/libs/OptionsListUtils.ts b/src/libs/OptionsListUtils.ts
+index a2a8587cec8..6471f9f6fa8 100644
+--- a/src/libs/OptionsListUtils.ts
++++ b/src/libs/OptionsListUtils.ts
+@@ -1515,14 +1515,8 @@ function createOptionList(personalDetails: OnyxEntry<PersonalDetailsList>, repor
+         });
+     }
+ 
+-    const allPersonalDetailsOptions = Object.values(personalDetails ?? {}).map((personalDetail) => ({
+-        item: personalDetail,
+-        ...createOption([personalDetail?.accountID ?? -1], personalDetails, reportMapForAccountIDs[personalDetail?.accountID ?? -1], {}, {showPersonalDetails: true}),
+-    }));
+-
+     return {
+-        reports: allReportOptions,
+-        personalDetails: allPersonalDetailsOptions as Array<SearchOption<PersonalDetails>>,
++        reports: allReportOptions
+     };
+ }
+ 

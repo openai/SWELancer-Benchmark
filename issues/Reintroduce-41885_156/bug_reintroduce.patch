@@ -1,0 +1,13 @@
+diff --git a/src/libs/ReportUtils.ts b/src/libs/ReportUtils.ts
+index 78ebdd92751..30b29bb4dfd 100644
+--- a/src/libs/ReportUtils.ts
++++ b/src/libs/ReportUtils.ts
+@@ -5972,7 +5972,7 @@ function isUnread(report: OnyxEntry<Report>): boolean {
+         return false;
+     }
+ 
+-    if (isEmptyReport(report) && !isSelfDM(report)) {
++    if (isEmptyReport(report) && !isDM(report)) {
+         return false;
+     }
+     // lastVisibleActionCreated and lastReadTime are both datetime strings and can be compared directly

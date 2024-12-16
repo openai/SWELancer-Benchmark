@@ -1,0 +1,15 @@
+diff --git a/src/libs/OptionsListUtils.ts b/src/libs/OptionsListUtils.ts
+index 51db5a693f9..daf0d030136 100644
+--- a/src/libs/OptionsListUtils.ts
++++ b/src/libs/OptionsListUtils.ts
+@@ -1912,7 +1912,9 @@ function getOptions(
+     });
+ 
+     const havingLoginPersonalDetails = includeP2P
+-        ? options.personalDetails.filter((detail) => !!detail?.login && !!detail.accountID && !detail?.isOptimisticPersonalDetail && (includeDomainEmail || !Str.isDomainEmail(detail.login)))
++        ? options.personalDetails.filter(
++              (detail) => (!!detail?.login && !!detail.accountID) || (!detail?.isOptimisticPersonalDetail && (includeDomainEmail || !Str.isDomainEmail(detail.login ?? ''))),
++          )
+         : [];
+     let allPersonalDetailsOptions = havingLoginPersonalDetails;
+ 

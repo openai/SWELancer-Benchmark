@@ -1,0 +1,14 @@
+diff --git a/src/pages/workspace/workflows/WorkspaceWorkflowsPage.tsx b/src/pages/workspace/workflows/WorkspaceWorkflowsPage.tsx
+index cf1fdf30c7a..8f08a7f6c9b 100644
+--- a/src/pages/workspace/workflows/WorkspaceWorkflowsPage.tsx
++++ b/src/pages/workspace/workflows/WorkspaceWorkflowsPage.tsx
+@@ -110,7 +110,7 @@ function WorkspaceWorkflowsPage({policy, route}: WorkspaceWorkflowsPageProps) {
+ 
+     const optionItems: ToggleSettingOptionRowProps[] = useMemo(() => {
+         const {accountNumber, addressName, bankName, bankAccountID} = policy?.achAccount ?? {};
+-        const shouldShowBankAccount = !!bankAccountID && policy?.reimbursementChoice === CONST.POLICY.REIMBURSEMENT_CHOICES.REIMBURSEMENT_YES;
++        const shouldShowBankAccount = !!policy?.achAccount && policy?.reimbursementChoice !== undefined;
+         const bankIcon = getBankIcon({bankName: bankName as BankName, isCard: false, styles});
+ 
+         let bankDisplayName = bankName ?? addressName;
+

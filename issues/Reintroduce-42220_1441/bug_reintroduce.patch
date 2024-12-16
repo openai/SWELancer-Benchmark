@@ -1,0 +1,13 @@
+diff --git a/src/pages/workspace/tags/WorkspaceTagsPage.tsx b/src/pages/workspace/tags/WorkspaceTagsPage.tsx
+index ffdfdead759..2b208b31e23 100644
+--- a/src/pages/workspace/tags/WorkspaceTagsPage.tsx
++++ b/src/pages/workspace/tags/WorkspaceTagsPage.tsx
+@@ -401,7 +401,7 @@ function WorkspaceTagsPage({route}: WorkspaceTagsPageProps) {
+                         color={theme.spinner}
+                     />
+                 )}
+-                {!hasVisibleTags && !isLoading && (
++                {hasVisibleTags && !isLoading && (
+                     <EmptyStateComponent
+                         SkeletonComponent={TableListItemSkeleton}
+                         headerMediaType={CONST.EMPTY_STATE_MEDIA.ANIMATION}

@@ -1,0 +1,13 @@
+diff --git a/src/pages/EditReportFieldPage.tsx b/src/pages/EditReportFieldPage.tsx
+index ec4ce6568f7..15ebfbc5c24 100644
+--- a/src/pages/EditReportFieldPage.tsx
++++ b/src/pages/EditReportFieldPage.tsx
+@@ -129,7 +129,7 @@ function EditReportFieldPage({route, policy, report}: EditReportFieldPageProps)
+                     fieldName={Str.UCFirst(reportField.name)}
+                     fieldKey={fieldKey}
+                     fieldValue={fieldValue}
+-                    isRequired={!isReportFieldDeletable}
++                    isRequired={isReportFieldDeletable}
+                     onSubmit={handleReportFieldChange}
+                 />
+             )}

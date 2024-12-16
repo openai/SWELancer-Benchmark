@@ -1,0 +1,13 @@
+diff --git a/src/pages/settings/ExitSurvey/ExitSurveyConfirmPage.tsx b/src/pages/settings/ExitSurvey/ExitSurveyConfirmPage.tsx
+index 2e567fe8297..dfa773d5cb1 100644
+--- a/src/pages/settings/ExitSurvey/ExitSurveyConfirmPage.tsx
++++ b/src/pages/settings/ExitSurvey/ExitSurveyConfirmPage.tsx
+@@ -85,7 +85,7 @@ function ExitSurveyConfirmPage({exitReason, route, navigation}: ExitSurveyConfir
+                     onPress={() => {
+                         ExitSurvey.switchToOldDot();
+                         Navigation.dismissModal();
+-                        Link.openOldDotLink(CONST.OLDDOT_URLS.INBOX);
++                        Link.buildOldDotURL(CONST.OLDDOT_URLS.INBOX);
+                     }}
+                     isDisabled={isOffline}
+                 />

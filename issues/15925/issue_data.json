@@ -1,0 +1,5 @@
+{
+    "price": 2000.0,
+    "title": "[HOLD for payment 2023-04-05] [$2000] Web - Chat- Line breaks are removed after special copy/paste scenario",
+    "issue_repo_steps": "Action performed: 1. Highlight text with the cursor with few line breaks\r\n2. Right click on the hightailed text --> click on the Copy icon at the Context menu\r\n3. Paste result to the chat\n\nExpected result: The user should be able to use copy/paste without any issues\n\nActual result: None"
+}

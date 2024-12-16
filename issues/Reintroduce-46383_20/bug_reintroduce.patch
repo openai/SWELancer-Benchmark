@@ -1,0 +1,13 @@
+diff --git a/src/pages/WorkspaceSwitcherPage/WorkspacesSectionHeader.tsx b/src/pages/WorkspaceSwitcherPage/WorkspacesSectionHeader.tsx
+index 9c714e54704..54b184d02a1 100644
+--- a/src/pages/WorkspaceSwitcherPage/WorkspacesSectionHeader.tsx
++++ b/src/pages/WorkspaceSwitcherPage/WorkspacesSectionHeader.tsx
+@@ -33,7 +33,7 @@ function WorkspacesSectionHeader() {
+                     accessibilityLabel={translate('workspace.new.newWorkspace')}
+                     role={CONST.ROLE.BUTTON}
+                     onPress={() => {
+-                        const activeRoute = Navigation.getActiveRouteWithoutParams();
++                        const activeRoute = Navigation.getRouteNameFromStateEvent();
+                         interceptAnonymousUser(() => App.createWorkspaceWithPolicyDraftAndNavigateToIt('', '', false, false, activeRoute));
+                     }}
+                 >

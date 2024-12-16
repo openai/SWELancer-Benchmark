@@ -1,0 +1,15 @@
+diff --git a/src/components/TextInputWithCurrencySymbol/BaseTextInputWithCurrencySymbol.tsx b/src/components/TextInputWithCurrencySymbol/BaseTextInputWithCurrencySymbol.tsx
+index 3e7c5f0bc41..1f24f2b9512 100644
+--- a/src/components/TextInputWithCurrencySymbol/BaseTextInputWithCurrencySymbol.tsx
++++ b/src/components/TextInputWithCurrencySymbol/BaseTextInputWithCurrencySymbol.tsx
+@@ -46,8 +46,8 @@ function BaseTextInputWithCurrencySymbol(
+      * @param text - Changed text from user input
+      */
+     const setFormattedAmount = (text: string) => {
+-        const newAmount = MoneyRequestUtils.addLeadingZero(MoneyRequestUtils.replaceAllDigits(text, fromLocaleDigit));
+-        onChangeAmount(newAmount);
++        const newAmount = MoneyRequestUtils.replaceAllDigits(text, fromLocaleDigit);
++        onChangeAmount(Number(newAmount) < 1 ? `0.${newAmount}` : newAmount);
+     };
+ 
+     const amountTextInput = (

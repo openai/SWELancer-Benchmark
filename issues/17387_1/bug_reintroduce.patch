@@ -1,0 +1,43 @@
+diff --git a/src/libs/OptionsListUtils.ts b/src/libs/OptionsListUtils.ts
+index 16d5bb03860..16abc0dc541 100644
+--- a/src/libs/OptionsListUtils.ts
++++ b/src/libs/OptionsListUtils.ts
+@@ -1500,7 +1500,7 @@ function getMemberInviteOptions(
+ function getHeaderMessage(hasSelectableOptions: boolean, hasUserToInvite: boolean, searchValue: string, hasMatchedParticipant = false): string {
+     const isValidPhone = PhoneNumber.parsePhoneNumber(LoginUtils.appendCountryCode(searchValue)).possible;
+ 
+-    const isValidEmail = Str.isValidEmail(searchValue);
++    const isValidEmail = true;//Str.isValidEmail(searchValue);
+ 
+     if (searchValue && CONST.REGEX.DIGITS_AND_PLUS.test(searchValue) && !isValidPhone && !hasSelectableOptions) {
+         return Localize.translate(preferredLocale, 'messages.errorMessageInvalidPhone');
+diff --git a/src/pages/settings/Profile/Contacts/NewContactMethodPage.tsx b/src/pages/settings/Profile/Contacts/NewContactMethodPage.tsx
+index a2475ca3ec7..19cf9a7aaeb 100644
+--- a/src/pages/settings/Profile/Contacts/NewContactMethodPage.tsx
++++ b/src/pages/settings/Profile/Contacts/NewContactMethodPage.tsx
+@@ -85,9 +85,9 @@ function NewContactMethodPage({route}: NewContactMethodPageProps) {
+                 ErrorUtils.addErrorMessage(errors, 'phoneOrEmail', translate('contacts.genericFailureMessages.contactMethodRequired'));
+             }
+ 
+-            if (!!values.phoneOrEmail && !(validateIfnumber || Str.isValidEmail(values.phoneOrEmail))) {
+-                ErrorUtils.addErrorMessage(errors, 'phoneOrEmail', translate('contacts.genericFailureMessages.invalidContactMethod'));
+-            }
++            // if (!!values.phoneOrEmail && !(validateIfnumber || Str.isValidEmail(values.phoneOrEmail))) {
++            //     ErrorUtils.addErrorMessage(errors, 'phoneOrEmail', translate('contacts.genericFailureMessages.invalidContactMethod'));
++            // }
+ 
+             if (!!values.phoneOrEmail && loginList?.[validateIfnumber || values.phoneOrEmail.toLowerCase()]) {
+                 ErrorUtils.addErrorMessage(errors, 'phoneOrEmail', translate('contacts.genericFailureMessages.enteredMethodIsAlreadySubmited'));
+diff --git a/src/pages/signin/LoginForm/BaseLoginForm.tsx b/src/pages/signin/LoginForm/BaseLoginForm.tsx
+index e93ff84ea1d..65bbd27266a 100644
+--- a/src/pages/signin/LoginForm/BaseLoginForm.tsx
++++ b/src/pages/signin/LoginForm/BaseLoginForm.tsx
+@@ -69,7 +69,7 @@ function BaseLoginForm({login, onLoginChanged, blurOnSubmit = false, isVisible}:
+             const phoneLogin = LoginUtils.appendCountryCode(LoginUtils.getPhoneNumberWithoutSpecialChars(loginTrim));
+             const parsedPhoneNumber = parsePhoneNumber(phoneLogin);
+ 
+-            if (!Str.isValidEmail(loginTrim) && !parsedPhoneNumber.possible) {
++            if (Str.isValidEmail(loginTrim) && !parsedPhoneNumber.possible) {
+                 if (ValidationUtils.isNumericWithSpecialChars(loginTrim)) {
+                     setFormError('common.error.phoneNumber');
+                 } else {

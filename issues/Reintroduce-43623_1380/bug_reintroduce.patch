@@ -1,0 +1,15 @@
+diff --git a/src/libs/OptionsListUtils.ts b/src/libs/OptionsListUtils.ts
+index 51db5a693f9..dbc6df6d8d3 100644
+--- a/src/libs/OptionsListUtils.ts
++++ b/src/libs/OptionsListUtils.ts
+@@ -1992,9 +1992,7 @@ function getOptions(
+ 
+             if (action === CONST.IOU.ACTION.CATEGORIZE) {
+                 const policyCategories = allPolicyCategories?.[`${ONYXKEYS.COLLECTION.POLICY_CATEGORIES}${reportOption.policyID}`] ?? {};
+-                if (getEnabledCategoriesCount(policyCategories) !== 0) {
+-                    recentReportOptions.push(reportOption);
+-                }
++                recentReportOptions.push(reportOption);
+             } else {
+                 recentReportOptions.push(reportOption);
+             }

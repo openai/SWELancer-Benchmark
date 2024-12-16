@@ -1,0 +1,68 @@
+diff --git a/src/components/ContextMenuItem.tsx b/src/components/ContextMenuItem.tsx
+index fe7be45e1b5..db338244300 100644
+--- a/src/components/ContextMenuItem.tsx
++++ b/src/components/ContextMenuItem.tsx
+@@ -1,5 +1,5 @@
+ import type {ForwardedRef} from 'react';
+-import React, {forwardRef, useImperativeHandle} from 'react';
++import React, {forwardRef, useImperativeHandle, useEffect, useState} from 'react';
+ import type {GestureResponderEvent, StyleProp, View, ViewStyle} from 'react-native';
+ import useStyleUtils from '@hooks/useStyleUtils';
+ import useThemeStyles from '@hooks/useThemeStyles';
+@@ -11,6 +11,26 @@ import BaseMiniContextMenuItem from './BaseMiniContextMenuItem';
+ import FocusableMenuItem from './FocusableMenuItem';
+ import Icon from './Icon';
+ 
++type isInteractiveState = [boolean, () => void];
++
++function useInteractiveState(): isInteractiveState {
++    const [isInteractive, setIsInteractive] = useState(false);
++
++    useEffect(() => {
++        if (!isInteractive) {
++            return;
++        }
++
++        const timer = setTimeout(() => {
++            setIsInteractive(false);
++        }, 1800);
++
++        return () => clearTimeout(timer);
++    }, [isInteractive]);
++
++    return [isInteractive, () => setIsInteractive(true)];
++}
++
+ type ContextMenuItemProps = {
+     /** Icon Component */
+     icon: IconAsset;
+@@ -93,17 +113,19 @@ function ContextMenuItem(
+     const StyleUtils = useStyleUtils();
+     const {windowWidth} = useWindowDimensions();
+     const [isThrottledButtonActive, setThrottledButtonInactive] = useThrottledButtonState();
+-
++    const [isInteractive, setIsInteractive] = useInteractiveState();
+     const triggerPressAndUpdateSuccess = (event?: GestureResponderEvent | MouseEvent | KeyboardEvent) => {
+         if (!isThrottledButtonActive) {
+             return;
+         }
++        
+         onPress(event);
+ 
+         // We only set the success state when we have icon or text to represent the success state
+         // We may want to replace this check by checking the Result from OnPress Callback in future.
+         if (!!successIcon || successText) {
+             setThrottledButtonInactive();
++            setIsInteractive();
+         }
+     };
+ 
+@@ -140,7 +162,7 @@ function ContextMenuItem(
+             style={shouldLimitWidth && StyleUtils.getContextMenuItemStyles(windowWidth)}
+             isAnonymousAction={isAnonymousAction}
+             focused={isFocused}
+-            interactive={isThrottledButtonActive}
++            interactive={isInteractive}
+             onFocus={onFocus}
+             onBlur={onBlur}
+             disabled={disabled}

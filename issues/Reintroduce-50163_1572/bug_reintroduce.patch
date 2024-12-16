@@ -1,0 +1,13 @@
+diff --git a/src/components/TextInput/BaseTextInput/index.tsx b/src/components/TextInput/BaseTextInput/index.tsx
+index 48b99486d6c..c6c56979356 100644
+--- a/src/components/TextInput/BaseTextInput/index.tsx
++++ b/src/components/TextInput/BaseTextInput/index.tsx
+@@ -427,7 +427,7 @@ function BaseTextInput(
+                                     </Text>
+                                 </View>
+                             )}
+-                            {isFocused && !isReadOnly && shouldShowClearButton && !!value && <TextInputClearButton onPressButton={() => setValue('')} />}
++                            {isFocused && !isReadOnly && shouldShowClearButton && !value && <TextInputClearButton onPressButton={() => setValue('')} />}
+                             {inputProps.isLoading && (
+                                 <ActivityIndicator
+                                     size="small"

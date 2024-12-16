@@ -1,0 +1,13 @@
+diff --git a/src/components/EmojiPicker/EmojiPicker.tsx b/src/components/EmojiPicker/EmojiPicker.tsx
+index 79af5bc0a4f..ebd9e73a58e 100644
+--- a/src/components/EmojiPicker/EmojiPicker.tsx
++++ b/src/components/EmojiPicker/EmojiPicker.tsx
+@@ -146,7 +146,8 @@ function EmojiPicker({viewportOffsetTop}: EmojiPickerProps, ref: ForwardedRef<Em
+ 
+         hideEmojiPicker(false);
+         if (typeof onEmojiSelected.current === 'function') {
+-            onEmojiSelected.current(emoji, emojiObject);
++            // BUG INTRODUCTION: Incorrectly replace the previous emoji instead of appending
++            onEmojiSelected.current(emojiObject.emoji, emojiObject);
+         }
+     };

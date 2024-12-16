@@ -1,0 +1,29 @@
+diff --git a/src/components/Header.tsx b/src/components/Header.tsx
+index 86a7a9cabcb..5d97f317cf3 100644
+--- a/src/components/Header.tsx
++++ b/src/components/Header.tsx
+@@ -45,12 +45,22 @@ function Header({title = '', subtitle = '', textStyles = [], containerStyles = [
+     );
+     return (
+         <View style={[styles.flex1, styles.flexRow, containerStyles]}>
+-            <View style={styles.mw100}>
++            <View style={[styles.mw100]}>
+                 {typeof title === 'string'
+                     ? !!title && (
+                           <Text
+                               numberOfLines={2}
+-                              style={[styles.headerText, styles.textLarge, textStyles]}
++                              style={[
++                                styles.headerText, 
++                                styles.textLarge, 
++                                textStyles,
++                                {
++                                    maxWidth: '90%',
++                                    lineHeight: 24,
++                                    height: 48, 
++                                    overflow: 'hidden'
++                                }
++                              ]}
+                           >
+                               {title}
+                           </Text>

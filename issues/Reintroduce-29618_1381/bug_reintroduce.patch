@@ -1,0 +1,87 @@
+diff --git a/src/components/CurrencySelectionList/index.tsx b/src/components/CurrencySelectionList/index.tsx
+index 201ed7bab73..d57f0e5ced5 100644
+--- a/src/components/CurrencySelectionList/index.tsx
++++ b/src/components/CurrencySelectionList/index.tsx
+@@ -17,6 +17,7 @@ function CurrencySelectionList({
+     currencyList,
+     selectedCurrencies = [],
+     canSelectMultiple = false,
++    isSingleKeyMode = false,
+     recentlyUsedCurrencies,
+ }: CurrencySelectionListProps) {
+     const [searchValue, setSearchValue] = useState('');
+@@ -27,7 +28,7 @@ function CurrencySelectionList({
+             const isSelectedCurrency = currencyCode === initiallySelectedCurrencyCode || selectedCurrencies.includes(currencyCode);
+             if (isSelectedCurrency || !currencyInfo?.retired) {
+                 acc.push({
+-                    currencyName: currencyInfo?.name ?? '',
++                    currencyName: isSingleKeyMode ? currencyInfo?.name || '' : CurrencyUtils.getDefaultCurrencyName(currencyCode),
+                     text: `${currencyCode} - ${CurrencyUtils.getCurrencySymbol(currencyCode)}`,
+                     currencyCode,
+                     keyForList: currencyCode,
+diff --git a/src/components/CurrencySelectionList/types.ts b/src/components/CurrencySelectionList/types.ts
+index 3001b0ceeaa..3d195beb2e7 100644
+--- a/src/components/CurrencySelectionList/types.ts
++++ b/src/components/CurrencySelectionList/types.ts
+@@ -30,6 +30,9 @@ type CurrencySelectionListProps = CurrencySelectionListOnyxProps & {
+ 
+     /** Whether this is a multi-select list */
+     canSelectMultiple?: boolean;
++
++    /** Whether this is a single source name or default e.g. name || displayName || codeName */
++    isSingleKeyMode?: boolean;
+ };
+ 
+ export type {CurrencyListItem, CurrencySelectionListProps, CurrencySelectionListOnyxProps};
+diff --git a/src/libs/CurrencyUtils.ts b/src/libs/CurrencyUtils.ts
+index 7d11bd0d61a..d959b104553 100644
+--- a/src/libs/CurrencyUtils.ts
++++ b/src/libs/CurrencyUtils.ts
+@@ -51,6 +51,13 @@ function getLocalizedCurrencySymbol(currencyCode: string): string | undefined {
+     return parts.find((part) => part.type === 'currency')?.value;
+ }
+ 
++/**
++ * Get localized currency name
++ */
++function getDefaultCurrencyName(currencyCode: string): string {
++    return currencyList?.[currencyCode]?.displayName || currencyList?.[currencyCode]?.ISO4217 || currencyList?.[currencyCode]?.symbol || '';
++}
++
+ /**
+  * Get the currency symbol for a currency(ISO 4217) Code
+  */
+@@ -199,6 +206,7 @@ function isValidCurrencyCode(currencyCode: string): boolean {
+ 
+ export {
+     getCurrencyDecimals,
++    getDefaultCurrencyName,
+     getCurrencyUnit,
+     getLocalizedCurrencySymbol,
+     getCurrencySymbol,
+diff --git a/src/pages/iou/request/step/IOURequestStepCurrency.tsx b/src/pages/iou/request/step/IOURequestStepCurrency.tsx
+index c48bf91986f..bc3d252e74f 100644
+--- a/src/pages/iou/request/step/IOURequestStepCurrency.tsx
++++ b/src/pages/iou/request/step/IOURequestStepCurrency.tsx
+@@ -82,6 +82,7 @@ function IOURequestStepCurrency({
+                         confirmCurrencySelection(option);
+                     }}
+                     initiallySelectedCurrencyCode={currency.toUpperCase()}
++                    isSingleKeyMode={true}
+                 />
+             )}
+         </StepScreenWrapper>
+diff --git a/src/types/onyx/Currency.ts b/src/types/onyx/Currency.ts
+index 69b4203cdbf..6402df480fa 100644
+--- a/src/types/onyx/Currency.ts
++++ b/src/types/onyx/Currency.ts
+@@ -6,6 +6,9 @@ type Currency = {
+     /** Name of the currency */
+     name: string;
+ 
++    /** Name of the currency */
++    displayName?: string;
++
+     /** ISO4217 Code for the currency */
+     ISO4217: string;
+ 

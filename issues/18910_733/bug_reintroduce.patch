@@ -1,0 +1,35 @@
+diff --git a/src/pages/workspace/WorkspaceInitialPage.tsx b/src/pages/workspace/WorkspaceInitialPage.tsx
+index ffaeadfbbc0..c7f3f473ec4 100644
+--- a/src/pages/workspace/WorkspaceInitialPage.tsx
++++ b/src/pages/workspace/WorkspaceInitialPage.tsx
+@@ -289,7 +289,7 @@ function WorkspaceInitialPage({policyDraft, policy: policyProp, route}: Workspac
+             brickRoadIndicator: hasMembersError ? CONST.BRICK_ROAD_INDICATOR_STATUS.ERROR : undefined,
+             routeName: SCREENS.WORKSPACE.MEMBERS,
+         },
+-        ...(isPaidGroupPolicy && shouldShowProtectedItems ? protectedCollectPolicyMenuItems : []),
++        ...protectedCollectPolicyMenuItems,
+     ];
+ 
+     const prevPolicy = usePrevious(policy);
+@@ -349,7 +349,7 @@ function WorkspaceInitialPage({policyDraft, policy: policyProp, route}: Workspac
+             <FullPageNotFoundView
+                 onBackButtonPress={Navigation.dismissModal}
+                 onLinkPress={Navigation.resetToHome}
+-                shouldShow={shouldShowNotFoundPage}
++                shouldShow={false}
+                 subtitleKey={isEmptyObject(policy) ? undefined : 'workspace.common.notAuthorized'}
+             >
+                 <HeaderWithBackButton
+diff --git a/src/pages/workspace/WorkspacePageWithSections.tsx b/src/pages/workspace/WorkspacePageWithSections.tsx
+index 4f0a84cffd9..e9fcdc17ced 100644
+--- a/src/pages/workspace/WorkspacePageWithSections.tsx
++++ b/src/pages/workspace/WorkspacePageWithSections.tsx
+@@ -175,7 +175,7 @@ function WorkspacePageWithSections({
+             <FullPageNotFoundView
+                 onBackButtonPress={Navigation.dismissModal}
+                 onLinkPress={Navigation.resetToHome}
+-                shouldShow={shouldShow}
++                shouldShow={false}
+                 subtitleKey={isEmptyObject(policy) ? undefined : 'workspace.common.notAuthorized'}
+                 shouldForceFullScreen
+             >

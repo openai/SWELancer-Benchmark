@@ -1,0 +1,19 @@
+diff --git a/.npmrc b/.npmrc
+deleted file mode 100644
+index b6f27f13595..00000000000
+--- a/.npmrc
++++ /dev/null
+@@ -1 +0,0 @@
+-engine-strict=true
+diff --git a/src/pages/Search/SavedSearchRenamePage.tsx b/src/pages/Search/SavedSearchRenamePage.tsx
+index 98a33759682..ba28243e002 100644
+--- a/src/pages/Search/SavedSearchRenamePage.tsx
++++ b/src/pages/Search/SavedSearchRenamePage.tsx
+@@ -68,7 +68,6 @@ function SavedSearchRenamePage({route}: {route: {params: {q: string; name: strin
+                     onChangeText={(renamedName) => setNewName(renamedName)}
+                     ref={inputCallbackRef}
+                     defaultValue={name}
+-                    shouldShowClearButton
+                 />
+             </FormProvider>
+         </ScreenWrapper>

@@ -1,0 +1,32 @@
+diff --git a/src/pages/iou/request/MoneyRequestParticipantsSelector.tsx b/src/pages/iou/request/MoneyRequestParticipantsSelector.tsx
+index 58e69485c1b..57c99973d27 100644
+--- a/src/pages/iou/request/MoneyRequestParticipantsSelector.tsx
++++ b/src/pages/iou/request/MoneyRequestParticipantsSelector.tsx
+@@ -379,17 +379,6 @@ function MoneyRequestParticipantsSelector({participants = CONST.EMPTY_ARRAY, onF
+         onFinish,
+     ]);
+ 
+-    const onSelectRow = useCallback(
+-        (item: Participant) => {
+-            if (isIOUSplit) {
+-                addParticipantToSelection(item);
+-                return;
+-            }
+-            addSingleParticipant(item);
+-        },
+-        [isIOUSplit, addParticipantToSelection, addSingleParticipant],
+-    );
+-
+     return (
+         <SelectionList
+             onConfirm={handleConfirmSelection}
+@@ -400,7 +389,7 @@ function MoneyRequestParticipantsSelector({participants = CONST.EMPTY_ARRAY, onF
+             textInputHint={offlineMessage}
+             onChangeText={setSearchTerm}
+             shouldPreventDefaultFocusOnSelectRow={!DeviceCapabilities.canUseTouchScreen()}
+-            onSelectRow={onSelectRow}
++            onSelectRow={(item) => addParticipantToSelection(item)}
+             shouldDebounceRowSelect
+             footerContent={footerContent}
+             headerMessage={header}
+

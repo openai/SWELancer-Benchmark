@@ -1,0 +1,34 @@
+diff --git a/src/languages/es.ts b/src/languages/es.ts
+index c27714b1231..b5d361fc070 100644
+--- a/src/languages/es.ts
++++ b/src/languages/es.ts
+@@ -190,6 +190,12 @@ import type {
+ } from './params';
+ import type {TranslationDeepObject} from './types';
+ 
++// Array of values that require the article "el"
++const EL_ARTICLE_VALUES = ['comerciante', 'gasto'];
++
++// Utility function to determine the article
++const getArticle = (valueName: string) => EL_ARTICLE_VALUES.includes(valueName) ? 'el' : 'la';
++
+ /* eslint-disable max-len */
+ const translations = {
+     common: {
+@@ -933,13 +939,13 @@ const translations = {
+         pendingConversionMessage: 'El total se actualizará cuando estés online',
+         changedTheExpense: 'cambió el gasto',
+         setTheRequest: ({valueName, newValueToDisplay}: SetTheRequestParams) =>
+-            `${valueName === 'comerciante' || valueName === 'importe' || valueName === 'gasto' ? 'el' : 'la'} ${valueName} a ${newValueToDisplay}`,
++            `${getArticle(valueName)} ${valueName} a ${newValueToDisplay}`,
+         setTheDistanceMerchant: ({translatedChangedField, newMerchant, newAmountToDisplay}: SetTheDistanceMerchantParams) =>
+             `estableció la ${translatedChangedField} a ${newMerchant}, lo que estableció el importe a ${newAmountToDisplay}`,
+         removedTheRequest: ({valueName, oldValueToDisplay}: RemovedTheRequestParams) =>
+-            `${valueName === 'comerciante' || valueName === 'importe' || valueName === 'gasto' ? 'el' : 'la'} ${valueName} (previamente ${oldValueToDisplay})`,
++            `${getArticle(valueName)} ${valueName} (previamente ${oldValueToDisplay})`,
+         updatedTheRequest: ({valueName, newValueToDisplay, oldValueToDisplay}: UpdatedTheRequestParams) =>
+-            `${valueName === 'comerciante' || valueName === 'importe' || valueName === 'gasto' ? 'el' : 'la'} ${valueName} a ${newValueToDisplay} (previamente ${oldValueToDisplay})`,
++            `${getArticle(valueName)} ${valueName} a ${newValueToDisplay} (previamente ${oldValueToDisplay})`,
+         updatedTheDistanceMerchant: ({translatedChangedField, newMerchant, oldMerchant, newAmountToDisplay, oldAmountToDisplay}: UpdatedTheDistanceMerchantParams) =>
+             `cambió la ${translatedChangedField} a ${newMerchant} (previamente ${oldMerchant}), lo que cambió el importe a ${newAmountToDisplay} (previamente ${oldAmountToDisplay})`,
+         threadExpenseReportName: ({formattedAmount, comment}: ThreadRequestReportNameParams) => `${comment ? `${formattedAmount} para ${comment}` : `Gasto de ${formattedAmount}`}`,

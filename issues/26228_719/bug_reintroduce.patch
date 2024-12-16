@@ -1,0 +1,21 @@
+diff --git a/src/components/PopoverMenu.tsx b/src/components/PopoverMenu.tsx
+index e3a04903f5c..4c6ed4be47a 100644
+--- a/src/components/PopoverMenu.tsx
++++ b/src/components/PopoverMenu.tsx
+@@ -155,14 +155,14 @@ function PopoverMenu({
+             onItemSelected(selectedItem, index);
+             Modal.close(
+                 () => {
+-                    selectedItem.onSelected?.();
++                    // selectedItem.onSelected?.();
+                 },
+                 undefined,
+                 selectedItem.shouldCloseAllModals,
+             );
+         } else {
+             onItemSelected(selectedItem, index);
+-            selectedItem.onSelected?.();
++            // selectedItem.onSelected?.();
+         }
+     };
+ 

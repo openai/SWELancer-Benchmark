@@ -1,0 +1,24 @@
+diff --git a/.npmrc b/.npmrc
+deleted file mode 100644
+index b6f27f13595..00000000000
+--- a/.npmrc
++++ /dev/null
+@@ -1 +0,0 @@
+-engine-strict=true
+diff --git a/src/hooks/useMarkdownStyle.ts b/src/hooks/useMarkdownStyle.ts
+index c7e9bf2c021..e43771d4268 100644
+--- a/src/hooks/useMarkdownStyle.ts
++++ b/src/hooks/useMarkdownStyle.ts
+@@ -44,12 +44,6 @@ function useMarkdownStyle(message: string | null = null, excludeStyles: Array<ke
+                 borderWidth: 4,
+                 marginLeft: 0,
+                 paddingLeft: 6,
+-                /**
+-                 * since blockquote has `inline-block` display -> padding-right is needed to prevent cursor overlapping
+-                 * with last character of the text node.
+-                 * As long as paddingRight > cursor.width, cursor will be displayed correctly.
+-                 */
+-                paddingRight: 1,
+             },
+             code: {
+                 ...FontUtils.fontFamily.platform.MONOSPACE,

@@ -1,0 +1,80 @@
+diff --git a/src/hooks/useResponsiveLayout/index.ts b/src/hooks/useResponsiveLayout/index.ts
+index 3aa698e6d65..f6dcc3e0e6e 100644
+--- a/src/hooks/useResponsiveLayout/index.ts
++++ b/src/hooks/useResponsiveLayout/index.ts
+@@ -64,6 +64,8 @@ export default function useResponsiveLayout(): ResponsiveLayoutResult {
+         // or there's a "right modal navigator" or "left modal navigator" on the top of the root navigation stack
+         // and the component calling this hook is not the child of another modal type, such as a confirm modal
+         (isDisplayedInNarrowModalNavigator && !activeModalType);
++    const isWideScreen = windowWidth > variables.widenScreenBreakpoint || isInNarrowPaneModal;
++    
+ 
+     const shouldUseNarrowLayout = isSmallScreenWidth || isInNarrowPaneModal;
+ 
+@@ -77,5 +79,6 @@ export default function useResponsiveLayout(): ResponsiveLayoutResult {
+         onboardingIsMediumOrLargerScreenWidth,
+         isLargeScreenWidth,
+         isSmallScreen,
++        isWideScreen,
+     };
+ }
+diff --git a/src/hooks/useResponsiveLayout/types.ts b/src/hooks/useResponsiveLayout/types.ts
+index c7bb021389f..66554d96289 100644
+--- a/src/hooks/useResponsiveLayout/types.ts
++++ b/src/hooks/useResponsiveLayout/types.ts
+@@ -8,5 +8,6 @@ type ResponsiveLayoutResult = {
+     isExtraSmallScreenWidth: boolean;
+     isSmallScreen: boolean;
+     onboardingIsMediumOrLargerScreenWidth: boolean;
++    isWideScreen: boolean;
+ };
+ export default ResponsiveLayoutResult;
+diff --git a/src/pages/workspace/WorkspacesListPage.tsx b/src/pages/workspace/WorkspacesListPage.tsx
+index 1dd3ee4a74d..009dd396178 100755
+--- a/src/pages/workspace/WorkspacesListPage.tsx
++++ b/src/pages/workspace/WorkspacesListPage.tsx
+@@ -105,7 +105,7 @@ function WorkspacesListPage() {
+     const styles = useThemeStyles();
+     const {translate} = useLocalize();
+     const {isOffline} = useNetwork();
+-    const {shouldUseNarrowLayout, isMediumScreenWidth} = useResponsiveLayout();
++    const {shouldUseNarrowLayout, isMediumScreenWidth, isWideScreen} = useResponsiveLayout();
+     const [allConnectionSyncProgresses] = useOnyx(ONYXKEYS.COLLECTION.POLICY_CONNECTION_SYNC_PROGRESS);
+     const [policies] = useOnyx(ONYXKEYS.COLLECTION.POLICY);
+     const [reimbursementAccount] = useOnyx(ONYXKEYS.REIMBURSEMENT_ACCOUNT);
+@@ -378,9 +378,9 @@ function WorkspacesListPage() {
+                     onBackButtonPress={() => Navigation.goBack()}
+                     icon={Illustrations.BigRocket}
+                 >
+-                    {!shouldUseNarrowLayout && getHeaderButton()}
++                    {isWideScreen && getHeaderButton()}
+                 </HeaderWithBackButton>
+-                {shouldUseNarrowLayout && <View style={[styles.pl5, styles.pr5]}>{getHeaderButton()}</View>}
++                {!isWideScreen  && <View style={[styles.pl5, styles.pr5]}>{getHeaderButton()}</View>}
+                 <ScrollView contentContainerStyle={styles.pt3}>
+                     <View style={[styles.flex1, isLessThanMediumScreen ? styles.workspaceSectionMobile : styles.workspaceSection]}>
+                         <FeatureList
+@@ -415,9 +415,9 @@ function WorkspacesListPage() {
+                     onBackButtonPress={() => Navigation.goBack()}
+                     icon={Illustrations.BigRocket}
+                 >
+-                    {!shouldUseNarrowLayout && getHeaderButton()}
++                    {isWideScreen && getHeaderButton()}
+                 </HeaderWithBackButton>
+-                {shouldUseNarrowLayout && <View style={[styles.pl5, styles.pr5]}>{getHeaderButton()}</View>}
++                {!isWideScreen && <View style={[styles.pl5, styles.pr5]}>{getHeaderButton()}</View>}
+                 <FlatList
+                     data={workspaces}
+                     renderItem={getMenuItem}
+diff --git a/src/styles/variables.ts b/src/styles/variables.ts
+index 300574514e5..e860a5eab91 100644
+--- a/src/styles/variables.ts
++++ b/src/styles/variables.ts
+@@ -92,6 +92,7 @@ export default {
+     iouAmountTextSize: 40,
+     extraSmallMobileResponsiveWidthBreakpoint: 320,
+     extraSmallMobileResponsiveHeightBreakpoint: 667,
++    widenScreenBreakpoint: 40,
+     mobileResponsiveWidthBreakpoint: 800,
+     tabletResponsiveWidthBreakpoint: 1024,
+     safeInsertPercentage: 0.7,

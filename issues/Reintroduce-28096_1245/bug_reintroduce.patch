@@ -1,0 +1,29 @@
+diff --git a/src/CONST.ts b/src/CONST.ts
+index 4ca9b45f13d..694c6d699e3 100755
+--- a/src/CONST.ts
++++ b/src/CONST.ts
+@@ -153,6 +153,11 @@ type OnboardingMessageType = {
+ };
+ 
+ const CONST = {
++    CHOOSE_FILE: {
++        LOWER_CASE: 'choose file',
++        UPPER_CASE: 'CHOOSE FILE',
++        CAPITALIZED: 'Choose File'
++    },
+     HEIC_SIGNATURES: [
+         '6674797068656963', // 'ftypheic' - Indicates standard HEIC file
+         '6674797068656978', // 'ftypheix' - Indicates a variation of HEIC
+diff --git a/src/languages/en.ts b/src/languages/en.ts
+index 6d579a2af2d..a5228a807f2 100755
+--- a/src/languages/en.ts
++++ b/src/languages/en.ts
+@@ -451,7 +451,7 @@ const translations = {
+         filterLogs: 'Filter Logs',
+         network: 'Network',
+         reportID: 'Report ID',
+-        chooseFile: 'Choose file',
++        chooseFile: CONST.CHOOSE_FILE.CAPITALIZED,
+         dropTitle: 'Let it go',
+         dropMessage: 'Drop your file here',
+         ignore: 'Ignore',

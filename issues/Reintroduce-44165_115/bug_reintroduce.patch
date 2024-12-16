@@ -1,0 +1,26 @@
+diff --git a/.npmrc b/.npmrc
+deleted file mode 100644
+index b6f27f13595..00000000000
+--- a/.npmrc
++++ /dev/null
+@@ -1 +0,0 @@
+-engine-strict=true
+diff --git a/src/pages/iou/request/step/IOURequestStepWaypoint.tsx b/src/pages/iou/request/step/IOURequestStepWaypoint.tsx
+index 4fad55e8fc4..578308ddbdc 100644
+--- a/src/pages/iou/request/step/IOURequestStepWaypoint.tsx
++++ b/src/pages/iou/request/step/IOURequestStepWaypoint.tsx
+@@ -89,12 +89,9 @@ function IOURequestStepWaypoint({
+         isFocused &&
+         (Number.isNaN(parsedWaypointIndex) || parsedWaypointIndex < 0 || parsedWaypointIndex > waypointCount || (filledWaypointCount < 2 && parsedWaypointIndex >= waypointCount));
+ 
++    // Modify goBack to always navigate to IOURequestStepDistance without using backTo
+     const goBack = () => {
+-        if (backTo) {
+-            Navigation.goBack(backTo);
+-            return;
+-        }
+-        Navigation.goBack(ROUTES.MONEY_REQUEST_CREATE_TAB_DISTANCE.getRoute(CONST.IOU.ACTION.CREATE, iouType, transactionID, reportID));
++        Navigation.goBack(ROUTES.MONEY_REQUEST_STEP_DISTANCE.getRoute(action, iouType, transactionID, reportID));
+     };
+ 
+     const validate = (values: FormOnyxValues<'waypointForm'>): Partial<Record<string, TranslationPaths>> => {

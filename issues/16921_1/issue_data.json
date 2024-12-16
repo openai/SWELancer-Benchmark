@@ -1,0 +1,5 @@
+{
+    "title": "[HOLD for payment 2023-06-01] [$4000] Paste H1(# test) message in chat causes incorrect line breaks",
+    "price": 4000.0,
+    "issue_repro_steps": "Action performed: 1. Navigate to [chat](https://staging.new.expensify.com/r/88654499) in Chrome and Safari \r\n2. Open an existing chat and compose a H1 message (e.g., # hello world)\r\n3. Send the message\r\n4. Hover over the message and click on the edit pencil \r\n5. Edit the H1 message (e.g., # hello world1234)\r\n6. Click Save Changes \r\n7. Hover over the edited message\r\n8. Triple-click on the edited H1 message to highlight it\r\n9. Copy/paste in the composer\r\n10. Observe the pasted H1 message is formatted with differently\n\nExpected result: Copying H1 message should not add a new line after #, and it should be the same as the original message\n\nActual result: None"
+}

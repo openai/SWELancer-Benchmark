@@ -1,0 +1,19 @@
+diff --git a/.npmrc b/.npmrc
+deleted file mode 100644
+index b6f27f13595..00000000000
+--- a/.npmrc
++++ /dev/null
+@@ -1 +0,0 @@
+-engine-strict=true
+diff --git a/src/components/ReportActionItem/MoneyRequestPreview/MoneyRequestPreviewContent.tsx b/src/components/ReportActionItem/MoneyRequestPreview/MoneyRequestPreviewContent.tsx
+index 0a740e65747..102ec2e386a 100644
+--- a/src/components/ReportActionItem/MoneyRequestPreview/MoneyRequestPreviewContent.tsx
++++ b/src/components/ReportActionItem/MoneyRequestPreview/MoneyRequestPreviewContent.tsx
+@@ -383,7 +383,6 @@ function MoneyRequestPreviewContent({
+                                                 <View style={styles.moneyRequestPreviewBoxAvatar}>
+                                                     <MultipleAvatars
+                                                         icons={sortedParticipantAvatars}
+-                                                        shouldStackHorizontally
+                                                         size="small"
+                                                         shouldUseCardBackground
+                                                     />

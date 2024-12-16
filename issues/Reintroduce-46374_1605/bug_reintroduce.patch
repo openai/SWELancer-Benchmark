@@ -1,0 +1,30 @@
+diff --git a/src/components/Search/index.tsx b/src/components/Search/index.tsx
+index b415d91b7ab..9bfea4d1976 100644
+--- a/src/components/Search/index.tsx
++++ b/src/components/Search/index.tsx
+@@ -191,12 +191,22 @@ function Search({queryJSON}: SearchProps) {
+     const isSearchResultsEmpty = !searchResults?.data || SearchUtils.isSearchResultsEmpty(searchResults);
+     const prevIsSearchResultEmpty = usePrevious(isSearchResultsEmpty);
+ 
++    const [delayedEmptyState, setDelayedEmptyState] = useState(false);
++
++    useEffect(() => {
++        const timer = setTimeout(() => {
++            setDelayedEmptyState(isSearchResultsEmpty);
++        }, 100); // Add a slight delay for simulating state lag
++
++        return () => clearTimeout(timer);
++    }, [isSearchResultsEmpty]);
++
+     useEffect(() => {
+-        if (!isSearchResultsEmpty || prevIsSearchResultEmpty) {
++        if (!delayedEmptyState || prevIsSearchResultEmpty) {
+             return;
+         }
+         turnOffMobileSelectionMode();
+-    }, [isSearchResultsEmpty, prevIsSearchResultEmpty]);
++    }, [delayedEmptyState, prevIsSearchResultEmpty]);
+ 
+     if (shouldShowLoadingState) {
+         return (
+

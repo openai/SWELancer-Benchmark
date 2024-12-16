@@ -1,0 +1,23 @@
+diff --git a/src/components/ReportActionItem/MoneyReportView.tsx b/src/components/ReportActionItem/MoneyReportView.tsx
+index 19ee17bba3b..4df063a5cb5 100644
+--- a/src/components/ReportActionItem/MoneyReportView.tsx
++++ b/src/components/ReportActionItem/MoneyReportView.tsx
+@@ -124,7 +124,7 @@ function MoneyReportView({report, policy, isCombinedReport = false, shouldShowTo
+                                         key={`menuItem-${fieldKey}`}
+                                         onClose={() => reportActions.clearReportFieldKeyErrors(report.reportID, fieldKey)}
+                                     >
+-                                        <MenuItemWithTopDescription
++                                       { !isCombinedReport ? (<MenuItemWithTopDescription
+                                             description={Str.UCFirst(reportField.name)}
+                                             title={fieldValue}
+                                             onPress={() =>
+@@ -148,7 +148,8 @@ function MoneyReportView({report, policy, isCombinedReport = false, shouldShowTo
+                                             titleWithTooltips={[]}
+                                             brickRoadIndicator={violation ? 'error' : undefined}
+                                             errorText={violationTranslation}
+-                                        />
++                                        />) : <></>
++                                    }
+                                     </OfflineWithFeedback>
+                                 );
+                             })}

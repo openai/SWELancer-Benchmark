@@ -1,0 +1,69 @@
+
+diff --git a/src/components/OptionListContextProvider.tsx b/src/components/OptionListContextProvider.tsx
+index f098188de27..2769057ba82 100644
+--- a/src/components/OptionListContextProvider.tsx
++++ b/src/components/OptionListContextProvider.tsx
+@@ -53,23 +53,61 @@ function OptionsListContextProvider({reports, children}: OptionsListProviderProp
+ 
+     const personalDetails = usePersonalDetails() || CONST.EMPTY_OBJECT;
+     const prevPersonalDetails = usePrevious(personalDetails);
++    const prevReports = usePrevious(reports);
+ 
+     /**
+      * This effect is used to update the options list when reports change.
+      */
++    useEffect(() => {
++        if (!areOptionsInitialized.current) {
++            return;
++        }
++
++        const newReports = OptionsListUtils.createOptionList(personalDetails, reports).reports;
++
++        setOptions((prevOptions) => {
++            const newOptions = {...prevOptions};
++            newOptions.reports = newReports;
++            return newOptions;
++        });
++        setOptions((prevOptions) => {
++            const newOptions = {...prevOptions};
++            newOptions.reports = newReports;
++            return newOptions;
++        });
++        setOptions((prevOptions) => {
++            const newOptions = {...prevOptions};
++            newOptions.reports = newReports;
++            return newOptions;
++        });
++        // eslint-disable-next-line react-hooks/exhaustive-deps
++    }, [reports]);
++
++    /**
++     * This effect is used to add a new report option or remove a report option from the list of options when a new report is added to/removed from the collection.
++     */
+     useEffect(() => {
+         // there is no need to update the options if the options are not initialized
+         if (!areOptionsInitialized.current || !reports) {
+             return;
+         }
++        const missingReportIds = Object.keys(reports).filter((key) => prevReports && !(key in prevReports));
+         // Since reports updates can happen in bulk, and some reports depend on other reports, we need to recreate the whole list from scratch.
+         const newReports = OptionsListUtils.createOptionList(personalDetails, reports).reports;
+ 
+         setOptions((prevOptions) => {
+             const newOptions = {
+                 ...prevOptions,
+-                reports: newReports,
++                reports: prevOptions.reports.filter((report) => reports[`${ONYXKEYS.COLLECTION.REPORT}${report.reportID}`] !== null),
+             };
++            missingReportIds.forEach((missingReportId) => {
++                const report = missingReportId ? reports[missingReportId] : null;
++                if (!missingReportId || !report) {
++                    return;
++                }
++                const reportOption = OptionsListUtils.createOptionFromReport(report, personalDetails);
++                newOptions.reports.push(reportOption);
++            });
+ 
+             return newOptions;
+         });
+

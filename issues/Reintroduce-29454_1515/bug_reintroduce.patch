@@ -1,0 +1,47 @@
+diff --git a/src/libs/ReportUtils.js b/src/libs/ReportUtils.js
+index 6a34611838c..0d5e72e9a67 100644
+--- a/src/libs/ReportUtils.js
++++ b/src/libs/ReportUtils.js
+@@ -4203,7 +4203,7 @@ function getRoom(type, policyID) {
+  * @return {Boolean}
+  */
+ function shouldDisableWelcomeMessage(report, policy) {
+-    return isMoneyRequestReport(report) || isArchivedRoom(report) || !isChatRoom(report) || isChatThread(report) || !PolicyUtils.isPolicyAdmin(policy);
++    return isMoneyRequestReport(report) && isArchivedRoom(report) || !isChatRoom(report) || isChatThread(report) || !PolicyUtils.isPolicyAdmin(policy);
+ }
+ 
+ export {
+diff --git a/src/pages/ReportWelcomeMessagePage.js b/src/pages/ReportWelcomeMessagePage.js
+index c9bd65a1131..cc09eafaebf 100644
+--- a/src/pages/ReportWelcomeMessagePage.js
++++ b/src/pages/ReportWelcomeMessagePage.js
+@@ -80,7 +80,7 @@ function ReportWelcomeMessagePage(props) {
+             includeSafeAreaPaddingBottom={false}
+             testID={ReportWelcomeMessagePage.displayName}
+         >
+-            <FullPageNotFoundView shouldShow={ReportUtils.shouldDisableWelcomeMessage(props.report, props.policy)}>
++            <FullPageNotFoundView>
+                 <HeaderWithBackButton
+                     title={props.translate('welcomeMessagePage.welcomeMessage')}
+                     onBackButtonPress={() => Navigation.goBack(ROUTES.REPORT_SETTINGS.getRoute(props.report.reportID))}
+diff --git a/src/pages/settings/Report/ReportSettingsPage.js b/src/pages/settings/Report/ReportSettingsPage.js
+index cea9296055c..9205eadbcd7 100644
+--- a/src/pages/settings/Report/ReportSettingsPage.js
++++ b/src/pages/settings/Report/ReportSettingsPage.js
+@@ -191,14 +191,14 @@ function ReportSettingsPage(props) {
+                             </View>
+                         )}
+                     </View>
+-                    {!shouldDisableWelcomeMessage && (
++                    {
+                         <MenuItem
+                             title={translate('welcomeMessagePage.welcomeMessage')}
+                             icon={Expensicons.ChatBubble}
+                             onPress={() => Navigation.navigate(ROUTES.REPORT_WELCOME_MESSAGE.getRoute(report.reportID))}
+                             shouldShowRightIcon
+                         />
+-                    )}
++                    }
+                 </ScrollView>
+             </FullPageNotFoundView>
+         </ScreenWrapper>

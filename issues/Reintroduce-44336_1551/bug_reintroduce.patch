@@ -1,0 +1,63 @@
+diff --git a/src/libs/actions/IOU.ts b/src/libs/actions/IOU.ts
+index 5262cc4dc4f..21e9043ccc6 100644
+--- a/src/libs/actions/IOU.ts
++++ b/src/libs/actions/IOU.ts
+@@ -5822,7 +5822,10 @@ function cleanUpMoneyRequest(transactionID: string, reportAction: OnyxTypes.Repo
+  * @param isSingleTransactionView - whether we are in the transaction thread report
+  * @return the url to navigate back once the money request is deleted
+  */
+-function deleteMoneyRequest(transactionID: string, reportAction: OnyxTypes.ReportAction, isSingleTransactionView = false) {
++function deleteMoneyRequest(transactionID: string, reportAction: OnyxTypes.ReportAction, isSingleTransactionView = false,
++    deleteTransactionRef: React.MutableRefObject<boolean>
++) {
++    let DeleteTransaction = deleteTransactionRef.current; // Store initial value in a local variable
+     // STEP 1: Calculate and prepare the data
+     const {
+         shouldDeleteTransactionThread,
+@@ -6050,12 +6053,16 @@ function deleteMoneyRequest(transactionID: string, reportAction: OnyxTypes.Repor
+     // STEP 3: Make the API request
+     API.write(WRITE_COMMANDS.DELETE_MONEY_REQUEST, parameters, {optimisticData, successData, failureData});
+     CachedPDFPaths.clearByKey(transactionID);
++    DeleteTransaction = true; 
+
+     return urlToNavigateBack;
+ }
+ 
+-function deleteTrackExpense(chatReportID: string, transactionID: string, reportAction: OnyxTypes.ReportAction, isSingleTransactionView = false) {
++function deleteTrackExpense(chatReportID: string, transactionID: string, reportAction: OnyxTypes.ReportAction, isSingleTransactionView = false,
++    deleteTransactionRef: React.MutableRefObject<boolean>
++) {
+     // STEP 1: Get all collections we're updating
++    let DeleteTransaction = deleteTransactionRef.current;
+     const chatReport = ReportConnection.getAllReports()?.[`${ONYXKEYS.COLLECTION.REPORT}${chatReportID}`] ?? null;
+     if (!ReportUtils.isSelfDM(chatReport)) {
+         return deleteMoneyRequest(transactionID, reportAction, isSingleTransactionView);
+@@ -6076,7 +6083,7 @@ function deleteTrackExpense(chatReportID: string, transactionID: string, reportA
+     // STEP 6: Make the API request
+     API.write(WRITE_COMMANDS.DELETE_MONEY_REQUEST, parameters, {optimisticData, successData, failureData});
+     CachedPDFPaths.clearByKey(transactionID);
+-
++    DeleteTransaction = true;
+     // STEP 7: Navigate the user depending on which page they are on and which resources were deleted
+     if (isSingleTransactionView && shouldDeleteTransactionThread) {
+         // Pop the deleted report screen before navigating. This prevents navigating to the Concierge chat due to the missing report.
+diff --git a/src/pages/ReportDetailsPage.tsx b/src/pages/ReportDetailsPage.tsx
+index 195c14698f7..2aa23d1285b 100644
+--- a/src/pages/ReportDetailsPage.tsx
++++ b/src/pages/ReportDetailsPage.tsx
+@@ -729,12 +729,12 @@ function ReportDetailsPage({policies, report, route}: ReportDetailsPageProps) {
+         }
+ 
+         if (ReportActionsUtils.isTrackExpenseAction(requestParentReportAction)) {
+-            navigateBackToAfterDelete.current = IOU.deleteTrackExpense(moneyRequestReport?.reportID ?? '', iouTransactionID, requestParentReportAction, isSingleTransactionView);
++            navigateBackToAfterDelete.current = IOU.deleteTrackExpense(moneyRequestReport?.reportID ?? '', iouTransactionID, requestParentReportAction, isSingleTransactionView,isTransactionDeleted);
+         } else {
+-            navigateBackToAfterDelete.current = IOU.deleteMoneyRequest(iouTransactionID, requestParentReportAction, isSingleTransactionView);
++            navigateBackToAfterDelete.current = IOU.deleteMoneyRequest(iouTransactionID, requestParentReportAction, isSingleTransactionView,isTransactionDeleted);
+         }
+ 
+-        isTransactionDeleted.current = true;
++        // isTransactionDeleted.current = true;
+     }, [caseID, iouTransactionID, moneyRequestReport?.reportID, report, requestParentReportAction, isSingleTransactionView]);
+     return (
+         <ScreenWrapper testID={ReportDetailsPage.displayName}>

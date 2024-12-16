@@ -1,0 +1,39 @@
+diff --git a/src/libs/ReportActionsUtils.ts b/src/libs/ReportActionsUtils.ts
+index 15d7728ba35..32d1b605bf4 100644
+--- a/src/libs/ReportActionsUtils.ts
++++ b/src/libs/ReportActionsUtils.ts
+@@ -11,6 +11,8 @@ import ONYXKEYS from '@src/ONYXKEYS';
+ import ROUTES from '@src/ROUTES';
+ import type {OnyxInputOrEntry, PrivatePersonalDetails} from '@src/types/onyx';
+ import type {IssueNewCardOriginalMessage, JoinWorkspaceResolution, OriginalMessageChangeLog, OriginalMessageExportIntegration} from '@src/types/onyx/OriginalMessage';
++import OriginalMessageActionableMentionWhisper from '@src/types/onyx/OriginalMessage';
++
+ import type Report from '@src/types/onyx/Report';
+ import type ReportAction from '@src/types/onyx/ReportAction';
+ import type {Message, OldDotReportAction, OriginalMessage, ReportActions} from '@src/types/onyx/ReportAction';
+@@ -126,7 +128,7 @@ function isDeletedAction(reportAction: OnyxInputOrEntry<ReportAction | Optimisti
+     const message = reportAction?.message ?? [];
+ 
+     if (!Array.isArray(message)) {
+-        return message?.html === '' ?? message?.deleted;
++        return message?.html === '' || Boolean(message?.deleted);
+     }
+ 
+     // A legacy deleted comment has either an empty array or an object with html field with empty string as value
+@@ -689,11 +691,14 @@ function isActionableTrackExpense(reportAction: OnyxInputOrEntry<ReportAction>):
+  *
+  */
+ function isResolvedActionTrackExpense(reportAction: OnyxEntry<ReportAction>): boolean {
+-    const originalMessage = getOriginalMessage(reportAction);
+-    const resolution = originalMessage && typeof originalMessage === 'object' && 'resolution' in originalMessage ? originalMessage?.resolution : null;
++    const resolution = (reportAction?.originalMessage as OriginalMessageActionableMentionWhisper['originalMessage'])?.resolution;
++  if (reportAction?.actionName === CONST.REPORT.ACTIONS.TYPE.ACTIONABLE_TRACK_EXPENSE_WHISPER) {
++      return false; 
++  }
+     return isActionableTrackExpense(reportAction) && !!resolution;
+ }
+ 
++
+ /**
+  * Checks if a reportAction is fit for display as report last action, meaning that
+  * it satisfies shouldReportActionBeVisible, it's not whisper action and not deleted.

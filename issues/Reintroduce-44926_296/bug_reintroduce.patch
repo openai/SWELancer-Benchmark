@@ -1,0 +1,22 @@
+diff --git a/src/pages/settings/ExitSurvey/ExitSurveyConfirmPage.tsx b/src/pages/settings/ExitSurvey/ExitSurveyConfirmPage.tsx
+index 4b8c22c2cdc..c2acba76fee 100644
+--- a/src/pages/settings/ExitSurvey/ExitSurveyConfirmPage.tsx
++++ b/src/pages/settings/ExitSurvey/ExitSurveyConfirmPage.tsx
+@@ -83,17 +83,6 @@ function ExitSurveyConfirmPage({exitReason, isLoading, route, navigation}: ExitS
+                     success
+                     large
+                     text={translate('exitSurvey.goToExpensifyClassic')}
+-                    onPress={() => {
+-                        ExitSurvey.switchToOldDot().then(() => {
+-                            if (NativeModules.HybridAppModule) {
+-                                Navigation.resetToHome();
+-                                NativeModules.HybridAppModule.closeReactNativeApp();
+-                                return;
+-                            }
+-                            Link.openOldDotLink(CONST.OLDDOT_URLS.INBOX);
+-                            Navigation.dismissModal();
+-                        });
+-                    }}
+                     isLoading={isLoading ?? false}
+                     isDisabled={isOffline}
+                 />

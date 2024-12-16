@@ -1,0 +1,29 @@
+diff --git a/src/components/MoneyRequestHeader.tsx b/src/components/MoneyRequestHeader.tsx
+index d2db257dc77..8d915540861 100644
+--- a/src/components/MoneyRequestHeader.tsx
++++ b/src/components/MoneyRequestHeader.tsx
+@@ -41,7 +41,14 @@ type MoneyRequestHeaderProps = {
+ };
+ 
+ function MoneyRequestHeader({report, parentReportAction, policy, onBackButtonPress}: MoneyRequestHeaderProps) {
+-    const {shouldUseNarrowLayout, isSmallScreenWidth} = useResponsiveLayout();
++    const {shouldUseNarrowLayout,
++        isSmallScreenWidth,
++        isInNarrowPaneModal,
++        isExtraSmallScreenHeight,
++        isExtraSmallScreenWidth,
++        isMediumScreenWidth,
++        onboardingIsMediumOrLargerScreenWidth,
++        isLargeScreenWidth} = useResponsiveLayout();
+     const [parentReport] = useOnyx(`${ONYXKEYS.COLLECTION.REPORT}${report?.parentReportID ?? '-1'}`);
+     const [transaction] = useOnyx(
+         `${ONYXKEYS.COLLECTION.TRANSACTION}${
+@@ -187,7 +194,7 @@ function MoneyRequestHeader({report, parentReportAction, policy, onBackButtonPre
+                     </View>
+                 )}
+             </View>
+-            {isSmallScreenWidth && shouldShowHoldMenu && (
++            {isLargeScreenWidth && shouldShowHoldMenu && (
+                 <ProcessMoneyRequestHoldMenu
+                     onClose={handleHoldRequestClose}
+                     onConfirm={handleHoldRequestClose}
