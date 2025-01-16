@@ -20,5 +20,4 @@ docker buildx build \
 ```
 
 **Step 2:** Run the Container 
-
-You'll need to set the environment variables defined in `sample.env`. The `ISSUE_ID` corresponds to the folder name the `issues` directory.
+- You'll need to set the environment variables defined in `sample.env`. The `ISSUE_ID` corresponds to the folder name the `issues` directory.
