@@ -1,1 +1,0 @@
-{"price": 500.0, "title": "[HOLD for payment 2023-10-05] [HOLD for payment 2023-10-02] [$500] Android - App crashes when opening Settings > Wallet", "issue_repo_steps": "Action performed: 1. Open Android App\r\n2. Login with any account\r\n3. Go to Settings > Wallet\n\nExpected result: Settings > Wallet opens correctly\n\nActual result: None"}

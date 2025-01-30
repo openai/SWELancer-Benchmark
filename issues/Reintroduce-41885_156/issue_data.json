@@ -1,1 +1,0 @@
-{"price": 500.0, "title": "[HOLD for payment 2024-07-10] [$500] LHN - Self DM is not shown in bold", "issue_repo_steps": "Action performed: 1. Go to https://staging.new.expensify.com/\r\n2. SIgn in with a new expensifail account\n\nExpected result: Selef DM must be shown in bold\n\nActual result: None"}

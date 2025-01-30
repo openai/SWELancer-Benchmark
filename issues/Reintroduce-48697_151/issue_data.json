@@ -1,1 +1,0 @@
-{"price": 100.0, "title": "[HOLD for payment 2024-10-24] [$100] Attachment - Chat blinks when txt attachment is uploaded", "issue_repo_steps": "Action performed: 1. Log in with a Gmail account\r\n2. Open any 1:1 chat\r\n3. Send a txt attachment\n\nExpected result: It shouldn't blink.\n\nActual result: None"}

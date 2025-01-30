@@ -1,1 +1,0 @@
-{"price": 250.0, "title": "[HOLD for payment 2024-06-06] [$250] Chat - Emojis auto-selected after sending a message with a space before choosing from composer", "issue_repo_steps": "Action performed: 1. Open any chat\r\n2. Add a space, type, and send a message\r\n3. Select emojis from the composer\n\nExpected result: Emojis should not auto-select\n\nActual result: None"}
