@@ -11,7 +11,6 @@ from typing import Any, Generic, Self, Sequence, TypeVar
 from pydantic import BaseModel, field_validator, model_validator
 
 import chz
-from chz.factories import function
 from nanoeval._multiprocessing_utils import check_multiprocess_safe
 from nanoeval.asyncio_utils import HasAsyncContextManager
 from nanoeval.json_recorder import json_recorder
@@ -109,11 +108,7 @@ class RunnerArgs:
         doc="Limit the number of tasks run. The limit is the first N tasks selected before shuffling.",
     )
     run_set_id: str | None = None
-    recorder: RecorderConfig = chz.field(
-        meta_factory=function(default_module="nanoeval.recorders"),
-        default_factory=json_recorder,
-        doc="Recorder configuration used to create a recorder for the eval.",
-    )
+    recorder: RecorderConfig = None
     enable_slackbot: bool = True
     slack_name: str | None = None
     model_name: str | None = None

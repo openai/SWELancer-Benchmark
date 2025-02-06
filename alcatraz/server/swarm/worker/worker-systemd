@@ -1,0 +1,14 @@
+[Unit]
+Description=My Custom Server Service
+After=network.target
+
+[Service]
+Type=simple
+User=root
+Environment=PYTHONPATH=/home/azureuser/.local/lib/python3.11/site-packages
+ExecStart=/usr/bin/python /code/worker.py
+Restart=on-failure
+
+[Install]
+WantedBy=multi-user.target
+
