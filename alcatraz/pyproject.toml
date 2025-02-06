@@ -1,0 +1,38 @@
+[project]
+name = 'alcatraz'
+readme = "README.md"
+requires-python = ">=3.11"
+version = "0.1.0"
+dependencies = [
+    "pyyaml",
+    "jupyter_client",
+    "rich[jupyter]",
+    "docker",
+    "tenacity",
+    "filelock",
+    "ipykernel",
+    "pydantic",
+    "pytest",
+    "pytest-asyncio",
+    "blobfile",
+    "httpx",
+    "pillow",
+    "msgpack",
+    "fastapi",
+    "azure-mgmt-compute",
+    "azure-mgmt-network",
+    "azure-identity",
+    "vncdotool",
+    "asyncvnc",
+    "structlog"
+]
+
+[tool.setuptools]
+packages = ["alcatraz"]
+
+[project.optional-dependencies]
+formatters = ["black>=23.3", "isort>=5.13"]
+dev = ["pre-commit>=3.7"]
+
+[tool.black]
+line-length = 100 # match the precommit
