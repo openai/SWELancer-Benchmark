@@ -177,7 +177,7 @@ class SWELancerTask(ComputerTask):
                 await asyncio.sleep(15)
 
         # Clear tests directory
-        await computer.send_shell_command("rm -rf /app/tests")
+        # await computer.send_shell_command("rm -rf /app/tests")
 
         # Remove existing git repo and create a new one
         await computer.check_shell_command("rm -rf .git")
@@ -248,89 +248,91 @@ class SWELancerTask(ComputerTask):
             model_patch = await computer.download("/tmp/patch.diff")
         finally:
             pass
+        
+        # TODO: Make a new computer? 
+        grading_computer = computer 
 
-        with computer as grading_computer:
-            # First, we need to identify all applicable test folders.
-            list_command = "bash -i -c 'ls /app/tests/issues'"
-            list_res = await grading_computer.send_shell_command(list_command)
-            folders = list_res.output.decode("utf-8").splitlines()
+        # First, we need to identify all applicable test folders.
+        list_command = "bash -i -c 'ls /app/tests/issues'"
+        list_res = await grading_computer.send_shell_command(list_command)
+        folders = list_res.output.decode("utf-8").splitlines()
 
-            # Remove the folders that are from testbed variant tasks, since they share tests.
-            filtered_folders = [
-                folder for folder in folders if not folder.startswith("Reintroduce-")
-            ]
+        # Remove the folders that are from testbed variant tasks, since they share tests.
+        filtered_folders = [
+            folder for folder in folders if not folder.startswith("Reintroduce-")
+        ]
 
-            # Get the raw GitHub issue ID from the Question ID
-            issue_id = self.question_id.replace("Reintroduce-", "").split("_")[0]
+        # Get the raw GitHub issue ID from the Question ID
+        issue_id = self.question_id.replace("Reintroduce-", "").split("_")[0]
 
-            # Find all relevant tests to run
-            matching_folders = [
-                folder for folder in filtered_folders if folder.split("_")[0] == issue_id
-            ]
-            print(f"Running n={len(matching_folders)} tests for {issue_id}.")
+        # Find all relevant tests to run
+        matching_folders = [
+            folder for folder in filtered_folders if folder.split("_")[0] == issue_id
+        ]
+        print(f"Running n={len(matching_folders)} tests for {issue_id}.")
 
-            test_results = []
-            pytest_outputs = []
-            num_failed = 0
-            for env_issue_id in matching_folders:
-                try:
-                    # Set the ISSUE_ID environment variable
-                    set_env_command = f"""echo "export ISSUE_ID={env_issue_id}" >> ~/.bashrc"""
-                    await grading_computer.send_shell_command(f"bash -i -c '{set_env_command}'")
-                    await grading_computer.send_shell_command(
-                        f"""mkdir -p /app/tests/logs/{env_issue_id}"""
-                    )
+        test_results = []
+        pytest_outputs = []
+        num_failed = 0
+        for env_issue_id in matching_folders:
+            try:
+                # Set the ISSUE_ID environment variable
+                set_env_command = f"""echo "export ISSUE_ID={env_issue_id}" >> ~/.bashrc"""
+                await grading_computer.send_shell_command(f"bash -i -c '{set_env_command}'")
+                await grading_computer.send_shell_command(
+                    f"""mkdir -p /app/tests/logs/{env_issue_id}"""
+                )
 
-                    # Run tests against the model's code
-                    res = await grading_computer.send_shell_command(
-                        f"""bash -i -c 'export ISSUE_ID={env_issue_id}; ansible-playbook -i "localhost," --connection=local /app/tests/run_fixed_state.yml'"""
-                    )
-                    print(f"Ansible playbook output: {res.output.decode('utf-8')}")
+                # Run tests against the model's code
+                res = await grading_computer.send_shell_command(
+                    f"""bash -i -c 'export ISSUE_ID={env_issue_id}; ansible-playbook -i "localhost," --connection=local /app/tests/run_fixed_state.yml'"""
+                )
+                print(f"Ansible playbook output: {res.output.decode('utf-8')}")
 
-                    # Get pytest.log
-                    pytest_log = await grading_computer.send_shell_command(
-                        f"""bash -i -c 'export ISSUE_ID={env_issue_id}; cat /app/tests/logs/$ISSUE_ID/pytest.log'"""
-                    )
+                # Get pytest.log
+                pytest_log = await grading_computer.send_shell_command(
+                    f"""bash -i -c 'export ISSUE_ID={env_issue_id}; cat /app/tests/logs/$ISSUE_ID/pytest.log'"""
+                )
 
-                    pytest_output = pytest_log.output.decode("utf-8")
-                    pytest_outputs.append(pytest_output)
-                    print(f"Pytest output: {pytest_output}")
+                pytest_output = pytest_log.output.decode("utf-8")
+                pytest_outputs.append(pytest_output)
+                print(f"Pytest output: {pytest_output}")
 
-                    # Entire test broke!
-                    if "No such file or directory" in pytest_output:
-                        num_failed += 1
-                        continue
+                # Entire test broke!
+                if "No such file or directory" in pytest_output:
+                    num_failed += 1
+                    continue
 
-                    if tests_failed_in_pytest_log(pytest_output):
-                        test_results.append(0.0)
-                    else:
-                        # End early if it's wrong
-                        test_results.append(1.0)
-                        break
-                except Exception as e:
-                    print("Grading error... retrying!")
-                    print(str(e))
+                if tests_failed_in_pytest_log(pytest_output):
+                    test_results.append(0.0)
+                else:
+                    # End early if it's wrong
+                    test_results.append(1.0)
+                    break
+            except Exception as e:
+                print("Grading error... retrying!")
+                print(str(e))
 
-            if not test_results:
-                raise RuntimeError("No tests were executed.")
+        if not test_results:
+            raise RuntimeError("No tests were executed.")
 
-            print(f"Test results: {test_results}")
-            correct = 1.0 if all(result == 1.0 for result in test_results) else 0.0
+        print(f"Test results: {test_results}")
+        correct = 1.0 if all(result == 1.0 for result in test_results) else 0.0
 
-            return SWELancerGrade(
-                score=correct,
-                grader_log=json.dumps(
-                    {
-                        "earned": self.price * correct,
-                        "available": self.price,
-                        "pytest_logs": pytest_outputs,
-                        "variant": self.variant,
-                        "model_patch": model_patch.decode("utf-8"),
-                    }
-                ),
-                patch_path="",
-                grade_report_path="",
-            )
+        return SWELancerGrade(
+            score=correct,
+            grader_log=json.dumps(
+                {
+                    "earned": self.price * correct,
+                    "available": self.price,
+                    "pytest_logs": pytest_outputs,
+                    "variant": self.variant,
+                    "model_patch": model_patch.decode("utf-8"),
+                }
+            ),
+            patch_path="",
+            grade_report_path="",
+        )
 
 
 @chz.chz
