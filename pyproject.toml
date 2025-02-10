@@ -1,0 +1,16 @@
+[project]
+name = 'swelancer'
+version = "0.1.0"
+dependencies = [
+    "alcatraz",
+    "nanoeval",
+    "nanoeval-alcatraz",
+]
+
+[tool.setuptools]
+packages = ["swelancer"]
+
+[tool.uv.sources]
+nanoeval = { path = "project/nanoeval" }
+alcatraz = { path = "project/alcatraz" }
+nanoeval-alcatraz = { path = "project/nanoeval_alcatraz" }

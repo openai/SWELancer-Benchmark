@@ -1,0 +1,27 @@
+steps:
+  - label: "type check"
+    commands:
+      - oaipkg pip pyright # skipif: already_setup
+      - ./install.py nanoeval # skipif: already_setup
+      - cd project/nanoeval
+      - pyright nanoeval
+    agents:
+      queue: crow-cpu
+
+  - label: "lint"
+    commands:
+      - oaipkg installext "ruff==0.9.2" # skipif: already_setup
+      - cd project/nanoeval
+      - ruff check .
+    agents:
+      queue: crow-cpu
+
+  - label: "tests"
+    commands:
+      - ./install.py nanoeval # skipif: already_setup
+      - source torchflow/buildkite/env.sh
+      - python torchflow/run-torchflow-setup.py
+      - cd project/nanoeval
+      - pytest -vv --durations=10
+    agents:
+      queue: crow-cpu
