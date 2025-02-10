@@ -371,7 +371,7 @@ class SWELancerEval(PythonCodingEval):
             "EVAL_VARIANT": "ic_swe",
         }
 
-        docker_image = "swelancer:latest"
+        docker_image = "expensify_replay:latest"
 
         swelancer_tasks = []
         i = 0 
