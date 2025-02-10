@@ -176,16 +176,8 @@ class SWELancerTask(ComputerTask):
                     break
                 await asyncio.sleep(15)
 
-        #TODO: move install to docker file?
-
-        #Zip testing files besides user-tool into password-protected dir to prevent cheating
-        await computer.check_shell_command(
-        f"apt-get install zip unzip -y && zip -j -P 'secretpasswordhere' /app/tests_backup.zip $(find /app/tests -maxdepth 1 -type f ! -name 'run_user_tool.yml')"
-        )
-
-        await computer.check_shell_command(
-        "rm $(find /app/tests -maxdepth 1 -type f ! -name 'run_user_tool.yml')"
-        )
+        # Clear tests directory
+        # await computer.send_shell_command("rm -rf /app/tests")
 
         # Remove existing git repo and create a new one
         await computer.check_shell_command("rm -rf .git")
@@ -212,11 +204,6 @@ class SWELancerTask(ComputerTask):
 
     @override
     async def grade(self, computer: ComputerInterface) -> SWELancerGrade:
-        #Unzip locked testing files
-        await computer.check_shell_command(
-        "unzip -P 'secretpasswordhere' -o /app/tests_backup.zip -d /app/tests"
-        )
-
         if self.variant == "swe_manager":
             # === Grade Manager Tasks ===
 
@@ -386,10 +373,6 @@ class SWELancerEval(PythonCodingEval):
 
             if str(task['manager_commit']) == 'nan': 
                 task['manager_commit'] = None
-            
-            #Clean internal tests (should be removed for release?)
-            if "Reintroduce-" in task["question_id"]:
-                continue
 
             SWEFL_ENV["ISSUE_ID"] = task["question_id"]
 
