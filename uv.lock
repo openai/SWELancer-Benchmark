@@ -229,6 +229,15 @@ wheels = [
 ]
 
 [[package]]
+name = "appdirs"
+version = "1.4.4"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/d7/d8/05696357e0311f5b5c316d7b95f46c669dd9c15aaeecbb48c7d0aeb88c40/appdirs-1.4.4.tar.gz", hash = "sha256:7d5d0167b2b1ba821647616af46a749d1c653740dd0d2415100fe26e27afdf41", size = 13470 }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/3b/00/2344469e2084fb287c2e0b57b72910309874c3245463acd6cf5e3db69324/appdirs-1.4.4-py2.py3-none-any.whl", hash = "sha256:a841dacd6b99318a741b166adb07e19ee71a274450e68237b4650ca1055ab128", size = 9566 },
+]
+
+[[package]]
 name = "appnope"
 version = "0.1.4"
 source = { registry = "https://pypi.org/simple" }
@@ -1483,6 +1492,15 @@ wheels = [
 ]
 
 [[package]]
+name = "more-itertools"
+version = "10.6.0"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/88/3b/7fa1fe835e2e93fd6d7b52b2f95ae810cf5ba133e1845f726f5a992d62c2/more-itertools-10.6.0.tar.gz", hash = "sha256:2cd7fad1009c31cc9fb6a035108509e6547547a7a738374f10bd49a09eb3ee3b", size = 125009 }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/23/62/0fe302c6d1be1c777cab0616e6302478251dfbf9055ad426f5d0def75c89/more_itertools-10.6.0-py3-none-any.whl", hash = "sha256:6eb054cb4b6db1473f6e15fcc676a08e4732548acd47c708f0e179c2c7c01e89", size = 63038 },
+]
+
+[[package]]
 name = "msal"
 version = "1.31.1"
 source = { registry = "https://pypi.org/simple" }
@@ -1620,10 +1638,12 @@ dependencies = [
     { name = "litecli" },
     { name = "loky" },
     { name = "matplotlib" },
+    { name = "more-itertools" },
     { name = "numpy" },
     { name = "openai" },
     { name = "pandas" },
     { name = "psutil" },
+    { name = "ptpython" },
     { name = "pyarrow" },
     { name = "pydantic" },
     { name = "pydantic-core" },
@@ -1647,10 +1667,12 @@ requires-dist = [
     { name = "litecli" },
     { name = "loky" },
     { name = "matplotlib" },
+    { name = "more-itertools" },
     { name = "numpy" },
     { name = "openai" },
     { name = "pandas" },
     { name = "psutil" },
+    { name = "ptpython" },
     { name = "pyarrow" },
     { name = "pydantic", specifier = ">=2" },
     { name = "pydantic-core" },
@@ -2018,6 +2040,21 @@ wheels = [
     { url = "https://files.pythonhosted.org/packages/47/da/99f4345d4ddf2845cb5b5bd0d93d554e84542d116934fde07a0c50bd4e9f/psutil-6.1.1-cp36-abi3-manylinux_2_17_aarch64.manylinux2014_aarch64.whl", hash = "sha256:33431e84fee02bc84ea36d9e2c4a6d395d479c9dd9bba2376c1f6ee8f3a4e0b3", size = 289017 },
     { url = "https://files.pythonhosted.org/packages/38/53/bd755c2896f4461fd4f36fa6a6dcb66a88a9e4b9fd4e5b66a77cf9d4a584/psutil-6.1.1-cp37-abi3-win32.whl", hash = "sha256:eaa912e0b11848c4d9279a93d7e2783df352b082f40111e078388701fd479e53", size = 250602 },
     { url = "https://files.pythonhosted.org/packages/7b/d7/7831438e6c3ebbfa6e01a927127a6cb42ad3ab844247f3c5b96bea25d73d/psutil-6.1.1-cp37-abi3-win_amd64.whl", hash = "sha256:f35cfccb065fff93529d2afb4a2e89e363fe63ca1e4a5da22b603a85833c2649", size = 254444 },
+]
+
+[[package]]
+name = "ptpython"
+version = "3.0.29"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "appdirs" },
+    { name = "jedi" },
+    { name = "prompt-toolkit" },
+    { name = "pygments" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/56/61/352792c9f47de98a910526ff8a684466a6217e53ffa6627b3781960e4f0d/ptpython-3.0.29.tar.gz", hash = "sha256:b9d625183aef93a673fc32cbe1c1fcaf51412e7a4f19590521cdaccadf25186e", size = 72622 }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/0f/39/c6fd4dd531e067b6a01624126cff0b3ddc6569e22f83e48d8418ffa9e3be/ptpython-3.0.29-py2.py3-none-any.whl", hash = "sha256:65d75c4871859e4305a020c9b9e204366dceb4d08e0e2bd7b7511bd5e917a402", size = 67057 },
 ]
 
 [[package]]

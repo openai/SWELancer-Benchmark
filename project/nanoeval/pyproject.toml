@@ -18,11 +18,13 @@ dependencies = [
     "tqdm",
     "loky",
     "numpy",
+    "more-itertools",
     "pytest-asyncio",
     "dill",
     "typing-extensions",
     "pydantic-core",
     "psutil",
+    "ptpython",
     "ipython",
     "structlog",
 ]
