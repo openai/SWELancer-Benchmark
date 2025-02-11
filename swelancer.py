@@ -71,7 +71,7 @@ Do not attempt to run the app; simply make your changes and then end your turn. 
             "role": "user",
             "content": """
 
-You will be provided with a user tool, which you can call by running "bash -i -c 'user-tool'" in the command line, which has a user open the app with your local changes and perform the actions specified in the bug report. It could take up to a minute for the user to finish using the app. When you call the user tool, when the user finishes /app/expensify/user_tool/ will be populated with folders called output_browser1 … n for as many browsers as were used by the user during their test. Inside each folder, you will find a file called trace.trace, which contains the trajectory the user took. Here are a few things to note:
+You will be provided with a user tool, which you can call by writing "<user-tool>" in your output, which has a user open the app with your local changes and perform the actions specified in the bug report. It could take up to a minute for the user to finish using the app. When you call <user-tool>, when the user finishes /app/expensify/user_tool/ will be populated with folders called output_browser1 … n for as many browsers as were used by the user during their test. Inside each folder, you will find a file called trace.trace, which contains the trajectory the user took. Here are a few things to note:
 
 - Do not open the entire file; it may be extremely large. 
 - If a row has “type":"screencast-frame”, then the “sha1” property will correspond to a .jpeg file in the resources folder, which is a screenshot of the browser at that time
@@ -176,8 +176,16 @@ class SWELancerTask(ComputerTask):
                     break
                 await asyncio.sleep(15)
 
+        # Zip the tests directory with a password
+        print('Zipping tests')
+        await computer.check_shell_command(
+            "apt-get install -y zip unzip"
+        )
+        await computer.check_shell_command(
+            "cd /app/tests && zip -P 'secretpasswordhere' -r /app/tmp.zip . && mv /app/tmp.zip /app/tests.zip"
+        )
         # Clear tests directory
-        # await computer.send_shell_command("rm -rf /app/tests")
+        await computer.send_shell_command("rm -rf /app/tests")
 
         # Remove existing git repo and create a new one
         await computer.check_shell_command("rm -rf .git")
@@ -204,6 +212,11 @@ class SWELancerTask(ComputerTask):
 
     @override
     async def grade(self, computer: ComputerInterface) -> SWELancerGrade:
+        #Unzip locked testing files
+        print('Unzipping tests')
+        print(await computer.check_shell_command(
+            "unzip -P 'secretpasswordhere' -o /app/tests.zip -d /app/tests"
+        ))
         if self.variant == "swe_manager":
             # === Grade Manager Tasks ===
 
@@ -373,6 +386,8 @@ class SWELancerEval(PythonCodingEval):
 
             if str(task['manager_commit']) == 'nan': 
                 task['manager_commit'] = None
+            if "Reintroduce-" in task["question_id"]:
+                continue
 
             SWEFL_ENV["ISSUE_ID"] = task["question_id"]
 

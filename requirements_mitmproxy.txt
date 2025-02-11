@@ -1,5 +1,0 @@
-requests_toolbelt==1.0.0
-pusher==3.3.2
-beautifulsoup4==4.12.3
-lxml==5.3.0
-requests==2.32.3

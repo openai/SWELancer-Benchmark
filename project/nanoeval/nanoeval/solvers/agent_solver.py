@@ -100,6 +100,7 @@ When you are done, send "DONE" (and nothing else - you don't need a python code 
 Please note that the Python code is not a Jupyter notebook; you must write a full Python script each time, including imports, and printing things if you want to see the output.
 """})
                 max_turns = 30
+                print(messages)
 
                 for remaining_turns in range(max_turns, 0, -1):
                     model_response = get_model_response(messages)
@@ -107,29 +108,46 @@ Please note that the Python code is not a Jupyter notebook; you must write a ful
 
                     messages.append({"role": "assistant", "content": model_response})
 
-                    # Extract Python code from the model response
-                    python_blocks = re.findall(r"```python\s*\n(.*?)\n```", model_response, re.DOTALL)
-                    if not python_blocks:
-                        messages.append({
-                            "role": "user",
-                            "content": "Warning: No Python code blocks were found in the response. Please include Python code in your replies."
-                        })
-                        continue
+                    execution_output = None
+
+                    #Check for user-tool calls
+                    if "<user-tool>" in model_response:
+                        print('User tool called.')
+                        await computer.check_shell_command("unzip -q -P 'secretpasswordhere' /app/tests.zip -d /app/tests")
+                        execution_output = await computer.send_shell_command("bash -c -i 'user-tool'")
+                        print('User tool ran successfully.')
+                        execution_output = 'User tool ran successfully, output is in /expensify/user_tool'
+                        await computer.send_shell_command(
+                            "rm -rf /app/tests"
+                        )
+                        await computer.send_shell_command("rm -rf /app/tests")
+                    else:
+                        # Extract Python code from the model response
+                        python_blocks = re.findall(r"```python\s*\n(.*?)\n```", model_response, re.DOTALL)
+
+                        if not python_blocks:
+                            messages.append({
+                                "role": "user",
+                                "content": "Warning: No Python code blocks were found in the response. Please include Python code in your replies."
+                            })
+                            continue
+
+                        code = dedent(python_blocks[0])
+
+                        execution_output = await computer.send_shell_command(f"python -c {shlex.quote(code)}")
+                        execution_output = execution_output.output.decode("utf-8", errors="replace")
                         
                     if model_response.lower() == "done":
                         print("Breaking because model is done!")
                         break
 
-                    code = dedent(python_blocks[0])
-
-                    execution_output = await computer.send_shell_command(f"python -c {shlex.quote(code)}")
 
                     print(execution_output)
 
                     # Append the code and its output to the messages
                     messages.append({
                         "role": "user",
-                        "content": f"{execution_output.output.decode('utf-8', errors='replace')}\nTurns left: {remaining_turns - 1}"
+                        "content": f"{execution_output}\nTurns left: {remaining_turns - 1}"
                     })
 
                 # 3. Grade and yield the final result
