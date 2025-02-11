@@ -31,6 +31,7 @@ import structlog.stdlib
 import chz
 from nanoeval.solvers.computer_tasks.code_execution_interface import ComputerInterface
 import pandas as pd
+import os
 
 logger = structlog.stdlib.get_logger(component=__name__, _print=True)
 
@@ -215,7 +216,7 @@ class SWELancerTask(ComputerTask):
         #Unzip locked testing files
         print('Unzipping tests')
         print(await computer.check_shell_command(
-            "unzip -P 'secretpasswordhere' -o /app/tests.zip -d /app/tests"
+            "unzip -q -P 'secretpasswordhere' -o /app/tests.zip -d /app/tests"
         ))
         if self.variant == "swe_manager":
             # === Grade Manager Tasks ===
@@ -360,13 +361,13 @@ class SWELancerEval(PythonCodingEval):
     async def get_tasks(self) -> list[SWELancerTask]:
         tasks = pd.read_csv("swelancer_tasks.csv")
         SWEFL_ENV = {
-            "ISSUE_ID": "",
-            "PUSHER_APP_KEY": "ec9c3907ffecefe1aeca",
-            "PUSHER_APP_SECRET": "4b28d7cd1e1a36d24602",
-            "PUSHER_APP_ID": "1912245",
-            "USE_WEB_PROXY": "false",
-            "EXPENSIFY_URL": "https://www.expensify.com/",
-            "NEW_EXPENSIFY_URL": "https://new.expensify.com/",
+            "PUSHER_APP_KEY": os.getenv("PUSHER_APP_KEY"),
+            "PUSHER_APP_SECRET": os.getenv("PUSHER_APP_SECRET"),
+            "PUSHER_APP_ID": os.getenv("PUSHER_APP_ID"),
+            "USE_WEB_PROXY": os.getenv("USE_WEB_PROXY"),
+            "EXPENSIFY_URL": os.getenv("EXPENSIFY_URL"),
+            "NEW_EXPENSIFY_URL": os.getenv("NEW_EXPENSIFY_URL"),
+            "ISSUE_ID": "0",
             "LC_ALL": "C.UTF-8",
             "EVAL_VARIANT": "ic_swe",
         }
@@ -394,7 +395,7 @@ class SWELancerEval(PythonCodingEval):
             del task['price_limit']
             swelancer_tasks.append(SWELancerTask(**task, attempt_id=str(i), environment=SWEFL_ENV, grade_every_step=False, docker_image=docker_image, instance=SwelancerInstance(repo="expensify")))
             i += 1
-        return swelancer_tasks[:1]
+        return swelancer_tasks
     
     @override
     async def evaluate(self, task: ComputerTask) -> FinalResult:
