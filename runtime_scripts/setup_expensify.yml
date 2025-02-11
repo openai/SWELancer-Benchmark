@@ -1,0 +1,186 @@
+---
+- hosts: localhost
+  connection: local
+  tasks:
+    - name: Ensure ISSUE_ID environment variable is set
+      assert:
+        that:
+          - lookup('env', 'ISSUE_ID') is not none
+        fail_msg: "The environment variable ISSUE_ID is not set."
+    
+    - name: Verify the flow file does not contain PII or unnecessary information
+      shell: |
+        ISSUE_ID={{ lookup('env', 'ISSUE_ID') }}
+        python3.12 -m pip install --no-cache-dir mitmproxy==11.0.2
+        python3.12 /app/tests/utils/check_flows.py --path=/app/tests/issues/$ISSUE_ID/ --prefixes=flow.mitm
+        python3.12 -m pip uninstall -y mitmproxy
+    
+    - name: Create a new log directory for the ISSUE_ID
+      file:
+        path: "/app/tests/logs/{{ lookup('env', 'ISSUE_ID') }}"
+        state: directory
+        mode: '0755'
+    
+    - name: Create a new attempts directory for the ISSUE_ID
+      file:
+        path: "/app/tests/attempts/{{ lookup('env', 'ISSUE_ID') }}"
+        state: directory
+        mode: '0755'
+
+    - name: Generate empty certs store
+      shell: mkdir -p /root/.pki/nssdb && certutil --empty-password -d $HOME/.pki/nssdb -N
+    
+    - name: Generate CA authority using mkcert
+      shell: |
+        mkcert -install
+        mkcert -cert-file certificate.pem -key-file key.pem dev.new.expensify.com localhost 127.0.0.1
+      args:
+        chdir: /app/expensify/config/webpack/
+    
+    - name: Modify /etc/hosts file to include dev.new.expensify.com
+      become: true
+      lineinfile:
+        path: /etc/hosts
+        line: '127.0.0.1 dev.new.expensify.com'
+        state: present
+        backup: no
+        unsafe_writes: yes
+    
+    - name: Get the commit ID for the issue
+      shell: |
+        ISSUE_ID={{ lookup('env', 'ISSUE_ID') }}
+        cat /app/tests/issues/$ISSUE_ID/commit_id.txt
+      register: commit_id
+    
+    - name: Get the git tag for the issue
+      shell: |
+        ISSUE_ID={{ lookup('env', 'ISSUE_ID') }}
+        cat /app/tests/issues/$ISSUE_ID/git_tag.txt
+      register: git_tag
+
+    - name: Checkout to the commit ID
+      shell: |
+        git reset --hard origin/master
+        git checkout {{ commit_id.stdout }}
+      args:
+        chdir: /app/expensify
+
+    - name: Slurp revert_command.txt
+      slurp:
+        src: "/app/tests/issues/{{ lookup('env','ISSUE_ID') }}/revert_command.txt"
+      register: revert_command
+
+    - name: Run revert command if not empty
+      shell: |
+        ISSUE_ID={{ lookup('env','ISSUE_ID') }}
+        {{ revert_command.content | b64decode | trim }}
+      args:
+        chdir: /app/expensify
+      when: (revert_command.content | b64decode | trim) | length > 0
+
+    - name: Slurp bug_reintroduce.patch
+      slurp:
+        src: "/app/tests/issues/{{ lookup('env','ISSUE_ID') }}/bug_reintroduce.patch"
+      register: patch_content
+
+    - name: Apply the patch if revert_command.txt is empty and bug_reintroduce.patch is not
+      shell: |
+        ISSUE_ID={{ lookup('env','ISSUE_ID') }}
+        patch -p1 < "/app/tests/issues/$ISSUE_ID/bug_reintroduce.patch"
+      args:
+        chdir: /app/expensify
+      when:
+        - (revert_command.content | b64decode | trim) | length == 0
+        - (patch_content.content | b64decode | trim) | length > 0
+    
+    - name: Apply npm_fix.py file to remove integrity checks
+      shell: |
+        python3.12 /app/expensify/npm_fix.py
+      args:
+        chdir: /app/expensify
+    
+    - name: Create .env file with the environment variables
+      lineinfile:
+        path: /app/expensify/.env
+        line: '{{ item.key }}={{ item.value }}'
+        create: yes
+      with_dict:
+        PUSHER_APP_KEY: "{{ lookup('env', 'PUSHER_APP_KEY') }}"
+        USE_WEB_PROXY: "{{ lookup('env', 'USE_WEB_PROXY') }}"
+        EXPENSIFY_URL: "{{ lookup('env', 'EXPENSIFY_URL') }}"
+        NEW_EXPENSIFY_URL: "{{ lookup('env', 'NEW_EXPENSIFY_URL') }}"
+
+    - name: Remove node_modules folder
+      file:
+        path: /app/expensify/node_modules
+        state: absent 
+    
+    - name: Remove .npmrc file
+      file:
+        path: /app/expensify/.npmrc
+        state: absent
+
+    - name: Use nvm to install specific Node.js version (using '.nvmrc')
+      shell: |
+        source /root/.nvm/nvm.sh
+        nvm install
+      args:
+        chdir: /app/expensify
+        executable: /bin/bash
+    
+    - name: Use npm version to set git tag if it exists
+      shell: |
+        source /root/.nvm/nvm.sh
+        npm version {{ git_tag.stdout }} --no-git-tag-version
+      args:
+        chdir: /app/expensify
+        executable: /bin/bash
+      when: git_tag.stdout != ''
+    
+    # - name: Set npm registry to use the local npm proxy
+    #   shell: |
+    #     source /root/.nvm/nvm.sh
+    #     npm set registry http://npmcache:4873/
+    #   args:
+    #     chdir: /app/expensify
+    #     executable: /bin/bash
+
+    - name: Install node modules via npm
+      shell: |
+        source /root/.nvm/nvm.sh
+        npm install --no-cache
+      args:
+        chdir: /app/expensify
+        executable: /bin/bash
+      retries: 3
+      delay: 5
+      register: result
+      until: result is not failed
+
+    - name: Check if the webpack.dev.ts file exists
+      ansible.builtin.stat:
+        path: /app/expensify/config/webpack/webpack.dev.ts
+      register: webpack_file_ts
+
+    - name: Compile Development Webpack (TypeScript)
+      shell: |
+        source /root/.nvm/nvm.sh
+        npx webpack --config ./config/webpack/webpack.dev.ts
+      args:
+        chdir: /app/expensify
+        executable: /bin/bash
+      when: webpack_file_ts.stat.exists
+    
+    - name: Check if the webpack.dev.js file exists
+      ansible.builtin.stat:
+        path: /app/expensify/config/webpack/webpack.dev.js
+      register: webpack_file_js
+    
+    - name: Compile Development Webpack (JavaScript)
+      shell: |
+        source /root/.nvm/nvm.sh
+        npx webpack --config ./config/webpack/webpack.dev.js
+      args:
+        chdir: /app/expensify
+        executable: /bin/bash
+      when: webpack_file_js.stat.exists

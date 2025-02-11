@@ -133,17 +133,17 @@ RUN mkdir -p /app/tests
 # Copy files into the /app/tests/ directory
 COPY issues/ /app/tests/issues/
 COPY utils/ /app/tests/utils/
-COPY setup_expensify.yml /app/tests/setup_expensify.yml
-COPY setup_mitmproxy.yml /app/tests/setup_mitmproxy.yml
-COPY run_test.yml /app/tests/run_test.yml
-COPY run_fixed_state.yml /app/tests/run_fixed_state.yml
-COPY run_user_tool.yml /app/tests/run_user_tool.yml
-COPY run_broken_state.yml /app/tests/run_broken_state.yml
-COPY setup_eval.yml /app/tests/setup_eval.yml
-COPY run.sh /app/tests/run.sh
-COPY replay.py /app/tests/replay.py
-COPY rewrite_test.py /app/tests/rewrite_test.py
-COPY npm_fix.py /app/expensify/npm_fix.py
+COPY runtime_scripts/setup_expensify.yml /app/tests/setup_expensify.yml
+COPY runtime_scripts/setup_mitmproxy.yml /app/tests/setup_mitmproxy.yml
+COPY runtime_scripts/run_test.yml /app/tests/run_test.yml
+COPY runtime_scripts/run_fixed_state.yml /app/tests/run_fixed_state.yml
+COPY runtime_scripts/run_user_tool.yml /app/tests/run_user_tool.yml
+COPY runtime_scripts/run_broken_state.yml /app/tests/run_broken_state.yml
+COPY runtime_scripts/setup_eval.yml /app/tests/setup_eval.yml
+COPY runtime_scripts/run.sh /app/tests/run.sh
+COPY runtime_scripts/replay.py /app/tests/replay.py
+COPY runtime_scripts/rewrite_test.py /app/tests/rewrite_test.py
+COPY runtime_scripts/npm_fix.py /app/expensify/npm_fix.py
 RUN chmod +x /app/tests/run.sh
 WORKDIR /app/expensify
 

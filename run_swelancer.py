@@ -6,7 +6,7 @@ from nanoeval.evaluation import EvalSpec, RunnerArgs
 from nanoeval.examples._gpqa import GPQAEval
 from nanoeval.recorder import dummy_recorder
 from nanoeval.setup import nanoeval_entrypoint
-from nanoeval.solvers.agent_solver import SimpleAgentSolver
+from swelancer_agent import SimpleAgentSolver
 
 async def main() -> None:
     report = await nanoeval.run(
