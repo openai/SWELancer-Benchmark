@@ -103,11 +103,11 @@ RUN curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.40.1/install.sh | b
     . "$NVM_DIR/nvm.sh"
 
 # Install Pip and Pipx
-COPY requirements_primary.txt .
+COPY requirements.txt .
 RUN curl https://bootstrap.pypa.io/get-pip.py -o get-pip.py && \
     python3.12 get-pip.py && \
     python3.12 -m pip install --upgrade pip && \
-    python3.12 -m pip install --no-cache-dir -r requirements_primary.txt && \
+    python3.12 -m pip install --no-cache-dir -r requirements.txt && \
     python3.12 -m pipx ensurepath && \
     /bin/bash -c "source /root/.bashrc"
 
@@ -118,14 +118,14 @@ RUN python3.12 -m pipx install --include-deps ansible==11.1.0
 RUN python3.12 -m pipx run --spec playwright playwright install
 
 # Install mitmdump, mitmproxy, and inject dependencies
-COPY requirements_mitmproxy.txt .
+COPY requirements.txt .
 RUN python3.12 -m pipx install mitmproxy==11.0.2 && \
-    python3.12 -m pipx runpip mitmproxy install -r requirements_mitmproxy.txt
+    python3.12 -m pipx runpip mitmproxy install -r requirements.txt
 
 # Install pytest, dependencies, and browser drivers
-COPY requirements_pytest.txt .
+COPY requirements.txt .
 RUN python3.12 -m pipx install pytest==8.3.4 && \
-    python3.12 -m pipx runpip pytest install -r requirements_pytest.txt
+    python3.12 -m pipx runpip pytest install -r requirements.txt
 
 # Create the /app/tests/ directory
 RUN mkdir -p /app/tests
