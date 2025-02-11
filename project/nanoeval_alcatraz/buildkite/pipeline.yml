@@ -1,0 +1,25 @@
+steps:
+  - label: 'lint'
+    commands:
+      - oaipkg installext "ruff==0.9.2"  # skipif: already_setup
+      - cd project/nanoeval_alcatraz
+      - ruff check .
+    agents:
+      queue: crow-cpu
+
+  - label: 'tests'
+    commands:
+      - ./install.py nanoeval_alcatraz  # skipif: already_setup
+      - cd project/nanoeval_alcatraz
+      - pytest -vv --durations=10
+    agents:
+      queue: crow-cpu
+
+  - label: 'type check'
+    commands:
+      - oaipkg installext "mypy==1.15.0"  # skipif: already_setup
+      - ./install.py nanoeval_alcatraz  # skipif: already_setup
+      - cd project/nanoeval_alcatraz
+      - mypy nanoeval_alcatraz
+    agents:
+      queue: crow-cpu
