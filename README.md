@@ -51,8 +51,7 @@ docker buildx build \
   - `ISSUE_ID`: This corresponds to the folder name in the `issues` directory you want to work with
 
 **Step 4:** Set Up Pusher Integration
-- We use Pusher as a real-time messaging service to handle communication between different components of our workflow
-- Pusher allows us to send notifications and updates between the LLM agent and the testing infrastructure
+- We use Pusher as a real-time messaging service to handle communication between different components of our workflow to send notifications and updates between the LLM agent and the testing infrastructure
 - To set up Pusher:
   1. Create an account at https://dashboard.pusher.com/ (you can sign in with GitHub)
   2. Create a new Pusher channel:
@@ -67,10 +66,6 @@ docker buildx build \
      - Secret
      - Cluster
 
-**Step 5:** Run the container and confirm tests work
-- You can run the container by pressing the "Run" button within the Docker app
-- After running the docker container, verify the setup by running the tests:
-  ```bash
-  bash -i -c 'ansible-playbook /app/tests/run_user_tool.yml'
-  ```
-- Check the "Files" section of the Docker container - you should see new attempt files and log files added
+**Step 5:** Run the evaluation
+- Run the `run_swelancer.py` file, which will start the evaluation. You will need to install the dependencies in pyproject.toml
+- Confirm that the evaluation completes successfully (it will project a dictionary with the results)
