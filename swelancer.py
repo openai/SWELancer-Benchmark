@@ -32,6 +32,7 @@ import chz
 from nanoeval.solvers.computer_tasks.code_execution_interface import ComputerInterface
 import pandas as pd
 import os
+from dataclasses import field
 
 logger = structlog.stdlib.get_logger(component=__name__, _print=True)
 
@@ -274,7 +275,7 @@ class SWELancerTask(ComputerTask):
 @chz.chz
 class SWELancerEval(PythonCodingEval):
     split: SWELancerSplit = "Diamond-$500k"
-
+    taskset: list[str] = field(default_factory=list)
     @override
     def get_name(self) -> str:
         return "SWELancer"
@@ -299,6 +300,8 @@ class SWELancerEval(PythonCodingEval):
         swelancer_tasks = []
         i = 0 
         for task in tasks.to_dict(orient="records"):
+            if self.taskset and task["question_id"] not in self.taskset:
+                continue
             # task['all_proposals'] = ast.literal_eval(task['all_proposals'])
             task['prompt'] = ast.literal_eval(task['prompt'])
             task['acceptable_folders'] = ast.literal_eval(task['acceptable_folders'])
