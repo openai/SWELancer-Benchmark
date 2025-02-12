@@ -61,30 +61,19 @@ RUN apt-get update && apt-get install -y \
     libgtk-3-0 \
     --no-install-recommends
 
-# Install Xvfb, Fluxbox, and VNC tools
+# Install Xvfb and VNC tools
 RUN apt-get update && apt-get install -y \
     xvfb \
-    fluxbox \
     x11vnc \
     novnc \
     websockify \
     --no-install-recommends
 
-# Install GNOME/GTK-related dependencies for proper GUI support
+# Install bspwm supporting tools
 RUN apt-get update && apt-get install -y \
-    gnome-settings-daemon \
-    gnome-session-bin \
-    gnome-control-center \
-    dconf-cli \
-    libgtk-3-0 \
-    libgdk-pixbuf2.0-0 \
-    libpangocairo-1.0-0 \
-    libatk1.0-0 \
-    --no-install-recommends
-
-# Install libraries to fix Xvfb-related issues
-RUN apt-get update && apt-get install -y \
-    libsecret-1-0 \
+    bspwm \
+    feh \
+    xterm \
     --no-install-recommends
 
 # Install dependencies related to tests
@@ -93,6 +82,7 @@ RUN apt-get update && apt-get install -y \
     watchman \
     python3-pyqt5 \
     ffmpeg \
+    xclip \
     --no-install-recommends
 
 # Clone the GitHub repository into /app/expensify
@@ -103,30 +93,21 @@ RUN git clone https://github.com/Expensify/App.git /app/expensify --single-branc
 RUN curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.40.1/install.sh | bash && \
     . "$NVM_DIR/nvm.sh"
 
-# Install Pip and Pipx
+# Install Pip
 COPY requirements.txt .
 RUN curl https://bootstrap.pypa.io/get-pip.py -o get-pip.py && \
     python3.12 get-pip.py && \
     python3.12 -m pip install --upgrade pip && \
-    python3.12 -m pip install --no-cache-dir -r requirements.txt && \
-    python3.12 -m pipx ensurepath && \
-    /bin/bash -c "source /root/.bashrc"
+    python3.12 -m pip install --no-cache-dir -r requirements.txt
 
-# Install ansible
-RUN python3.12 -m pipx install --include-deps ansible==11.1.0
+# Setup playwright
+RUN python3.12 -m playwright install
+RUN python3.12 -m playwright install-deps
 
-# Install browser drivers
-RUN python3.12 -m pipx run --spec playwright playwright install
-
-# Install mitmdump, mitmproxy, and inject dependencies
-COPY requirements.txt .
-RUN python3.12 -m pipx install mitmproxy==11.0.2 && \
-    python3.12 -m pipx runpip mitmproxy install -r requirements.txt
-
-# Install pytest, dependencies, and browser drivers
-COPY requirements.txt .
-RUN python3.12 -m pipx install pytest==8.3.4 && \
-    python3.12 -m pipx runpip pytest install -r requirements.txt
+# Copy bspwm configuration files
+RUN mkdir -p /root/.config/bspwm
+RUN echo '#!/bin/bash\nbspc monitor -d 1 2 3 4\nbspc config automatic_scheme spiral\nbspc config border_width 2\nbspc config window_gap 8' > /root/.config/bspwm/bspwmrc
+RUN chmod +x /root/.config/bspwm/bspwmrc
 
 # Create the /app/tests/ directory
 RUN mkdir -p /app/tests
@@ -136,15 +117,14 @@ COPY issues/ /app/tests/issues/
 COPY utils/ /app/tests/utils/
 COPY runtime_scripts/setup_expensify.yml /app/tests/setup_expensify.yml
 COPY runtime_scripts/setup_mitmproxy.yml /app/tests/setup_mitmproxy.yml
-COPY runtime_scripts/run_test.yml /app/tests/run_test.yml
 COPY runtime_scripts/run_fixed_state.yml /app/tests/run_fixed_state.yml
 COPY runtime_scripts/run_user_tool.yml /app/tests/run_user_tool.yml
-COPY runtime_scripts/run_broken_state.yml /app/tests/run_broken_state.yml
 COPY runtime_scripts/setup_eval.yml /app/tests/setup_eval.yml
 COPY runtime_scripts/run.sh /app/tests/run.sh
 COPY runtime_scripts/replay.py /app/tests/replay.py
 COPY runtime_scripts/rewrite_test.py /app/tests/rewrite_test.py
 COPY runtime_scripts/npm_fix.py /app/expensify/npm_fix.py
+COPY runtime_scripts/pytest.ini /app/tests/pytest.ini
 RUN chmod +x /app/tests/run.sh
 WORKDIR /app/expensify
 

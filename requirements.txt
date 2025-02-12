@@ -1,5 +1,6 @@
 aiodebug
 aiomonitor
+ansible==11.1.0
 async-lru
 asyncio==3.4.3
 asyncvnc
@@ -13,12 +14,13 @@ jupyter-client
 libcst==1.5.1
 loky
 lxml==5.3.0
+mitmproxy==11.0.2
 moviepy==2.1.1
 numpy==2.2.1
 openai
 pandas
+playwright==1.47.0
 pillow<11.0.0
-pipx==1.7.1
 psutil
 pyarrow
 pyotp==2.9.0
