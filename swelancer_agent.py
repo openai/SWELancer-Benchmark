@@ -38,7 +38,9 @@ from alcatraz.alcatraz_computer_interface import AlcatrazComputerInterface
 
 from openai import OpenAI
 import os
+from dotenv import load_dotenv
 
+load_dotenv()
 client = OpenAI(
     api_key=os.environ.get("OPENAI_API_KEY"),  # This is the default and can be omitted
 )
