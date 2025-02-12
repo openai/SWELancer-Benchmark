@@ -54,6 +54,8 @@ docker buildx build \
   .
 ```
 
+After the command completes, run the Docker container.
+
 **Step 3: Configure Environment Variables**
 
 Ensure you have an OpenAI API key and username set on your machine.

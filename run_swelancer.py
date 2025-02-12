@@ -11,7 +11,8 @@ from swelancer_agent import SimpleAgentSolver
 async def main() -> None:
     report = await nanoeval.run(
         EvalSpec(
-            eval=SWELancerEval(solver=SimpleAgentSolver(model="gpt-4o")),
+            #taskset is a of ISSUE_IDs you wish to evaluate (eg ["123","456_789"]). If left empty, all issues will be evaluated
+            eval=SWELancerEval(solver=SimpleAgentSolver(model="gpt-4o"),taskset=[]),
             runner=RunnerArgs(
                 concurrency=1,
                 experimental_use_multiprocessing=False,
