@@ -2,7 +2,7 @@
 
 This repo contains the dataset and code for the paper "SWE-Lancer: Can Frontier LLMs Earn $1 Million from Real-World Freelance Software Engineering?".
 
-**Step 1**: Package Management and Requirements
+**Step 1: Package Management and Requirements**
 
 Python 3.11 is the most stable version to use with SWE-Lancer.
 
@@ -27,7 +27,7 @@ for proj in nanoeval alcatraz nanoeval_alcatraz; do
 done
 ```
 
-**Step 2:** Build the Docker Image
+**Step 2: Build the Docker Image**
 
 Please run the command that corresponds to your computer's architecture.
 
@@ -52,7 +52,7 @@ docker buildx build \
   .
 ```
 
-**Step 3:** Configure Environment Variables
+**Step 3: Configure Environment Variables**
 
 Locate the `sample.env` file in the root directory. This file contains template environment variables needed for the application:
 
@@ -66,7 +66,7 @@ PUSHER_APP_ID=your-app-id
 
 Create a new file named `.env` and copy the contents from `sample.env`. Fill in the appropriate values for each variable (you will get the values for the Pusher variables in the next step).
 
-**Step 4:** Set Up Pusher Integration
+**Step 4: Set Up Pusher Integration**
 
 We use Pusher as a real-time messaging service to handle communication between different components of our workflow. Pusher allows us to send notifications and updates between the LLM agent and the testing infrastructure. To set up Pusher:
 
@@ -83,7 +83,7 @@ We use Pusher as a real-time messaging service to handle communication between d
    - Secret
    - Cluster
 
-**Step 5:** Run the container and confirm tests work
+**Step 5: Run the container and confirm tests work**
 
 You can run the container by pressing the "Run" button within the Docker app. After running the Docker container, verify the setup by connecting to your Docker container and running:
 
@@ -93,7 +93,7 @@ bash -i -c 'ansible-playbook /app/tests/run_user_tool.yml'
 
 Check the "Files" section of the Docker container - you should see new attempt files and log files added.
 
-**Step 6:** Running SWE-Lancer
+**Step 6: Running SWE-Lancer**
 
 You are now ready to run the eval with:
 
