@@ -11,9 +11,11 @@ For package management, this repo comes with a pre-existing virtualenv or you ca
 We recommend using the pre-built virtualenv with [uv](https://github.com/astral-sh/uv), a lightweight OSS package manager. To do this, run:
 
 ```bash
-source .venv/bin/activate
-pip install uv
 uv sync
+source .venv/bin/activate
+for proj in nanoeval alcatraz nanoeval_alcatraz; do
+  uv pip install -e project/"$proj"
+done
 ```
 
 To use your own virtualenv, without uv, run:
@@ -23,7 +25,7 @@ python -m venv venv
 source venv/bin/activate
 pip install -r requirements.txt
 for proj in nanoeval alcatraz nanoeval_alcatraz; do
-  uv pip install -e project/"$proj"
+  pip install -e project/"$proj"
 done
 ```
 
@@ -58,13 +60,11 @@ Locate the `sample.env` file in the root directory. This file contains template 
 
 ```plaintext
 # sample.env contents example:
-OPENAI_API_KEY=your-key-here
-OPENAI_USER=your-username
 PUSHER_APP_ID=your-app-id
 # ... other variables
 ```
 
-Create a new file named `.env` and copy the contents from `sample.env`. Fill in the appropriate values for each variable (you will get the values for the Pusher variables in the next step).
+Create a new file named `.env` and copy the contents from `sample.env`.
 
 **Step 4: Set Up Pusher Integration**
 
@@ -83,17 +83,7 @@ We use Pusher as a real-time messaging service to handle communication between d
    - Secret
    - Cluster
 
-**Step 5: Run the container and confirm tests work**
-
-You can run the container by pressing the "Run" button within the Docker app. After running the Docker container, verify the setup by connecting to your Docker container and running:
-
-```bash
-bash -i -c 'ansible-playbook /app/tests/run_user_tool.yml'
-```
-
-Check the "Files" section of the Docker container - you should see new attempt files and log files added.
-
-**Step 6: Running SWE-Lancer**
+**Step 5: Running SWE-Lancer**
 
 You are now ready to run the eval with:
 
