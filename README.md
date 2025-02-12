@@ -56,6 +56,8 @@ docker buildx build \
 
 **Step 3: Configure Environment Variables**
 
+Ensure you have an OpenAI API key and username set on your machine.
+
 Locate the `sample.env` file in the root directory. This file contains template environment variables needed for the application:
 
 ```plaintext
