@@ -2,3 +2,6 @@
 name = "nanoeval_alcatraz"
 version = "0.1.0"
 dependencies = ["async-lru", "structlog", "typing-extensions"]
+
+[tool.setuptools.packages.find]
+include = ["nanoeval_alcatraz*"]
