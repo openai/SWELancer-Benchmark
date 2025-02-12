@@ -45,6 +45,10 @@ client = OpenAI(
 
 
 def get_model_response(messages: list[dict[str, Any]]) -> str:
+    #check for message length clipping
+    for message in messages:
+        if len(message["content"]) > 1048575:
+            message["content"] = message["content"][:1048525] + " [message too long, clipped]"
     chat_completion = client.chat.completions.create(
         messages=messages,
         model="gpt-4o",
