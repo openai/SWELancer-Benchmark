@@ -20,6 +20,7 @@ RUN apt-get update && apt-get install -y \
     openssh-client \
     xz-utils \
     patch \
+    ansible \
     --no-install-recommends
 
 # Install Python and related tools

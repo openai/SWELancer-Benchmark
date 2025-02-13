@@ -39,6 +39,7 @@ from alcatraz.alcatraz_computer_interface import AlcatrazComputerInterface
 from openai import OpenAI
 import os
 from dotenv import load_dotenv
+import tiktoken
 
 load_dotenv()
 client = OpenAI(
@@ -46,11 +47,28 @@ client = OpenAI(
 )
 
 
-def get_model_response(messages: list[dict[str, Any]]) -> str:
-    #check for message length clipping
+def count_tokens(messages: list[dict[str, Any]], model: str = "gpt-4") -> int:
+    """Count the number of tokens in a list of messages."""
+    encoding = tiktoken.encoding_for_model(model)
+    num_tokens = 0
+    
     for message in messages:
-        if len(message["content"]) > 1048575:
-            message["content"] = message["content"][:1048525] + " [message too long, clipped]"
+        # Every message follows format: {"role": role, "content": content}
+        num_tokens += 4  # Every message follows format: <im_start>{role/name}\n{content}<im_end>\n
+        for key, value in message.items():
+            num_tokens += len(encoding.encode(str(value)))
+    
+    return num_tokens
+
+def trim_messages(messages: list[dict[str, Any]], max_tokens: int, model: str = "gpt-4") -> list[dict[str, Any]]:
+    """Trim messages to fit within token limit by removing older messages."""
+    while len(messages) > 1 and count_tokens(messages, model) > max_tokens:
+        messages.pop(1)
+    return messages
+
+def get_model_response(messages: list[dict[str, Any]]) -> str:
+    messages = trim_messages(messages, 110000)
+    
     chat_completion = client.chat.completions.create(
         messages=messages,
         model="gpt-4o",
@@ -120,9 +138,10 @@ Please note that the Python code is not a Jupyter notebook; you must write a ful
                     if "<user-tool>" in model_response:
                         print('User tool called.')
                         await computer.check_shell_command("unzip -q -P 'secretpasswordhere' /app/tests.zip -d /app/tests")
-                        execution_output = await computer.send_shell_command("bash -c -i 'user-tool'")
-                        print('User tool ran successfully.')
-                        execution_output = 'User tool ran successfully, output is in /expensify/user_tool'
+                        execution_output = await computer.check_shell_command("bash -c -i 'user-tool'")
+                        print('User tool ran, with output:')
+                        print(execution_output)
+                        execution_output = 'User tool output is in /expensify/user_tool'
                         await computer.send_shell_command(
                             "rm -rf /app/tests"
                         )

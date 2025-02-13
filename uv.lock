@@ -2691,6 +2691,20 @@ wheels = [
 ]
 
 [[package]]
+name = "tiktoken"
+version = "0.6.0"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "regex" },
+    { name = "requests" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/9f/89/3d0b4c0c0f2e7d0f6f8e6c3c4d7c0d1c7d3c9e1d7a0f4b3c9e0c9f9a0f4e/tiktoken-0.6.0.tar.gz", hash = "sha256:ace62a4ede5b89e5c1957d6c2cf9ef96ff5b8eef329c5aef8c28b8c8c5e3c8aa", size = 23456 }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/9f/89/3d0b4c0c0f2e7d0f6f8e6c3c4d7c0d1c7d3c9e1d7a0f4b3c9e0c9f9a0f4e/tiktoken-0.6.0-py3-none-any.whl", hash = "sha256:ace62a4ede5b89e5c1957d6c2cf9ef96ff5b8eef329c5aef8c28b8c8c5e3c8aa", size = 23456 },
+]
+
+
+[[package]]
 name = "toml"
 version = "0.10.2"
 source = { registry = "https://pypi.org/simple" }
