@@ -11,9 +11,7 @@
     - name: Verify the flow file does not contain PII or unnecessary information
       shell: |
         ISSUE_ID={{ lookup('env', 'ISSUE_ID') }}
-        python3.12 -m pip install --no-cache-dir mitmproxy==11.0.2
         python3.12 /app/tests/utils/check_flows.py --path=/app/tests/issues/$ISSUE_ID/ --prefixes=flow.mitm
-        python3.12 -m pip uninstall -y mitmproxy
     
     - name: Create a new log directory for the ISSUE_ID
       file:

@@ -7,11 +7,10 @@
         path: "/app/tests/logs/{{ lookup('env', 'ISSUE_ID') }}"
         state: directory
         mode: '0755'
-
+  
     - name: Start mitmdump in the background
       shell: |
-        ISSUE_ID={{ lookup('env', 'ISSUE_ID') }}
-        nohup mitmdump --mode transparent --showhost > /app/tests/logs/$ISSUE_ID/mitmdump.log 2>&1 & echo $! > /tmp/mitmdump.pid
+        nohup mitmdump --mode transparent --showhost 2>&1 & echo $! > /tmp/mitmdump.pid
       async: 1
       poll: 0
 

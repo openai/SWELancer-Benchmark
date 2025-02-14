@@ -6,13 +6,13 @@ if [ "$EVAL_VARIANT" = "swe_manager" ]; then
 else
     # Start Xvfb for a virtual display
     echo "Starting Xvfb on display :99..."
-    Xvfb :99 -screen 0 1920x1080x24 > /dev/null 2>&1 &
+    Xvfb :99 -screen 0 2560x1600x24 > /dev/null 2>&1 &
     export DISPLAY=:99
     sleep 2
 
-    # Start a lightweight window manager
-    echo "Starting Fluxbox window manager..."
-    fluxbox > /dev/null 2>&1 &
+    # Start bspwm window manager
+    echo "Starting bspwm window manager..."
+    bspwm > /dev/null 2>&1 &
     sleep 2
 
     # Start x11vnc to expose the Xvfb display
