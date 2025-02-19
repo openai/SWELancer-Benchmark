@@ -1,4 +1,4 @@
-name: pyright
+name: ci
 
 on:
   pull_request:
