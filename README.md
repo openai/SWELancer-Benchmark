@@ -2,6 +2,8 @@
 
 This repo contains the dataset and code for the paper ["SWE-Lancer: Can Frontier LLMs Earn $1 Million from Real-World Freelance Software Engineering?"](https://www.openai.com/index/swe-lancer/).
 
+**Note:** We will continue to update this repository with new tasks and updates to the scaffolding; the code and data here does not exactly match what was used in the paper.
+
 **Step 1: Package Management and Requirements**
 
 Python 3.11 is the most stable version to use with SWE-Lancer.
