@@ -1,0 +1,4 @@
+{
+    "extraPaths": ["project/nanoeval", "project/alcatraz", "project/nanoeval_alcatraz"],
+    "exclude": ["**/node_modules", "**/__pycache__", "**/.*", "issues", "utils", "runtime_scripts"]
+}
