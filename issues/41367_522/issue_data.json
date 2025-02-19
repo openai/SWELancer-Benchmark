@@ -1,1 +1,0 @@
-{"price": 250.0, "title": "[HOLD for payment 2024-06-03] [$250] LHN:  Emoji is misaligned with message ", "issue_repo_steps": "Action performed: 1. Send a message with emoji from A to B\r\n2. Login as B and observe the LHN\n\nExpected result: There is no misalignment with emoji\n\nActual result: None"}

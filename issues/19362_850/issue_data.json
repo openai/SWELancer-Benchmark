@@ -1,1 +1,0 @@
-{"price": 1000.0, "title": "[HOLD for payment 2023-06-07] [$1000]  nothing happens on click mark as unread for first message in thread", "issue_repo_steps": "Action performed: 1. Go to any chat\r\n2. send any message\r\n3. go to thread\r\n4. click on mark as unread for  first message\n\nExpected result: None\n\nActual result: None"}

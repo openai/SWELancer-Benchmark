@@ -1,5 +1,0 @@
-{
-    "price": 8000.0,
-    "title": "[$8000] Copy to clipboard/toggled Tooltip and Hoverable get's stuck on scroll",
-    "issue_repo_steps": "Action performed: None\n\nExpected result: Tooltip should stick to Hoverable message / be dismissed when you scroll away from it\n\nActual result: None"
-}

@@ -1,5 +1,0 @@
-{
-    "price": 4000.0,
-    "title": "[HOLD for payment 2023-04-20] [$4000] Using a header (#) and a space or bold (*), then adding a code block results in the code block being bolded for a moment",
-    "issue_repo_steps": "Action performed: 1. Open a chat\r\n2. Start a message with # then a space\r\n3. Add a code block using three backticks\r\n\r\nYou should see the code block go bold, then normal.\n\nExpected result: A code block should not show bold text.\n\nActual result: None"
-}

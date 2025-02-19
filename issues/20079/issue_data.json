@@ -1,5 +1,0 @@
-{
-    "price": 2000.0,
-    "title": "[HOLD for payment 2023-08-28] [$2000] Web- Chat - Pressing Copy to clipboard, Copy link, or Mark as unread from the Mini context menu does not refocus the Composer",
-    "issue_repo_steps": "Action performed: 1. Open App\r\n2. Go to any chat\r\n3. Send a message and click anywhere on the page to lose composer focus\r\n4. Hover over the message and click any of these three Copy to clipboard, Copy link, Mark as unread\n\nExpected result: Pressing any of these three options Copy to clipboard, Copy link, Mark as unread should have to refocus the composer like we do when using the Context menu\n\nActual result: None"
-}

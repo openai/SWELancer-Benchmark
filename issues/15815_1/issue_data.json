@@ -1,5 +1,0 @@
-{
-    "title": "[HOLD for payment 2023-04-18] [$4000] Emoji reaction button sizes are not 28px",
-    "price": 4000.0,
-    "issue_repro_steps": "Action performed: 1. Go to any chat\r\n2. Add a reaction to any message\r\n3. Verify the size of the emoji\n\nExpected result: Should be 28px\n\nActual result: None"
-}
