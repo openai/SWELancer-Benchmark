@@ -69,10 +69,10 @@ def get_model_response(messages: list[dict[str, Any]]) -> str:
     messages = trim_messages(messages, 110000)
     
     chat_completion = client.chat.completions.create(
-        messages=messages,
+        messages=messages, # type: ignore
         model="gpt-4o",
     )
-    return chat_completion.choices[0].message.content
+    return chat_completion.choices[0].message.content # type: ignore
 
 
 @chz.chz
@@ -105,7 +105,7 @@ class SimpleAgentSolver(PythonCodingSolver):
                 for prompt_message in task.prompt:
                     messages.append({
                         "role": "user",
-                        "content": str(prompt_message["content"])
+                        "content": str(prompt_message["content"]) # type: ignore
                     })
                 messages.append({"role": "user", "content": """The repository is cloned in your CWD. You must send Python code in backticks in each response to me, and I will execute the code and send you back the result, for example:
                                                                        

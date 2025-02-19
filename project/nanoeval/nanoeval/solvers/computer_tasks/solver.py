@@ -348,7 +348,7 @@ class PythonCodingEval(nanoeval.Eval[ComputerTask, FinalResult]):
         # compute percentiles
         convo_lens = np.array(convo_lens)
         percentiles = np.percentile(convo_lens, [25, 50, 75])
-        summary_dict["convo_len_percentiles"] = percentiles.tolist()
+        summary_dict["convo_len_percentiles"] = percentiles.tolist() # type: ignore
 
         return {
             "frac_correct": frac_correct,

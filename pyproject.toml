@@ -4,9 +4,10 @@ version = "0.1.0"
 dependencies = [
     "alcatraz",
     "nanoeval",
-    "nanoeval-alcatraz",
+    "nanoeval_alcatraz",
     "python-dotenv>=1.0.1",
     "tiktoken>=0.9.0",
+    "pyright",
 ]
 requires-python = ">=3.11"
 
@@ -16,4 +17,4 @@ packages = ["swelancer"]
 [tool.uv.sources]
 nanoeval = { path = "project/nanoeval", editable = true }
 alcatraz = { path = "project/alcatraz", editable = true }
-nanoeval-alcatraz = { path = "project/nanoeval_alcatraz", editable = true }
+nanoeval_alcatraz = { path = "project/nanoeval_alcatraz", editable = true }

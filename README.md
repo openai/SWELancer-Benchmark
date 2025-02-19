@@ -136,16 +136,19 @@ For a complete example of a ComputerInterface implementation, you can refer to t
 ### Best Practices
 
 1. **Resource Management**
+
    - Implement proper cleanup in your interface
    - Handle container/VM lifecycle appropriately
    - Clean up temporary files
 
 2. **Security**
+
    - Implement proper isolation between tasks
    - Handle sensitive data appropriately
    - Control network access
 
 3. **Scalability**
+
    - Consider implementing a pool of compute resources
    - Handle concurrent task execution
    - Implement proper resource limits

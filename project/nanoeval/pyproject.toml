@@ -27,6 +27,7 @@ dependencies = [
     "ptpython",
     "ipython",
     "structlog",
+    "pandas-stubs>=2.2.3.241126",
 ]
 
 [tool.setuptools.packages.find]

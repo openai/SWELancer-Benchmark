@@ -1355,7 +1355,7 @@ class BaseAlcatrazCluster(ABC):
                 max_pool_size=1000,
                 timeout=self.limits["docker_client_timeout_seconds"],
             )
-        res = docker_client_push.images.push(repository=repository, tag=tag)
+        res = docker_client_push.images.push(repository=repository, tag=tag) # type: ignore
         logger.info(f"pushed {repository}:{tag}")
         final_res = json.loads(res.strip().split("\n")[-1])
         if "error" in final_res:
