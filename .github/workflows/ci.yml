@@ -23,4 +23,4 @@ jobs:
         run: uv sync --all-extras --dev
 
       - name: Run pyright
-        run: pyright
+        run: uv run pyright
