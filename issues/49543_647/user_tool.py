@@ -47,9 +47,7 @@ async def test_issue_49543() -> None:
 
         raise e
     finally:
-
-        await context.tracing.stop()
-        await context.tracing.export(trace_path)
+        await context.tracing.stop(path=trace_path)
         trace_cleaner(trace_path)
 
         await close_browser(context, page, playwright)

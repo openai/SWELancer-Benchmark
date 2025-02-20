@@ -12,7 +12,6 @@ import imaplib, pytest
 import email
 import re
 import random
-
 from utils.trace_cleaner import trace_cleaner
 
 
@@ -69,22 +68,18 @@ def get_magic_code(user_email, password, since=None, retries=5, delay=10):
 
 
 def login_user_ND_with_magiccode(user_email, password, page):
-
-
     page.goto(NEWDOT_URL)
-
 
     page.locator('input[type="email"]').fill(user_email)
     page.locator("div:nth-child(3) > div:nth-child(2) > div > div > div > .css-view-175oi2r").click()
 
     page.wait_for_timeout(5000)
 
-
-
     magic_code = "123456"
-
+    
     page.locator('input[autocomplete="one-time-code"]').fill(magic_code)
     page.wait_for_timeout(500)
+    
 
 
 def test_issue_24642():
@@ -105,14 +100,15 @@ def test_issue_24642():
         context_args["geolocation"] = {"latitude": 37.7749, "longitude": -122.4194}
         context_args["permissions"] = ["geolocation"]
         context_args["ignore_https_errors"] = True
-        
+
         context = browser.new_context(**context_args)
+        # Start tracing with screenshots, snapshots and sources
         context.tracing.start(screenshots=True, snapshots=True, sources=True)
 
-        try:
-            page = context.new_page()
-            first_user_email = generate_random_email()
+        page = context.new_page()
+        first_user_email = generate_random_email()
 
+        try:
             login_user_ND_with_magiccode(first_user_email, PASSWORD, page)
             page.wait_for_timeout(2000)
             context.set_offline(True)
@@ -121,16 +117,16 @@ def test_issue_24642():
             page.get_by_text("Personal details").click()
             try:
                 page.get_by_role("button", name="Back").click(timeout=10000)
-
             except Exception as e:
                 pytest.fail("Test failed due to an exception")
-
-        except Exception as main_ex:
-            raise main_ex
         finally:
-            context.tracing.stop()
             trace_path = "/app/expensify/user_tool/output_browser1.zip"
-            context.tracing.export(trace_path)
+            context.tracing.stop(path=trace_path)
             trace_cleaner(trace_path)
+
             context.close()
             browser.close()
+
+
+if __name__ == "__main__":
+    test_issue_24642()

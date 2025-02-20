@@ -18,10 +18,13 @@ import email
 import re
 import random
 
+from utils.trace_cleaner import trace_cleaner
+
 NEWDOT_URL = "https://dev.new.expensify.com:8082/"
 OLDDOT_URL = "http://localhost:9000/"
 EMAIL = "turingvidhant+111@gmail.com"
 PASSWORD = "uotx fzkt kfeg dehz"
+
 
 class IMAPOTPExtractor:
     def __init__(self, email_address, password):
@@ -50,7 +53,7 @@ class IMAPOTPExtractor:
             if status != "OK":
                 return None
             
-            email_ids = messages[0].split()            
+            email_ids = messages[0].split()
             email_ids = email_ids[::-1]
 
             for email_id in email_ids:
@@ -97,6 +100,7 @@ class IMAPOTPExtractor:
         match = re.search(r"\b\d{6}\b", text)
         return match.group(0) if match else None
 
+
 gmail_account_helper = IMAPOTPExtractor(EMAIL, PASSWORD)
 
 
@@ -113,6 +117,7 @@ def new_dot_login(page, email):
         page.get_by_role("button", name="Sign In").click()
     except:
         pass
+
 
 def launch_browser(pw, headless=True, device=None, geolocation=None):
     """
@@ -138,22 +143,15 @@ def test_expensify():
         ])
 
         first_user_context = browser.new_context(ignore_https_errors=True)
+        # Start tracing with screenshots, snapshots and sources
+        first_user_context.tracing.start(screenshots=True, snapshots=True, sources=True)
 
+        page = first_user_context.new_page()
         try:
-
-            first_user_context.tracing.start(
-                title="test_expensify", 
-                screenshots=True, 
-                snapshots=True, 
-                sources=True
-            )
-
-            page = first_user_context.new_page()
             page.wait_for_timeout(3000)
-
             new_dot_login(page, EMAIL)
             page.wait_for_timeout(3000)
-
+            
             page.get_by_text("This is your personal space. Use it for notes, tasks, drafts, and reminders.").click()
 
             page.get_by_label("Start chat (Floating action)").click()
@@ -161,7 +159,6 @@ def test_expensify():
             page.get_by_label("Manual").click()
 
             scan_button = page.get_by_label("Scan")
-
             distance_button = page.get_by_label("Distance")
             distance_initial_bg_color = distance_button.evaluate("element => window.getComputedStyle(element).backgroundColor")
 
@@ -180,18 +177,9 @@ def test_expensify():
             assert distance_initial_bg_color != distance_hover_bg_color, "Distance Button Background color did not change on hover"
 
             page.wait_for_timeout(1500)
-        except Exception as e:
-
-            raise e
         finally:
-
-            first_user_context.tracing.stop()
             trace_path = "/app/expensify/user_tool/output_browser1.zip"
-            first_user_context.tracing.export(path=trace_path)
-
-
-            from utils.trace_cleaner import trace_cleaner
+            first_user_context.tracing.stop(path=trace_path)
             trace_cleaner(trace_path)
-
             page.close()
             browser.close()

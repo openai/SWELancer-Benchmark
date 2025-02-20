@@ -13,6 +13,7 @@ from playwright.sync_api import sync_playwright, expect
 import numpy as np
 from PIL import Image
 import io
+
 from utils.trace_cleaner import trace_cleaner
 
 GMAIL_NAME = "testerbro7077"
@@ -25,8 +26,8 @@ def get_test_user_info(seed=None, first_name=None, last_name=None):
     if last_name is None:
         last_name = "Sai"
 
-    email = f"{GMAIL_NAME}+{seed}@gmail.com" if seed is not None else f"{GMAIL_NAME}@gmail.com"
-    return {"email": email, "password": GMAIL_APP_PASSWORD, "first_name": first_name, "last_name": last_name}
+    email_addr = f"{GMAIL_NAME}+{seed}@gmail.com" if seed is not None else f"{GMAIL_NAME}@gmail.com"
+    return {"email": email_addr, "password": GMAIL_APP_PASSWORD, "first_name": first_name, "last_name": last_name}
 
 def get_magic_code(user_email, password, retries=5, delay=5):
     imap = imaplib.IMAP4_SSL("imap.gmail.com")
@@ -94,7 +95,7 @@ def login_user(page, user_info, activity_text="Track and budget expenses"):
     if join_button.is_visible():
         join_button.click(timeout=3000)
     else:
-        magic_code = "123456" #get_magic_code(user_info["email"], user_info["password"], retries=6, delay=5)
+        magic_code = "123456"  # get_magic_code(user_info["email"], user_info["password"], retries=6, delay=5)
         print(f"Magic code: {magic_code}")
         validate_code_input.fill(magic_code)
 
@@ -133,7 +134,7 @@ def chech_bg_color(page):
 
     page.wait_for_timeout(1000)
     view_button = page.get_by_role("button", name="View", exact=True).nth(2)
-    container = view_button.locator("..").locator("..").locator("..").locator("..")
+    container = view_button.locator("..").locator("..").locator("..").locator("..").locator()
     background_color = container.evaluate("element => getComputedStyle(element).backgroundColor")
 
     expected_background_color = "rgb(26, 61, 50)"
@@ -148,19 +149,21 @@ def test_login():
         ])
         userA_info = get_test_user_info(seed=1, first_name="Yagna")
         contextA = browser.new_context()
+        # Start tracing after creating the context
         contextA.tracing.start(screenshots=True, snapshots=True, sources=True)
         pageA = contextA.new_page()
+        
         try:
             login_user(pageA, userA_info)
             chech_bg_color(pageA)
-        except Exception as e:
-            print("Test failed due to exception:", e)
-            raise
         finally:
-            contextA.tracing.stop()
             trace_path = "/app/expensify/user_tool/output_browser1.zip"
-            contextA.tracing.export(path=trace_path)
+            contextA.tracing.stop(path=trace_path)
             trace_cleaner(trace_path)
             pageA.close()
             contextA.close()
             browser.close()
+
+
+if __name__ == "__main__":
+    test_login()

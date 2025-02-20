@@ -22,22 +22,19 @@ EXPENSIFY_EMAIL = "testingq186@gmail.com"
 EXPENSIFY_PASSWORD = "kkfr hqiv yuxq rbso"
 
 
-
 logging.basicConfig(level=logging.INFO, stream=sys.stdout, format="%(message)s")
 LOGGER = logging.getLogger(__name__)
 
 def create_dummy_image():
-
-    img = Image.new('RGB', (100, 100), color = 'red')
+    img = Image.new('RGB', (100, 100), color='red')
     byte_io = BytesIO()
     img.save(byte_io, 'PNG')
     byte_io.seek(0)
     return byte_io
 
 
-
-
 TESTING_FLOW = True
+
 
 @pytest_asyncio.fixture
 async def page():
@@ -45,37 +42,38 @@ async def page():
     Launch the Expensify app.
     """
     pw = await async_playwright().start()
-    browser = await pw.chromium.launch(channel="chrome", headless=True, args=["--ignore-certificate-errors", "--disable-web-security", "--disable-features=IsolateOrigins,site-per-process" ], proxy={"server": "http://localhost:8080"}, slow_mo=500)
+    browser = await pw.chromium.launch(channel="chrome", headless=True, args=["--ignore-certificate-errors", "--disable-web-security", "--disable-features=IsolateOrigins,site-per-process"], proxy={"server": "http://localhost:8080"}, slow_mo=500)
     context = await browser.new_context(ignore_https_errors=True)
     page = await context.new_page()
 
     yield page
+
+    # Original cleanup (if browser is still open, this may be a redundant close if already closed in test)
     await browser.close()
     await pw.stop()
+
 
 @pytest.mark.asyncio
 async def test_the_issue(page):
     """
-    Demonstrate the Expensify app email login verification.
+    Demonstrate the Expensify app email login verification with tracing.
     """
+    await page.goto(NEWDOT_URL)
 
-    await page.context.tracing.start(screenshots=True, snapshots=True, sources=True)
+    # Start tracing using the page context
+    context = page.context
+    await context.tracing.start(screenshots=True, snapshots=True, sources=True)
+
     try:
-        await page.goto(NEWDOT_URL)
-
-
         with EmailHandler(EXPENSIFY_EMAIL, EXPENSIFY_PASSWORD) as email_handler:
-            if not TESTING_FLOW :
+            if not TESTING_FLOW:
                 email_handler.clean_inbox()  # Clean inbox
-
 
             await page.get_by_role("textbox", name="Phone or email").fill(EXPENSIFY_EMAIL)
             await page.get_by_role("button", name="Continue").click()
 
-
             otp = email_handler.read_otp_code() if not TESTING_FLOW else "123456"
             await page.locator('input[name="validateCode"]').first.fill(otp)
-
 
             await page.get_by_text("Please enter the magic code").wait_for(state="hidden")
             logging.info("Sign in complete.")
@@ -89,29 +87,24 @@ async def test_the_issue(page):
         await page.locator('div[aria-label="test1@gmail.com"]').last.click()
         await page.locator('div[aria-label="More"]').last.click()
         await page.locator('text="Add receipt"').last.click()
-
-
+        
         dummy_image = create_dummy_image()
         async with page.expect_file_chooser() as fc_info:
             await page.locator('text="Choose file"').last.click()
             file_chooser = await fc_info.value
-
-            await file_chooser.set_files([{
+            await file_chooser.set_files([{ 
                 "name": "dummy_image.png",
                 "mimeType": "image/png",
                 "buffer": dummy_image.getvalue()
             }])
         two_100_dollar = page.get_by_role("button", name="Request").filter(has_text="200.0")
-
-
+        
         await expect(two_100_dollar).to_be_visible()
-
-    except Exception as e:
-        LOGGER.error(f"Test failed with error: {e}")
-        raise e
     finally:
-
-        await page.context.tracing.stop()
-        await page.context.tracing.export(path="/app/expensify/user_tool/output_browser1.zip")
-
-        trace_cleaner("/app/expensify/user_tool/output_browser1.zip")
+        # Stop tracing and export the trace file
+        trace_path = "/app/expensify/user_tool/output_browser1.zip"
+        await context.tracing.stop(path=trace_path)
+        trace_cleaner(trace_path)
+        
+        # Close the browser
+        await page.context.browser.close()

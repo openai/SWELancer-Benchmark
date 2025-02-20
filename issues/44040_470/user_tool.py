@@ -14,7 +14,7 @@ EMAIL_USERNAME2 = "testotpverif+222@gmail.com"
 EMAIL_PASSWORD = "ghka tmuf vpio patv"
 EXPENSIFY_URL = "https://dev.new.expensify.com:8082/"
 
-
+ 
 def login_user(email_username, page):
     """
     Log into the Expensify app.
@@ -23,7 +23,7 @@ def login_user(email_username, page):
 
     page.get_by_test_id("username").fill(email_username)
     page.get_by_role("button", name="Continue").click()
-    otp_code='101010'
+    otp_code = '101010'
     page.get_by_test_id("SignInPage").get_by_test_id("validateCode").fill(otp_code)
     sign_in_button = page.get_by_test_id("SignInPage").get_by_role("button", name="Sign in")
     page.wait_for_timeout(1000)
@@ -31,6 +31,7 @@ def login_user(email_username, page):
         sign_in_button.click()
     page.wait_for_timeout(2000)
 
+    
 
 def submit_expense(page, recipient_email):
 
@@ -46,6 +47,7 @@ def submit_expense(page, recipient_email):
     page.wait_for_timeout(1000)
 
 
+    manual_button = page.locator('button[aria-label="Manual"]').wait_for()
     manual_button = page.locator('button[aria-label="Manual"]')
     manual_button.wait_for()
     manual_button.click()
@@ -74,29 +76,22 @@ def submit_expense(page, recipient_email):
 def test_expenses_members_list():
     with sync_playwright() as playwright:
         browser = playwright.chromium.launch(headless=True, args=["--disable-web-security", "--disable-features=IsolateOrigins,site-per-process"], slow_mo=500)
-
-        context1 = browser.new_context()
-        context1.tracing.start(screenshots=True, snapshots=True, sources=True)
+        context1 = None
+        context2 = None
         try:
+            # Create first context and start tracing
+            context1 = browser.new_context()
+            context1.tracing.start(screenshots=True, snapshots=True, sources=True)
             page1 = context1.new_page()
+
             login_user(email_username=EMAIL_USERNAME1, page=page1)
             submit_expense(page1, EMAIL_USERNAME2)
-            page1.close()
-        except Exception as e:
-            print(f"Error in context1: {e}")
-        finally:
-            context1.tracing.stop()
-            trace_path1 = "/app/expensify/user_tool/output_browser1.zip"
-            context1.tracing.export(path=trace_path1)
-            trace_cleaner(trace_path1)
-            context1.close()
 
-        context2 = browser.new_context()
-        context2.tracing.start(screenshots=True, snapshots=True, sources=True)
-        try:
+            # Continue with second context
+            context2 = browser.new_context()
+            context2.tracing.start(screenshots=True, snapshots=True, sources=True)
             page2 = context2.new_page()
             login_user(email_username=EMAIL_USERNAME2, page=page2)
-
 
             page2.get_by_label("Start chat (Floating action)").click()
             page2.get_by_label("Start chat", exact=True).click()
@@ -109,15 +104,13 @@ def test_expenses_members_list():
             submit_expense(page2, EMAIL_USERNAME1)
             page2.wait_for_timeout(3000)
 
-
             page2.get_by_text("Test2 owes").first.click()
             try:
                 page2.get_by_label("Test2 owes").first.click()
-            except:
+            except Exception:
                 page2.get_by_text("Test2 owes").nth(1).click()
             page2.get_by_label("Members").click()
             page2.wait_for_timeout(2000)
-
 
             first_user_div = page2.locator(f'button[aria-label*="Test"]:has(div:has-text("{EMAIL_USERNAME1}"))')
             second_user_div = page2.locator(f'button[aria-label*="Test2"]:has(div:has-text("{EMAIL_USERNAME2}"))')
@@ -126,14 +119,44 @@ def test_expenses_members_list():
 
             assert first_user_div_count == 1, f"First user div count is {first_user_div_count}"
             assert second_user_div_count == 1, f"Second user div count is {second_user_div_count}"
-        except Exception as e:
-            print(f"Error in context2: {e}")
-        finally:
-            context2.tracing.stop()
-            trace_path2 = "/app/expensify/user_tool/output_browser2.zip"
-            context2.tracing.export(path=trace_path2)
-            trace_cleaner(trace_path2)
-            page2.close()
-            context2.close()
 
-        browser.close()
+        finally:
+            # Export tracing and clean up for context1
+            if context1 is not None:
+                trace_path1 = "/app/expensify/user_tool/output_browser1.zip"
+                try:
+                    context1.tracing.stop(path=trace_path1)
+                except Exception as e:
+                    print(f"Error stopping tracing for context1: {e}")
+                try:
+                    trace_cleaner(trace_path1)
+                except Exception as e:
+                    print(f"Error cleaning trace for context1: {e}")
+                try:
+                    context1.close()
+                except Exception as e:
+                    print(f"Error closing context1: {e}")
+            
+            # Export tracing and clean up for context2
+            if context2 is not None:
+                trace_path2 = "/app/expensify/user_tool/output_browser2.zip"
+                try:
+                    context2.tracing.stop(path=trace_path2)
+                except Exception as e:
+                    print(f"Error stopping tracing for context2: {e}")
+                try:
+                    trace_cleaner(trace_path2)
+                except Exception as e:
+                    print(f"Error cleaning trace for context2: {e}")
+                try:
+                    context2.close()
+                except Exception as e:
+                    print(f"Error closing context2: {e}")
+            try:
+                browser.close()
+            except Exception as e:
+                print(f"Error closing browser: {e}")
+
+
+if __name__ == "__main__":
+    test_expenses_members_list()

@@ -1,12 +1,14 @@
 import sys, os
 
+from utils.trace_cleaner import trace_cleaner
+
 base_path = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
 sys.path.insert(0, base_path)
 
 import os
+
 import requests  # pip install requests
 from playwright.sync_api import Page, TimeoutError, expect, sync_playwright
-from utils.trace_cleaner import trace_cleaner
 
 EMAIL_USERNAME = "xecuycismfsga"
 EMAIL_ALIAS = "um9vc7"
@@ -23,7 +25,6 @@ def download_image(
 ) -> str:
     script_dir = os.path.dirname(__file__)
     file_path = os.path.join(script_dir, cache_dir, filename)
-
 
     if not os.path.exists(file_path):
         response = requests.get(url)
@@ -47,7 +48,6 @@ def get_test_image(url: str, cache_dir="test_assets", filename="downloaded_image
 
 def create_user(page: Page, firstname: str = "User", lastname: str = EMAIL_ALIAS):
     page.get_by_role("button", name="Join").click()
-
 
     page.get_by_text("Track and budget expenses").click()
     page.get_by_role("button", name="Continue").last.click()
@@ -89,7 +89,6 @@ def login_or_create_user(
 
 def test_replace_receipt_scan():
     with sync_playwright() as p:
-
         browser = p.chromium.launch(
             headless=True,
             slow_mo=SLOW_MO,
@@ -100,18 +99,14 @@ def test_replace_receipt_scan():
             ],
         )
         context = browser.new_context()
-
-
+        # Start tracing for the context
         context.tracing.start(screenshots=True, snapshots=True, sources=True)
-        trace_path = "/app/expensify/user_tool/output_browser1.zip"
+        page = context.new_page()
 
         try:
-            page = context.new_page()
             page.goto(NEW_DOT_URL)
 
-
             login_or_create_user(page)
-
 
             chat = page.locator(
                 f'button[aria-label="Navigates to a chat"]:has-text("{PARTICIPANT_EMAIL}")'
@@ -120,18 +115,12 @@ def test_replace_receipt_scan():
             try:
                 chat.click(timeout=3000)
             except TimeoutError:
-
                 page.get_by_label("Start chat (Floating action)").click()
                 page.get_by_label("Start chat", exact=True).click()
                 page.get_by_test_id("selection-list-text-input").fill(PARTICIPANT_EMAIL)
-                page.get_by_test_id("selection-list").get_by_label(
-                    PARTICIPANT_EMAIL
-                ).click()
-
-
+                page.get_by_test_id("selection-list").get_by_label(PARTICIPANT_EMAIL).click()
                 page.get_by_role("textbox").fill("Hey")
                 page.keyboard.press("Enter")
-
 
             page.get_by_role("button", name="Create").click()
             page.get_by_label("Submit expense").click()
@@ -146,7 +135,6 @@ def test_replace_receipt_scan():
             page.get_by_role("button", name="Submit expense").click()
             page.get_by_role("button", name="Not now").click()
 
-
             page.get_by_role("button", name="View details").last.click()
             page.get_by_text("Receipt scanning...").last.click()
             page.get_by_label("View attachment").last.click()
@@ -158,12 +146,14 @@ def test_replace_receipt_scan():
             expect(page.get_by_text("Replace")).not_to_be_visible()
 
         finally:
-
-            context.tracing.stop()
-            context.tracing.export(path=trace_path)
-
-
+            # Stop the tracing session and export the trace file
+            trace_path = "/app/expensify/user_tool/output_browser1.zip"
+            context.tracing.stop(path=trace_path)
             trace_cleaner(trace_path)
-
             context.close()
             browser.close()
+
+
+# If running as a script
+if __name__ == "__main__":
+    test_replace_receipt_scan()

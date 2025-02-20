@@ -6,26 +6,26 @@ sys.path.insert(0, base_path)
 from playwright.sync_api import sync_playwright
 from utils.trace_cleaner import trace_cleaner
 
+
 def generate_random_email1(base_email="testerbro7077@gmail.com"):
     timestamp = int("46344")
     email_user, domain = base_email.split('@')
     return f"{email_user}+{timestamp}@{domain}"
 
+
 def login_user1(p, first_name="Yagna", slow_mo=1000, last_name="Sai") -> tuple:
     user_email1 = generate_random_email1()
     password = "xqxz mmcb tvkn lpgp"
-
+    
     browser = p.chromium.launch(headless=True, args=[
-        '--disable-web-security',
-        '--disable-features=IsolateOrigins,site-per-process',
-    ])
+            '--disable-web-security',
+            '--disable-features=IsolateOrigins,site-per-process',
+        ])
     context = browser.new_context()
-
     context.tracing.start(screenshots=True, snapshots=True, sources=True)
-
     page = context.new_page()
 
-    page.goto('https://dev.new.expensify.com:8082/')
+    page.goto('https://dev.new.expensify.com:8082/') 
     phone_or_email_input = page.locator('input[type="email"]')
     phone_or_email_input.fill(user_email1)
 
@@ -33,31 +33,30 @@ def login_user1(p, first_name="Yagna", slow_mo=1000, last_name="Sai") -> tuple:
     page.wait_for_timeout(1000)
 
     validate_code_input = page.locator('input[name="validateCode"]').nth(0)
-
     validate_code_input.fill("123456")
 
     return browser, context, page, user_email1
+
 
 def generate_random_email2(base_email="testerbro7077@gmail.com"):
     timestamp = int("46345")
     email_user, domain = base_email.split('@')
     return f"{email_user}+{timestamp}@{domain}"
 
+
 def login_user2(p, first_name="Yagna", last_name="Sai") -> tuple:
     user_email2 = generate_random_email2()
     password = "xqxz mmcb tvkn lpgp"
-
+    
     browser = p.chromium.launch(headless=True, args=[
-        '--disable-web-security',
-        '--disable-features=IsolateOrigins,site-per-process',
-    ])
+            '--disable-web-security',
+            '--disable-features=IsolateOrigins,site-per-process',
+        ])
     context = browser.new_context()
-
     context.tracing.start(screenshots=True, snapshots=True, sources=True)
-
     page = context.new_page()
 
-    page.goto('https://dev.new.expensify.com:8082/')
+    page.goto('https://dev.new.expensify.com:8082/') 
     phone_or_email_input = page.locator('input[type="email"]')
     phone_or_email_input.fill(user_email2)
 
@@ -68,6 +67,7 @@ def login_user2(p, first_name="Yagna", last_name="Sai") -> tuple:
 
     return browser, context, page, user_email2
 
+
 def add_member(page):
     page.get_by_label("My settings").click()
     page.get_by_test_id("InitialSettingsPage").get_by_label("Workspaces").get_by_text("Workspaces").click()
@@ -77,35 +77,26 @@ def add_member(page):
     page.get_by_test_id("WorkspacesListPage").locator("button").filter(has_text="Testerbro7077+46345@gmail.com").click()
     assert not page.get_by_label("Delete").is_visible()
 
+
 def test_run(admin_first_name="Yagna", admin_last_name="Sai", member_first_name="Sai", member_last_name="Yagna"):
     with sync_playwright() as p:
-        browser_member = browser_admin = None
-        context_member = context_admin = None
+        # Launch both browsers and start tracing
+        browser_member, context_member, page_member, user_email1 = login_user1(p, member_first_name, member_last_name)
+        browser_admin, context_admin, page_admin, admin_email = login_user2(p, admin_first_name, admin_last_name)
+
         try:
-            browser_member, context_member, page_member, user_email1 = login_user1(p, member_first_name, member_last_name)
-            browser_admin, context_admin, page_admin, admin_email = login_user2(p, admin_first_name, admin_last_name)
-
             add_member(page_member)
-        except Exception as e:
-
-            raise e
         finally:
+            # Stop tracing for admin browser, export and clean the trace
+            context_admin.tracing.stop(path="/app/expensify/user_tool/output_browser2.zip")
+            trace_cleaner("/app/expensify/user_tool/output_browser2.zip")
+            browser_admin.close()
 
-            if context_member:
-                context_member.tracing.stop()
-                trace_path1 = "/app/expensify/user_tool/output_browser1.zip"
-                context_member.tracing.export(path=trace_path1)
-                trace_cleaner(trace_path1)
-            if context_admin:
-                context_admin.tracing.stop()
-                trace_path2 = "/app/expensify/user_tool/output_browser2.zip"
-                context_admin.tracing.export(path=trace_path2)
-                trace_cleaner(trace_path2)
+            # Stop tracing for member browser, export and clean the trace
+            context_member.tracing.stop(path="/app/expensify/user_tool/output_browser1.zip")
+            trace_cleaner("/app/expensify/user_tool/output_browser1.zip")
+            browser_member.close()
 
-            if browser_member:
-                browser_member.close()
-            if browser_admin:
-                browser_admin.close()
 
 if __name__ == "__main__":
     test_run()

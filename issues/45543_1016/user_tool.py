@@ -3,11 +3,13 @@ import sys, os
 base_path = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
 sys.path.insert(0, base_path)
 
+from utils.trace_cleaner import trace_cleaner
+
 import pytest
 from playwright.async_api import expect, async_playwright, Browser, Page
 from utils.login import sign_in, NEW_DOT_URL, check_if_logged_in
 from utils.browser import close_browser
-from utils.trace_cleaner import trace_cleaner
+
 
 USER_EMAILA = "doorsqueaky+3182311@gmail.com"
 USERNAME_A = 'John Doe'
@@ -31,6 +33,8 @@ async def start_browser_with_proxy():
         ]
     )
     context = await browser.new_context(ignore_https_errors=True)
+    # Start tracing for this context
+    await context.tracing.start(screenshots=True, snapshots=True, sources=True)
     page = await context.new_page()
     return context, page, playwright
 
@@ -65,6 +69,8 @@ async def create_draft_reply_in_thread(page: Page, username: str, sender_email: 
     await page.wait_for_timeout(1000)
 
 
+    message_editor = page.locator('div[aria-label="Chat message"]', has_text=message)
+    # Assuming the draft editor is the same as the message editor for reply
     message_editor = page.locator('div[contenteditable="true"][placeholder="Write something..."]').last
     await message_editor.fill(reply)
 
@@ -91,56 +97,40 @@ async def enter_dummy_otp_if_not_logged_in(page: Page, email: str):
         await page.get_by_test_id("validateCode").fill("123456")
 
 
-
 @pytest.mark.asyncio
 async def test_workspace_switch_on_reload():
-    contextA, pageA, playwrightA = None, None, None
-    contextB, pageB, playwrightB = None, None, None
+    # Initialize browser contexts to None for cleanup
+    contextA = contextB = None
+    pageA = pageB = None
+    playwrightA = playwrightB = None
 
     try:
-
         contextA, pageA, playwrightA = await start_browser_with_proxy()
-        await contextA.tracing.start(title="Browser Context A", screenshots=True, snapshots=True, sources=True)
-
 
         await enter_dummy_otp_if_not_logged_in(pageA, USER_EMAILA)
+
         await expect(pageA.get_by_label("Inbox")).to_be_visible()
 
         message = "Hello How are you"
         await send_message(pageA, USER_EMAILB, message)
 
-
         contextB, pageB, playwrightB = await start_browser_with_proxy()
-        await contextB.tracing.start(title="Browser Context B", screenshots=True, snapshots=True, sources=True)
-
 
         await enter_dummy_otp_if_not_logged_in(pageB, USER_EMAILB)
+
         await expect(pageA.get_by_label("Inbox")).to_be_visible()
 
         reply = "Hey I am good. What about you?"
         await create_draft_reply_in_thread(pageB, USERNAME_A, USER_EMAILA, message, reply)
         await navigate_away_check_draft(pageB, USERNAME_A, USER_EMAILA)
 
-    except Exception as e:
-
-        raise e
     finally:
-
-        if contextA:
-            await contextA.tracing.stop()
-            trace_path_a = "/app/expensify/user_tool/output_browser1.zip"
-            await contextA.tracing.export(trace_path_a)
-            trace_cleaner(trace_path_a)
-
-
-        if contextB:
-            await contextB.tracing.stop()
-            trace_path_b = "/app/expensify/user_tool/output_browser2.zip"
-            await contextB.tracing.export(trace_path_b)
-            trace_cleaner(trace_path_b)
-
-
-        if contextA and pageA and playwrightA:
+        # Stop tracing and export the trace before closing each browser
+        if contextA is not None:
+            await contextA.tracing.stop(path="/app/expensify/user_tool/output_browser1.zip")
+            trace_cleaner("/app/expensify/user_tool/output_browser1.zip")
             await close_browser(contextA, pageA, playwrightA)
-        if contextB and pageB and playwrightB:
+        if contextB is not None:
+            await contextB.tracing.stop(path="/app/expensify/user_tool/output_browser2.zip")
+            trace_cleaner("/app/expensify/user_tool/output_browser2.zip")
             await close_browser(contextB, pageB, playwrightB)

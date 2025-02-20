@@ -18,12 +18,13 @@ import email
 import re
 import random
 
-from utils.trace_cleaner import trace_cleaner  # <--- Added import
+from utils.trace_cleaner import trace_cleaner
 
 NEWDOT_URL = "https://dev.new.expensify.com:8082/"
 OLDDOT_URL = "http://localhost:9000/"
 EMAIL = "turingvidhant+109@gmail.com"
 PASSWORD = "uotx fzkt kfeg dehz"
+
 
 class IMAPOTPExtractor:
     def __init__(self, email_address, password):
@@ -98,6 +99,7 @@ class IMAPOTPExtractor:
     def _extract_otp(self, text):
         match = re.search(r"\b\d{6}\b", text)
         return match.group(0) if match else None
+
 
 gmail_account_helper = IMAPOTPExtractor(EMAIL, PASSWORD)
 
@@ -259,19 +261,18 @@ def add_report_field_list_value(
 
 
 def test_expensify():
-    with sync_playwright() as p:
+     with sync_playwright() as p:
         browser = p.chromium.launch(headless=True, args=[
             "--disable-web-security",
             "--disable-features=IsolateOrigins,site-per-process"
         ])
+
         first_user_context = browser.new_context(ignore_https_errors=True)
-
-
+        # Start tracing immediately after context creation
         first_user_context.tracing.start(screenshots=True, snapshots=True, sources=True)
-
         page = first_user_context.new_page()        
         page.wait_for_timeout(3000)
-
+        
         try:
             new_dot_login(page, EMAIL)
             page.wait_for_timeout(3000)
@@ -283,18 +284,15 @@ def test_expensify():
             page.get_by_label("New workspace").click()
             page.wait_for_timeout(500)
             
-
             features_text_element = page.locator('div[dir="auto"]', has_text="More features")
             features_text_element.click()
             
-
             documement_button = page.get_by_label("Document and reclaim eligible")
             documement_button.click()
-
+            
             taxes_button = page.get_by_test_id("WorkspaceInitialPage").get_by_label("Taxes")
             taxes_button.click()
             
-
             add_rate = page.get_by_role("button", name="Add rate")
             add_rate.click()
             
@@ -304,28 +302,27 @@ def test_expensify():
             
             save_button = page.get_by_test_id("TextSelectorModal").get_by_role("button", name="Save")
             save_button.click()
-
+            
             tax_value_button = page.get_by_text("Value")
             tax_value_button.click()
             page.get_by_placeholder("0").fill("1")
             save_button = page.get_by_test_id("AmountSelectorModal").get_by_role("button", name="Save")
             save_button.click()
-
+            
             save_button = page.get_by_role("button", name="Save").last
             save_button.click()
             page.locator("button").filter(has_text="/1%").click()
             
-
             element = page.locator('div[dir="auto"]', has_text="Hmm... it's not here")
             expect(element).not_to_be_visible()
-
+            
             page.wait_for_timeout(1500)
         finally:
-
-            first_user_context.tracing.stop()
+            # Ensure tracing is stopped and exported even on errors
             trace_path = "/app/expensify/user_tool/output_browser1.zip"
-            first_user_context.tracing.export(trace_path)
+            first_user_context.tracing.stop(path=trace_path)
             trace_cleaner(trace_path)
-
-            page.close()
             browser.close()
+
+if __name__ == "__main__":
+    test_expensify()

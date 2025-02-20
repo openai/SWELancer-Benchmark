@@ -186,8 +186,8 @@ async def test_recovery_code_login():
             raise e
         finally:
 
-            await context.tracing.stop()
-            await context.tracing.export(path="/app/expensify/user_tool/output_browser1.zip")
+            
+            await context.tracing.stop(path="/app/expensify/user_tool/output_browser1.zip")
             trace_cleaner("/app/expensify/user_tool/output_browser1.zip")
 
 

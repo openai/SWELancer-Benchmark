@@ -5,33 +5,28 @@ sys.path.insert(0, base_path)
 
 import pytest
 from playwright.sync_api import sync_playwright, Page
-
-
 from utils.trace_cleaner import trace_cleaner
 
 static_email = "testuserexpensify1+82@gmail.com"
 
+
 @pytest.fixture
 def setup_playwright():
-
     playwright = sync_playwright().start()
 
     browser = playwright.chromium.launch(
         headless=True, slow_mo=1000, args=["--disable-web-security", "--disable-features=IsolateOrigins,site-per-process"]
     )
     page = browser.new_page()
-    yield page
-
-    browser.close()
-    playwright.stop()
-
+    # Yield page, browser, and playwright so that the test can manage tracing and cleanup
+    yield page, browser, playwright
+    # No cleanup here: test function is responsible for stopping tracing, exporting, cleaning trace, and closing browser/playwright
 
 
 def login_user(page: Page, email: str, first_name: str, last_name: str):
     page.goto("https://dev.new.expensify.com:8082/")
     page.locator('input[type="email"]').fill(email)
     page.locator('button[tabindex="0"]').click()
-
 
     join_button = page.get_by_role("button", name="Join")
     join_button.click()
@@ -58,7 +53,6 @@ def create_workspace_and_add_member(page: Page, member_email: str):
     page.locator('button[aria-label="Back"]').click()
 
 
-
 def browse_to_workspace(page: Page, workspace_name: str):
     page.locator('button[aria-label="Workspaces"]').click()
     try:
@@ -68,7 +62,6 @@ def browse_to_workspace(page: Page, workspace_name: str):
     page.locator(
         'button[aria-label="Navigates to a chat"]', has_text=workspace_name
     ).nth(0).click()
-
 
 
 def submit_expense(page: Page, amount: int, merchant: str):
@@ -81,7 +74,6 @@ def submit_expense(page: Page, amount: int, merchant: str):
     page.locator('input[aria-label="Merchant"]').fill(merchant)
     page.locator('button[data-listener="Enter"]', has_text="Save").click()
     page.locator('button[data-listener="Enter"]', has_text="Submit").click()
-
 
 
 def wait_for_text_with_assertion(
@@ -105,12 +97,9 @@ def wait_for_text_with_assertion(
 
 @pytest.mark.usefixtures("setup_playwright")
 def test_duplicate_and_hold_expense(setup_playwright):
-    page = setup_playwright
-    trace_path = "/app/expensify/user_tool/output_browser1.zip"
-
-
+    page, browser, playwright = setup_playwright
+    # Start tracing with desired options
     page.context.tracing.start(screenshots=True, snapshots=True, sources=True)
-
     try:
         user1_email = static_email
         user2_email = "testuser@gmail.com"
@@ -154,14 +143,9 @@ def test_duplicate_and_hold_expense(setup_playwright):
             interval=1,
             assertion_message="Expense's text not updated to 'Hold' from 'Duplicate'.",
         )
-
-    except Exception as e:
-
-        raise e
-
     finally:
-
-        page.context.tracing.stop()
-        page.context.tracing.export(path=trace_path)
-
-        trace_cleaner(trace_path)
+        trace_file = "/app/expensify/user_tool/output_browser1.zip"
+        page.context.tracing.stop(path=trace_file)
+        trace_cleaner(trace_file)
+        browser.close()
+        playwright.stop()

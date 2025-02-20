@@ -1,5 +1,7 @@
 import sys, os
 
+from utils.trace_cleaner import trace_cleaner
+
 base_path = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
 sys.path.insert(0, base_path)
 
@@ -9,25 +11,30 @@ import time
 import random
 import re
 
-from utils.trace_cleaner import trace_cleaner
 
 @pytest.fixture(scope="function")
 def page():
-    with sync_playwright() as p:
-        browser = p.chromium.launch(channel="chrome", headless=True, args=[
-            "--disable-web-security",
-            "--disable-features=IsolateOrigins,site-per-process",
-        ], slow_mo=500)
-        context_args = {"viewport": {"width": 1024, "height": 640}}
-        context_args["timezone_id"] = "Asia/Dhaka"
-        page = browser.new_page(**context_args)
-        yield page
-        browser.close()
+    # Start Playwright explicitly so we can manage closing later via the test
+    p = sync_playwright().start()
+    browser = p.chromium.launch(channel="chrome", headless=True, args=[
+        "--disable-web-security",
+        "--disable-features=IsolateOrigins,site-per-process",
+    ], slow_mo=500)
+    context_args = {"viewport": {"width": 1024, "height": 640}, "timezone_id": "Asia/Dhaka"}
+    # Create a browser context so we can use tracing
+    context = browser.new_context(**context_args)
+    page = context.new_page()
+    # Attach browser and context to the page so we can access them later
+    page.browser = browser
+    page._context = context
+    yield page
+    # Do not close the browser here as it will be closed in the test's finally block
+    p.stop()
 
 
 def test_check_unhold_button_exists(page):
-
-    page.context.tracing.start(screenshots=True, snapshots=True, sources=True)
+    # Start tracing
+    page._context.tracing.start(screenshots=True, snapshots=True, sources=True)
     try:
         first_name = 'Test'
         last_name = 'Name'
@@ -36,7 +43,7 @@ def test_check_unhold_button_exists(page):
         page.goto('https://dev.new.expensify.com:8082/')
         phone_or_email_input = page.locator('input[type="email"]')
         expect(phone_or_email_input).to_be_visible()
-        
+
         email = "rgarciatammy4+173307430716@gmail.com"
         phone_or_email_input.fill(email)
 
@@ -62,7 +69,6 @@ def test_check_unhold_button_exists(page):
         else:
             workspace_name = f"{email.capitalize()}'s Workspace"
         
-
         settings = page.locator('button[aria-label="My settings"]')
         expect(settings).to_be_visible()
         settings.click()
@@ -93,7 +99,7 @@ def test_check_unhold_button_exists(page):
         page.get_by_role("textbox", name="Merchant").fill("merchant1")
         page.get_by_role("button", name="Save").click()
         page.get_by_role("button", name="Submit").click()
-
+        
 
         page.get_by_role("button", name="Create").click()
         page.get_by_label("Submit expense").get_by_text("Submit expense").click()
@@ -104,7 +110,7 @@ def test_check_unhold_button_exists(page):
         page.get_by_role("textbox", name="Merchant").fill("merchant2")
         page.get_by_role("button", name="Save").click()
         page.get_by_role("button", name="Submit").click()
-
+        
 
         page.get_by_role("button", name="Create").click()
         page.get_by_label("Submit expense").get_by_text("Submit expense").click()
@@ -146,7 +152,7 @@ def test_check_unhold_button_exists(page):
         page.wait_for_timeout(1000)
         
         page.keyboard.press('Enter')
-        page.get_by_role("button", name="View details").get_by_text(f'{workspace_name} owes').click()
+        page.get_by_role("button", name=f'{workspace_name} owes').click()
         page.wait_for_timeout(1000)
 
         page.get_by_label("Cash").get_by_text('Hold').nth(1).click()
@@ -155,15 +161,12 @@ def test_check_unhold_button_exists(page):
         page.mouse.click(0,0)
         page.get_by_role('button', name='for merchant1').nth(1).click()
         page.wait_for_timeout(1000)
-
+        
 
         expect(page.get_by_role('button', name='Unhold')).to_be_visible(timeout=10)
-
-    except Exception as e:
-        raise e
     finally:
-
-        page.context.tracing.stop()
-        trace_path = '/app/expensify/user_tool/output_browser1.zip'
-        page.context.tracing.export(trace_path)
+        # Stop tracing, export trace then clean up and close the browser
+        trace_path = "/app/expensify/user_tool/output_browser1.zip"
+        page._context.tracing.stop(path=trace_path)
         trace_cleaner(trace_path)
+        page.browser.close()

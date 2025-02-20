@@ -3,6 +3,8 @@ import sys, os
 base_path = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
 sys.path.insert(0, base_path)
 
+from utils.trace_cleaner import trace_cleaner
+
 import time
 import imaplib
 import logging
@@ -12,7 +14,6 @@ import email
 import string, random
 import pytest
 from playwright.sync_api import sync_playwright, expect, Page
-from utils.trace_cleaner import trace_cleaner
 
 
 EXPENSIFY_URL = "https://dev.new.expensify.com:8082/"
@@ -28,6 +29,7 @@ EMAIL_USERNAME_POSTFIX = "49298_4"
 logging.basicConfig(level=logging.INFO, stream=sys.stdout, format="%(message)s")
 LOGGER = logging.getLogger(__name__)
 
+
 def generate_user_email(user_id=None):
     """
     Generate an email address for a user login.
@@ -37,6 +39,7 @@ def generate_user_email(user_id=None):
     domain = temp[1].strip()
     return f"{username}+{EMAIL_USERNAME_POSTFIX}@{domain}"
 
+
 def clear_inbox(username, password):
     """
     Delete all existing messages from the Inbox.
@@ -45,9 +48,10 @@ def clear_inbox(username, password):
     with imaplib.IMAP4_SSL(host="imap.gmail.com") as imap:
         imap.login(username, password)
         imap.select("inbox")
-        imap.store("1:*", "+FLAGS", "\\Deleted")
+        imap.store("1:*", "+FLAGS", "\Deleted")
         imap.expunge()
         imap.close()
+
 
 def get_otp_from_email(username, password, retries=2, delay=2):
     """
@@ -75,6 +79,7 @@ def get_otp_from_email(username, password, retries=2, delay=2):
         imap.close()
     return "123456"
 
+
 def launch_browser(pw, headless=True, device=None, geolocation=None):
     """
     Launch the browser.
@@ -82,7 +87,7 @@ def launch_browser(pw, headless=True, device=None, geolocation=None):
     browser = pw.chromium.launch(
         headless=True,
         proxy={
-            'server': 'http://127.0.0.1:8080',
+            'server': 'http://127.0.0.1:8080',  
         },
         args=[
             '--disable-web-security',
@@ -98,6 +103,7 @@ def launch_browser(pw, headless=True, device=None, geolocation=None):
     context = browser.new_context(**context_args)
     page = context.new_page()
     return browser, context, page
+
 
 def login_user(page, email, first_name="John", last_name="Doe"):
     """
@@ -115,14 +121,16 @@ def login_user(page, email, first_name="John", last_name="Doe"):
     otp_code = get_otp_from_email(EMAIL_USERNAME, EMAIL_PASSWORD)
     page.get_by_test_id("validateCode").fill(otp_code)
 
+
 def test():
     with sync_playwright() as p:
         email = generate_user_email()
         LOGGER.info("User email %s", email)
         browser, context, page = launch_browser(p)
+        
+        # Start tracing the context
+        context.tracing.start(screenshots=True, snapshots=True, sources=True)
 
-
-        context.tracing.start(screenshots=True, snapshots=True)
         try:
             login_user(page, email)
             page.wait_for_timeout(5000)
@@ -132,7 +140,6 @@ def test():
             page.locator(
                 'button[aria-label="Start chat (Floating action)"][tabindex="0"]'
             ).click()
-
 
             page.locator('div[aria-label="Start chat"][role="menuitem"]').click()
 
@@ -160,17 +167,15 @@ def test():
             page.wait_for_selector('div[data-testid="PrivateNotesListPage"]')
             parent_div = page.locator('div[data-testid="PrivateNotesListPage"]')
 
-
             child_with_scroll_y = parent_div.evaluate_handle(
                 """parent => {
-                const children = parent.querySelectorAll("div");
-                return Array.from(children).find(child => {
-                    const style = getComputedStyle(child);
-                    return style.overflowY === "scroll" || style.overflowY === "auto";
-                });
-            }"""
+                    const children = parent.querySelectorAll("div");
+                    return Array.from(children).find(child => {
+                        const style = getComputedStyle(child);
+                        return style.overflowY === "scroll" || style.overflowY === "auto";
+                    });
+                }"""
             )
-
 
             if child_with_scroll_y:
                 text = child_with_scroll_y.evaluate("element => element.innerText")
@@ -182,11 +187,13 @@ def test():
                 "Keep notes about this chat here. You're the only person who can add, edit, or view these notes."
                 in text
             ), "The intro text on private notes list stays fixed when it should scroll with the page"
-        except Exception as e:
-            raise e
         finally:
-
-            context.tracing.stop()
             trace_path = "/app/expensify/user_tool/output_browser1.zip"
-            context.tracing.export(trace_path)
+            context.tracing.stop()
+            context.tracing.export_trace(trace_path)
             trace_cleaner(trace_path)
+            browser.close()
+
+
+if __name__ == '__main__':
+    test()

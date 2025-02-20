@@ -11,36 +11,34 @@ import os
 from email.header import decode_header
 from playwright.sync_api import sync_playwright, expect
 from playwright.sync_api._context_manager import PlaywrightContextManager
-from utils.trace_cleaner import trace_cleaner  # <--- Added for trace cleaning
+from utils.trace_cleaner import trace_cleaner
 
 
 GMAIL_NAME = "nomandevtur+50577"
 GMAIL_APP_PASSWORD = "tpye xlsj axyq nltq"
 
 
-def get_test_user_info(seed = None, first_name = None, last_name = None):
+def get_test_user_info(seed=None, first_name=None, last_name=None):
     if first_name is None:
         first_name = GMAIL_NAME
 
     if last_name is None:
         last_name = ""
 
-    email = f"{GMAIL_NAME}+{seed}@gmail.com" if seed is not None else f"{GMAIL_NAME}@gmail.com"
+    email_addr = f"{GMAIL_NAME}+{seed}@gmail.com" if seed is not None else f"{GMAIL_NAME}@gmail.com"
     
-    return {"email": email, "password": GMAIL_APP_PASSWORD, "first_name": first_name, "last_name": last_name}
+    return {"email": email_addr, "password": GMAIL_APP_PASSWORD, "first_name": first_name, "last_name": last_name}
 
 
 def delete_email_inbox(user_email, password, retries=5, delay=10):
     imap = imaplib.IMAP4_SSL("imap.gmail.com")
     imap.login(user_email, password)
 
-
-
     imap.select("inbox")
     status, all_emails = imap.search(None, "ALL")
     if status == "OK":
         for email_id in all_emails[0].split():
-            imap.store(email_id, "+FLAGS", "\\Deleted")
+            imap.store(email_id, "+FLAGS", "\Deleted")
         imap.expunge()
 
 
@@ -93,7 +91,7 @@ def select_activity(page, first_name, last_name, activity_text):
     
 
     page.get_by_label(activity_text).click()
-
+    
 
     page.get_by_role("textbox", name="First name").fill(first_name)
     page.get_by_role("textbox", name="Last name").fill(last_name)
@@ -108,7 +106,6 @@ def login_user(page, user_info, activity_text="Track and budget expenses"):
     page.wait_for_load_state('load')
     
     try:
-
         expect(page.get_by_label("Inbox")).to_be_visible(timeout=10000)
         return
     except:
@@ -141,20 +138,18 @@ def get_context(p: PlaywrightContextManager, user_info, browser, is_phone_setup=
     """
     permissions = ['clipboard-read', 'clipboard-write']
 
-
     data_dir = 'mobile_context' if is_phone_setup else 'desktop_context'
     data_dir += f"_{user_info['email']}"
     os.makedirs(data_dir, exist_ok=True)  
 
-
     context_options = {
         "permissions": permissions,
-        "storage_state": None
+        "storage_state": None  
     }
 
     if is_phone_setup:
         context_options.update({
-            "viewport": {"width": 390, "height": 844},
+            "viewport": {"width": 390, "height": 844},  
             "user_agent": "Mozilla/5.0 (iPhone; CPU iPhone OS 14_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/14.0 Mobile/15E148 Safari/604.1",
         })
 
@@ -163,6 +158,7 @@ def get_context(p: PlaywrightContextManager, user_info, browser, is_phone_setup=
     return context, page
 
     
+
 def test_inconsistent_button_behavior():
     with sync_playwright() as p:
         user_info = get_test_user_info(10)
@@ -175,14 +171,11 @@ def test_inconsistent_button_behavior():
         ])
 
         context, page = get_context(p, user_info, browser)
-
-
-
+        # Start tracing
+        context.tracing.start(screenshots=True, snapshots=True, sources=True)
 
         try:
-            context.tracing.start(title='scenario1', screenshots=True, snapshots=True, sources=True)
             login_user(page, user_info)
-
 
             page.get_by_label("Start chat (Floating action)").click()
             page.get_by_label("Submit expense").nth(0).click()
@@ -203,6 +196,7 @@ def test_inconsistent_button_behavior():
 
             page.bring_to_front()
             page.get_by_role("button", name="Submit PKR").click()
+
             page.wait_for_timeout(1000)
             page1.bring_to_front()
             page1.get_by_role("button", name="Submit PKR").click()
@@ -210,16 +204,6 @@ def test_inconsistent_button_behavior():
 
             text_locator = page1.get_by_text("Please select a participant.")
             expect(text_locator).to_be_visible()
-
-        finally:
-
-            context.tracing.stop()
-            trace_path_1 = "/app/expensify/user_tool/output_browser1.zip"
-            context.tracing.export(trace_path_1)
-            trace_cleaner(trace_path_1)
-
-        try:
-            context.tracing.start(title='scenario2', screenshots=True, snapshots=True, sources=True)
 
             page.bring_to_front()
             page.get_by_label("Create").click()
@@ -240,16 +224,17 @@ def test_inconsistent_button_behavior():
             page1.bring_to_front()
             page1.get_by_role("button", name="Confirm task").click()
             page.wait_for_timeout(1000)
-
+            
             text_locator = page1.get_by_text("Please enter a title and select a share destination.")
             expect(text_locator).to_be_visible()
 
+            page.close()
         finally:
+            trace_path = "/app/expensify/user_tool/output_browser1.zip"
+            context.tracing.stop(path=trace_path)
+            trace_cleaner(trace_path)
+            browser.close()
 
-            context.tracing.stop()
-            trace_path_2 = "/app/expensify/user_tool/output_browser2.zip"
-            context.tracing.export(trace_path_2)
-            trace_cleaner(trace_path_2)
 
-        page.close()
-        browser.close()
+if __name__ == '__main__':
+    test_inconsistent_button_behavior()

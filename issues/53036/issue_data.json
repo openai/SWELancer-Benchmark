@@ -1,0 +1,5 @@
+{
+    "price": 250.0,
+    "title": "[HOLD for payment 2024-12-16] [$250] No way to save a search after searching for a custom query",
+    "issue_repo_steps": "Action Performed:\nGo to search\nClick on search\nEnter any query to give results\nClick filters\nExpected Result: Should have an option to save the results\nActual Result: No option to save the search for a custom query"
+}

@@ -13,15 +13,14 @@ import re
 from playwright.sync_api._context_manager import PlaywrightContextManager
 from playwright._impl._browser import Browser
 from playwright._impl._page import Page
-from utils.trace_cleaner import trace_cleaner
 
+from utils.trace_cleaner import trace_cleaner
 
 
 def generate_random_email(base_email="testerbro7077@gmail.com"):
     timestamp = int("28077")
     email_user, domain = base_email.split('@')
     return f"{email_user}+{timestamp}@{domain}"
-
 
 
 def get_magic_code(user_email, password, retries=5, delay=10):
@@ -62,7 +61,6 @@ def get_magic_code(user_email, password, retries=5, delay=10):
     return None
 
 
-
 def login_user(p: PlaywrightContextManager, first_name="Yagna", last_name="Sai") -> tuple[Browser, Page, str]:
     user_email = generate_random_email()
     password = "xqxz mmcb tvkn lpgp"
@@ -84,7 +82,6 @@ def login_user(p: PlaywrightContextManager, first_name="Yagna", last_name="Sai")
     continue_button.click()
 
     page.wait_for_timeout(1000)
-
 
     magic_code = "123456"
 
@@ -133,7 +130,6 @@ def login_user2(p: PlaywrightContextManager, first_name="Yagna", last_name="Sai"
 
     page.wait_for_timeout(1000)
 
-
     magic_code = "123456"
 
     validate_code_input = page.locator('input[data-testid="validateCode"]')
@@ -167,42 +163,28 @@ def check_name2(page):
 @pytest.mark.parametrize("first_name, last_name", [("Yagna", "Sai")])
 def test_run(first_name: str, last_name: str) -> None:
     with sync_playwright() as playwright:
-
-        trace_path1 = "/app/expensify/user_tool/output_browser1.zip"
-        browser1 = page1 = context1 = None
+        # First browser session with tracing
         try:
             browser1, page1, user_email1 = login_user(playwright, first_name, last_name)
             context1 = page1.context
-            context1.tracing.start(title="login_user", screenshots=True, snapshots=True, sources=True)
+            context1.tracing.start(screenshots=True, snapshots=True, sources=True)
             print(f"Logged in with email: {user_email1}")
             check_name(page1)
-        except Exception as e:
-            print(f"Error in first part: {e}")
         finally:
-            if context1:
-                context1.tracing.stop()
-                context1.tracing.export(path=trace_path1)
-                trace_cleaner(trace_path1)
-            if browser1:
-                browser1.close()
+            context1.tracing.stop(path="/app/expensify/user_tool/output_browser1.zip")
+            trace_cleaner("/app/expensify/user_tool/output_browser1.zip")
+            browser1.close()
 
-
-        trace_path2 = "/app/expensify/user_tool/output_browser2.zip"
-        browser2 = page2 = context2 = None
+        # Second browser session with tracing
         try:
             browser2, page2, user_email2 = login_user2(playwright, first_name, last_name)
             context2 = page2.context
-            context2.tracing.start(title="login_user2", screenshots=True, snapshots=True, sources=True)
+            context2.tracing.start(screenshots=True, snapshots=True, sources=True)
             check_name2(page2)
-        except Exception as e:
-            print(f"Error in second part: {e}")
         finally:
-            if context2:
-                context2.tracing.stop()
-                context2.tracing.export(path=trace_path2)
-                trace_cleaner(trace_path2)
-            if browser2:
-                browser2.close()
+            context2.tracing.stop(path="/app/expensify/user_tool/output_browser2.zip")
+            trace_cleaner("/app/expensify/user_tool/output_browser2.zip")
+            browser2.close()
 
 
 if __name__ == "__main__":

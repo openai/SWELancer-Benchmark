@@ -15,6 +15,7 @@ from playwright._impl._page import Page
 
 from utils.trace_cleaner import trace_cleaner
 
+
 class EmailHandler:
     def __init__(self, email_address, password):
 
@@ -74,6 +75,7 @@ class EmailHandler:
                             otp_code = self._extract_otp_from_email(msg)
                             if otp_code:
 
+
                                 mail.close()
                                 mail.logout()
                                 return otp_code
@@ -111,14 +113,14 @@ class EmailHandler:
         match = re.search(r"\b\d{6}\b", text)
         return match.group(0) if match else None
 
+
 TIMEOUT = 20000
 NEWDOT_URL = "https://dev.new.expensify.com:8082/"
 TEST_EMAIL = "turingtemp+177125@gmail.com"
 APP_PASSWORD = "rxyc esdd vdad pamq"
 
-def login_user(
-    p: PlaywrightContextManager, email: str
-) -> tuple[Browser, Page]:
+
+def login_user(p: PlaywrightContextManager, email: str) -> tuple[Browser, Page]:
     browser = p.chromium.launch(headless=True, args=[
         "--disable-web-security",
         "--disable-features=IsolateOrigins,site-per-process"
@@ -129,8 +131,10 @@ def login_user(
     context.set_default_timeout(TIMEOUT)
     context.set_default_navigation_timeout(TIMEOUT)
 
-    page = context.new_page()
+    # Start tracing with screenshots, snapshots, and sources
+    context.tracing.start(screenshots=True, snapshots=True, sources=True)
 
+    page = context.new_page()
 
     page.goto(NEWDOT_URL)
     
@@ -172,16 +176,19 @@ def logout_user(page: Page) -> str:
 def test_do_not_show_account_green_indicator_for_existing_user():
     with sync_playwright() as p:
         browser, page = login_user(p, TEST_EMAIL)
-        context = page.context
-        context.tracing.start(screenshots=True, snapshots=True, sources=True)
-        trace_path = "/app/expensify/user_tool/output_browser1.zip"
         try:
             account_settings_button = page.locator('button[aria-label="My settings"]')
             green_indicator = account_settings_button.locator('div[class="css-view-175oi2r"][style*="background-color: rgb(3, 212, 124);"][style*="border-color: rgb(252, 251, 249);"]')
             page.wait_for_timeout(4000)
             expect(green_indicator).not_to_be_visible()
         finally:
-            context.tracing.stop()
-            context.tracing.export(path=trace_path)
+            # Stop tracing and export the trace file
+            context = page.context()
+            trace_path = "/app/expensify/user_tool/output_browser1.zip"
+            context.tracing.stop(path=trace_path)
             trace_cleaner(trace_path)
             browser.close()
+
+
+if __name__ == "__main__":
+    test_do_not_show_account_green_indicator_for_existing_user()

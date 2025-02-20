@@ -7,8 +7,8 @@ from playwright.sync_api import sync_playwright, expect
 from playwright._impl._page import Page
 from utils.trace_cleaner import trace_cleaner
 
-def launch_browser(playwright, platform="desktop"):
 
+def launch_browser(playwright, platform="desktop"):
     mobile_context = {}
 
     if platform.lower() == "mobile":
@@ -18,14 +18,15 @@ def launch_browser(playwright, platform="desktop"):
         }
 
     browser = playwright.chromium.launch(headless=True, args=[
-            "--ignore-certificate-errors",
-            "--disable-web-security",
-            "--disable-features=IsolateOrigins,site-per-process"
-        ])
+        "--ignore-certificate-errors",
+        "--disable-web-security",
+        "--disable-features=IsolateOrigins,site-per-process"
+    ])
     context = browser.new_context(**mobile_context)
+    context.tracing.start(screenshots=True, snapshots=True, sources=True)
     page = context.new_page()
 
-    return page
+    return browser, context, page
 
 
 def login_user_if_not_logged_in(page: Page, platform="desktop"):
@@ -42,9 +43,7 @@ def login_user_if_not_logged_in(page: Page, platform="desktop"):
 
 
 def verify_receipt_violation_error_message(page: Page, member_name: str, approval_required_amount: int):
-    page.get_by_label("Navigates to a chat").get_by_text(
-        member_name, exact=True
-    ).click()
+    page.get_by_label("Navigates to a chat").get_by_text(member_name, exact=True).click()
     page_id = page.url.rstrip("/").split("/")[-1]
     page.get_by_test_id(f"report-screen-{page_id}").get_by_role(
         "button", name="View details"
@@ -57,39 +56,25 @@ def verify_receipt_violation_error_message(page: Page, member_name: str, approva
         "The approval limit should not be undefined",
     ).to_have_count(0)
 
-    approval_error_message = page.get_by_text(
-            f"Expense exceeds auto approval limit of ${approval_required_amount}"
-        ) if page.get_by_text(
-            f"Expense exceeds auto approval limit of ${approval_required_amount}"
-        ).is_visible() else page.get_by_text(
-            f"Expense exceeds auto approval limit of ${approval_required_amount}"
-        ).nth(1)
+    approval_error_message = (page.get_by_text(f"Expense exceeds auto approval limit of ${approval_required_amount}")
+                              if page.get_by_text(f"Expense exceeds auto approval limit of ${approval_required_amount}").is_visible()
+                              else page.get_by_text(f"Expense exceeds auto approval limit of ${approval_required_amount}").nth(1))
     
-    expect(approval_error_message,"The approval limit should be correct",).to_have_count(1)
+    expect(approval_error_message, "The approval limit should be correct").to_have_count(1)
 
 
 def test_receipt_violation_should_show_correct_error_message():
     playwright = sync_playwright().start()
-    page = None
-    context = None
-
+    browser, context, page = launch_browser(playwright)
     try:
-        page = launch_browser(playwright)
-        context = page.context
-        context.tracing.start(screenshots=True, snapshots=True, sources=True)
-
         login_user_if_not_logged_in(page)
         page.wait_for_timeout(2000)
         verify_receipt_violation_error_message(page, "Asaad J", 100)
-
-    except Exception as e:
-        raise e
-
     finally:
-        if context:
-            context.tracing.stop()
-            trace_path = "/app/expensify/user_tool/output_browser1.zip"
-            context.tracing.export(path=trace_path)
-            trace_cleaner(trace_path)
-            context.close()
+        context.tracing.stop(path="/app/expensify/user_tool/output_browser1.zip")
+        trace_cleaner("/app/expensify/user_tool/output_browser1.zip")
+        browser.close()
         playwright.stop()
+
+
+test_receipt_violation_should_show_correct_error_message()

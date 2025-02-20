@@ -17,13 +17,13 @@ import imaplib
 import email
 import re
 import random
-
 from utils.trace_cleaner import trace_cleaner
 
 NEWDOT_URL = "https://dev.new.expensify.com:8082/"
 OLDDOT_URL = "http://localhost:9000/"
 EMAIL = "turingvidhant+114@gmail.com"
 PASSWORD = "uotx fzkt kfeg dehz"
+
 
 class IMAPOTPExtractor:
     def __init__(self, email_address, password):
@@ -99,11 +99,13 @@ class IMAPOTPExtractor:
         match = re.search(r"\b\d{6}\b", text)
         return match.group(0) if match else None
 
+
 gmail_account_helper = IMAPOTPExtractor(EMAIL, PASSWORD)
 
 
+
 def new_dot_login(page, email):
-    page.goto(NEWDOT_URL)
+    page.goto(NEWDOT_URL)  
     page.locator('input[type="email"]').fill(email)
     page.wait_for_timeout(3000)
     page.get_by_role("button", name="Continue").nth(0).click()
@@ -134,22 +136,16 @@ def launch_browser(pw, headless=True, device=None, geolocation=None):
 
 
 def test_expensify():
-    error = None
-    with sync_playwright() as p:
+     with sync_playwright() as p:
         browser = p.chromium.launch(headless=True, args=[
             "--disable-web-security",
             "--disable-features=IsolateOrigins,site-per-process"
         ])
-        context = browser.new_context(ignore_https_errors=True)
 
-        context.tracing.start(
-            title="test-expensify-trace",
-            screenshots=True,
-            snapshots=True,
-            sources=True
-        )
-
-        page = context.new_page()
+        first_user_context = browser.new_context(ignore_https_errors=True)
+        # Start tracing immediately after creating the context
+        first_user_context.tracing.start(screenshots=True, snapshots=True, sources=True)
+        page = first_user_context.new_page()
         page.wait_for_timeout(3000)
 
         try:
@@ -157,12 +153,10 @@ def test_expensify():
             page.wait_for_timeout(3000)
             amount = "100"
 
-
             workspace_chat = page.locator('button[aria-label="Navigates to a chat"]', has_text="Turing Vidhant+114's Workspace")
             expect(workspace_chat).to_be_visible()
             workspace_chat.click()
             page.wait_for_timeout(2000)
-
 
             plus_create_icon = page.locator('button[aria-label="Create"]').last
             expect(plus_create_icon).to_be_visible()
@@ -174,20 +168,17 @@ def test_expensify():
             submit_expense_button.click()
             page.wait_for_timeout(2000)
 
-
-            manual_button = page.locator('button[aria-label="Manual"]')
+            manual_button = page.locator('button[aria-label="Manual"]').
             expect(manual_button).to_be_visible()
             manual_button.click()
             page.wait_for_timeout(2000)
 
             page.locator('input[role="presentation"]').fill(amount)
 
-
             next_button = page.locator('button[data-listener="Enter"]', has_text="Next").first
             expect(next_button).to_be_visible()
             next_button.click()
             page.wait_for_timeout(2000)
-
 
             merchant_field = page.locator('div[role="menuitem"]', has_text="Merchant")
             expect(merchant_field).to_be_visible()
@@ -201,46 +192,41 @@ def test_expensify():
             save_button.click()
             page.wait_for_timeout(2000)
 
-
             save_button = page.locator('button[data-listener="Enter"]', has_text="Submit")
             expect(save_button).to_be_visible()
             save_button.click()
             page.wait_for_timeout(2000)
 
-
             new_workspace_chat = page.locator('button[aria-label="Navigates to a chat"]', has_text="Turing Vidhant+114's Workspace")
             expect(new_workspace_chat).to_be_visible()
             new_workspace_chat.click()
             page.wait_for_timeout(2000)
-
+    
             view_details = page.locator('button[aria-label="View details"]').last
             expect(view_details).to_be_visible()
             view_details.click()
-
-
+            
             page.get_by_role("textbox").type(':eye:', delay=100)
             page.wait_for_timeout(2000)
-
-
+            
             smile_emoji = page.locator('div[aria-label="smile+1}"]')
             page.wait_for_timeout(2000)
-
+    
             if smile_emoji.is_visible():
                 assert False, "Emoji suggestion does not auto close after inserting emoji."
             else:
                 assert True, "Emoji suggestion auto close after inserting emoji."
-
+            
             page.wait_for_timeout(1500)
-        except Exception as e:
-            error = e
-        finally:
 
-            context.tracing.stop()
+        finally:
+            # Ensure that tracing is stopped and the trace file is exported
             trace_path = "/app/expensify/user_tool/output_browser1.zip"
-            context.tracing.export(path=trace_path)
+            first_user_context.tracing.stop(path=trace_path)
             trace_cleaner(trace_path)
             page.close()
             browser.close()
 
-    if error:
-        raise error
+
+if __name__ == '__main__':
+    test_expensify()

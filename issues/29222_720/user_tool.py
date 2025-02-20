@@ -17,12 +17,14 @@ import imaplib
 import email
 import re
 import random
+
 from utils.trace_cleaner import trace_cleaner
 
 NEWDOT_URL = "https://dev.new.expensify.com:8082/"
 OLDDOT_URL = "http://localhost:9000/"
 EMAIL = "turingvidhant+109@gmail.com"
 PASSWORD = "uotx fzkt kfeg dehz"
+
 
 class IMAPOTPExtractor:
     def __init__(self, email_address, password):
@@ -98,6 +100,7 @@ class IMAPOTPExtractor:
         match = re.search(r"\b\d{6}\b", text)
         return match.group(0) if match else None
 
+
 gmail_account_helper = IMAPOTPExtractor(EMAIL, PASSWORD)
 
 
@@ -114,6 +117,7 @@ def new_dot_login(page, email):
         page.get_by_role("button", name="Sign In").click()
     except:
         pass
+
 
 def launch_browser(pw, headless=True, device=None, geolocation=None):
     """
@@ -132,17 +136,19 @@ def launch_browser(pw, headless=True, device=None, geolocation=None):
 
 
 def test_expensify():
-    with sync_playwright() as p:
+     with sync_playwright() as p:
         browser = p.chromium.launch(headless=True, args=[
             "--disable-web-security",
             "--disable-features=IsolateOrigins,site-per-process"
         ])
 
         first_user_context = browser.new_context(ignore_https_errors=True)
+        # Start tracing for this context
         first_user_context.tracing.start(screenshots=True, snapshots=True, sources=True)
-        page = first_user_context.new_page()
         try:
+            page = first_user_context.new_page()
             page.wait_for_timeout(3000)
+
             new_dot_login(page, EMAIL)
             page.wait_for_timeout(3000)
 
@@ -172,14 +178,20 @@ def test_expensify():
 
             expect(page.get_by_text("India Gate", exact=True)).to_be_visible()
             expect(page.get_by_text("Colorado Springs", exact=True)).to_be_visible()
-            page.wait_for_timeout(1500)
-        except Exception as e:
-            raise e
-        finally:
-            first_user_context.tracing.stop()
-            trace_path = "/app/expensify/user_tool/output_browser1.zip"
-            first_user_context.tracing.export(path=trace_path)
-            trace_cleaner(trace_path)
 
-        page.close()
-        browser.close()
+            page.wait_for_timeout(1500)
+        finally:
+            # Stop tracing and export the trace file
+            trace_path = "/app/expensify/user_tool/output_browser1.zip"
+            first_user_context.tracing.stop(path=trace_path)
+            trace_cleaner(trace_path)
+            try:
+                page.close()
+            except Exception:
+                pass
+            first_user_context.close()
+            browser.close()
+
+
+if __name__ == "__main__":
+    test_expensify()

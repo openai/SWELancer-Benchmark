@@ -3,6 +3,8 @@ import sys, os
 base_path = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
 sys.path.insert(0, base_path)
 
+from utils.trace_cleaner import trace_cleaner
+
 import imaplib
 import email
 import re
@@ -14,9 +16,11 @@ from playwright.sync_api._context_manager import PlaywrightContextManager
 from playwright._impl._browser import Browser
 from playwright._impl._page import Page
 
+
 master_email_address = "brighturing926+49492@gmail.com"
 master_app_password = "sijknxflhloopmta"
 dev_base_url = "https://dev.new.expensify.com:8082"
+
 
 class EmailHandler:
     def __init__(self, email_address, password) -> Any:
@@ -130,7 +134,6 @@ def login_user(p: PlaywrightContextManager, user_email: str) -> tuple[Browser, P
     page.locator('button[tabindex="0"]').click()
 
 
-
     page.wait_for_timeout(5000)
 
     my_otp_code = "111111"
@@ -148,10 +151,9 @@ def login_user(p: PlaywrightContextManager, user_email: str) -> tuple[Browser, P
 
 def test_enter_key_to_delete() -> None:
     with sync_playwright() as p:
+
         browser, page = login_user(p, master_email_address)
         context = page.context
-
-
         context.tracing.start(screenshots=True, snapshots=True, sources=True)
 
         try:
@@ -178,18 +180,17 @@ def test_enter_key_to_delete() -> None:
             page.wait_for_timeout(1000)
             page.locator("body").press("Enter")
             page.wait_for_timeout(1000)
-
+            
             delete_model = page.get_by_role("button", name="Delete")
-
+            
             assert not delete_model.is_visible(), "Enter key not working, Delete modal is still visible"
-        except Exception as e:
 
-            raise e
         finally:
-
-            context.tracing.stop()
-            trace_path = "/app/expensify/user_tool/output_browser1.zip"
-            context.tracing.export(path=trace_path)
-            from utils.trace_cleaner import trace_cleaner
-            trace_cleaner(trace_path)
+            trace_zip_path = "/app/expensify/user_tool/output_browser1.zip"
+            context.tracing.stop(path=trace_zip_path)
+            trace_cleaner(trace_zip_path)
             browser.close()
+
+
+if __name__ == "__main__":
+    test_enter_key_to_delete()

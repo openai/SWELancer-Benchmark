@@ -3,8 +3,9 @@ import sys, os
 base_path = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
 sys.path.insert(0, base_path)
 
-from playwright.sync_api import Playwright, sync_playwright, expect
 from utils.trace_cleaner import trace_cleaner
+from playwright.sync_api import Playwright, sync_playwright, expect
+
 
 def generate_random_email():
     return f"bobexpensifytest+49993o@gmail.com"
@@ -16,16 +17,12 @@ def test_track_expense_rate(playwright: Playwright) -> None:
     last_name = 's'
 
     browser = playwright.chromium.launch(channel="chrome", headless=True, slow_mo=1000, args=[
-            "--disable-web-security",
-            "--disable-features=IsolateOrigins,site-per-process"
-        ])
-
-    context = browser.new_context(viewport={"width":1000,"height":550})
-
+        "--disable-web-security",
+        "--disable-features=IsolateOrigins,site-per-process"
+    ])
+    context = browser.new_context(viewport={"width": 1000, "height": 550})
     context.tracing.start(screenshots=True, snapshots=True, sources=True)
-
     page = context.new_page()
-    trace_path = "/app/expensify/user_tool/output_browser1.zip"
 
     try:
         page.goto("https://dev.new.expensify.com:8082/")
@@ -34,14 +31,11 @@ def test_track_expense_rate(playwright: Playwright) -> None:
         page.locator('button[tabindex="0"]').click()
         page.wait_for_timeout(1000)
 
-
         page.get_by_role("button", name="Join").click()
-
 
         page.locator("text='Track and budget expenses'").click()
         page.get_by_role("button", name="Continue").click()
         page.wait_for_timeout(1000)
-
 
         page.locator('input[name="fname"]').fill(first_name)
         page.locator('input[name="lname"]').fill(last_name)
@@ -51,7 +45,7 @@ def test_track_expense_rate(playwright: Playwright) -> None:
         page.wait_for_timeout(500)
         page.locator('button[aria-label="My settings"]').click()
         page.wait_for_timeout(500)  # Short delay
-
+        
         page.get_by_test_id("InitialSettingsPage").get_by_label("Workspaces").get_by_text("Workspaces").click()
         page.get_by_label("New workspace").first.click()
         page.wait_for_timeout(500)  # Short delay
@@ -74,8 +68,7 @@ def test_track_expense_rate(playwright: Playwright) -> None:
         assert "ABC" in check_text, "The merchant 'ABC' is not in the check text."
 
     finally:
-
-        context.tracing.stop()
-        context.tracing.export(path=trace_path)
+        trace_path = "/app/expensify/user_tool/output_browser1.zip"
+        context.tracing.stop(path=trace_path)
         trace_cleaner(trace_path)
         browser.close()

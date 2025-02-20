@@ -221,23 +221,18 @@ def submit_invalid_expense(page):
 @pytest.mark.parametrize("first_name, last_name", [("Test", "User")])
 def test_selected_highlight(setup_playwright, first_name, last_name):
     context = setup_playwright
-
-
+    # Start tracing for this context
     context.tracing.start(screenshots=True, snapshots=True, sources=True)
     try:
         account = EmailHandler(email_address=BASE_EMAIL, password=PASSWORD)
         user_email = account.get_email_address()
 
-
         page = context.new_page()
         login_user(page, account)
 
-
         workspace_name = create_a_new_workspace(page)
 
-
         access_target_workspace_chat(page, workspace_name)
-
 
         page.get_by_label("Test User's Workspace").click()
 
@@ -246,11 +241,9 @@ def test_selected_highlight(setup_playwright, first_name, last_name):
         page.get_by_text("Notify me about new messages").click()
         selected_option = page.get_by_test_id("selection-list").get_by_label("Immediately")
         expect(selected_option).to_have_css("background-color", "rgba(0, 0, 0, 0)")
-    except Exception as e:
-        raise e
     finally:
-
-        context.tracing.stop()
-        context.tracing.export("/app/expensify/user_tool/output_browser1.zip")
-
-        trace_cleaner("/app/expensify/user_tool/output_browser1.zip")
+        trace_path = "/app/expensify/user_tool/output_browser1.zip"
+        context.tracing.stop(path=trace_path)
+        trace_cleaner(trace_path)
+        # Closing the context if not already closed by the fixture
+        context.close()

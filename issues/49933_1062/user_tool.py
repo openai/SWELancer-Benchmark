@@ -266,9 +266,9 @@ async def run(playwright: Playwright) -> None:
         raise e
     finally:
 
-        await context.tracing.stop()
+        
         trace_path = "/app/expensify/user_tool/output_browser1.zip"
-        await context.tracing.export(path=trace_path)
+        await context.tracing.stop(path=trace_path)
         trace_cleaner(trace_path)
 
     await context.close()

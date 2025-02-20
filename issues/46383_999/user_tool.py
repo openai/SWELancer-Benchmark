@@ -7,8 +7,7 @@ from playwright.sync_api import sync_playwright, expect
 from playwright.sync_api._context_manager import PlaywrightContextManager
 from playwright._impl._browser import Browser
 from playwright._impl._page import Page
-
-from utils.trace_cleaner import trace_cleaner  # <--- Added import
+from utils.trace_cleaner import trace_cleaner
 
 SITE_URL = "https://dev.new.expensify.com:8082/"
 PRIMARY_EMAIL = "expensifyolddot+1733039252@gmail.com"
@@ -16,8 +15,7 @@ FIRST_NAME = "expensifyolddot"
 LAST_NAME = "1733039252"
 
 
-def login_user(p: PlaywrightContextManager, first_name="Milan", last_name="T") -> tuple[Browser, Page, str]:
-
+def login_user(p: PlaywrightContextManager, first_name="Milan", last_name="T") -> tuple[Browser, Page, object, str]:
     browser = p.chromium.launch(headless=True,
         proxy={'server': 'http://127.0.0.1:8080'},
         args=[
@@ -36,16 +34,13 @@ def login_user(p: PlaywrightContextManager, first_name="Milan", last_name="T") -
     page = context.new_page()
     user_email = PRIMARY_EMAIL
 
-
     page.goto(SITE_URL)
-
 
     page.locator('input[type="email"]').fill(user_email)
     page.locator('button[tabindex="0"]').click()
     page.wait_for_timeout(2000)
 
-
-    try:
+    try: 
         page.locator('button[tabindex="0"]').click()
     except Exception:
         pass
@@ -54,7 +49,6 @@ def login_user(p: PlaywrightContextManager, first_name="Milan", last_name="T") -
 
         page.locator("text='Track and budget expenses'").click()
         page.get_by_role("button", name="Continue").click()
-
 
         page.locator('input[name="fname"]').fill(first_name)
         page.locator('input[name="lname"]').fill(last_name)
@@ -67,36 +61,23 @@ def login_user(p: PlaywrightContextManager, first_name="Milan", last_name="T") -
 def test_create_workspace():
     with sync_playwright() as p:
         browser, page, context, user_email = login_user(p, FIRST_NAME, LAST_NAME)
-
-
-        context.tracing.start(
-            title="test_create_workspace",
-            snapshots=True,
-            screenshots=True,
-            sources=True
-        )
+        # Start tracing before executing the test logic
+        context.tracing.start(screenshots=True, snapshots=True, sources=True)
         try:
-
             if page.get_by_label("Close").is_visible():
                 page.get_by_label("Close").click()
             page.get_by_label("Workspaces").click()
             page.get_by_label("New workspace").click()
 
-
             page.get_by_test_id("WorkspaceInitialPage").get_by_label("Back").click()
+
             expected_url = "https://dev.new.expensify.com:8082/workspace-switcher"
             page.wait_for_url(expected_url)
+
             assert page.url == expected_url, f"Expected URL to be {expected_url}, but got {page.url}"
-        except Exception as e:
-            print(f"Test failed: {e}")
-            raise
         finally:
-
-            context.tracing.stop()
-            trace_path = "/app/expensify/user_tool/output_browser1.zip"
-            context.tracing.export(trace_path)
-            trace_cleaner(trace_path)
-
-
-            context.close()
+            # Stop tracing and export trace to the output zip file
+            trace_output_path = "/app/expensify/user_tool/output_browser1.zip"
+            context.tracing.stop(path=trace_output_path)
+            trace_cleaner(trace_output_path)
             browser.close()

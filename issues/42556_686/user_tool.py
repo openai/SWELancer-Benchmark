@@ -3,6 +3,8 @@ import sys, os
 base_path = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
 sys.path.insert(0, base_path)
 
+from utils.trace_cleaner import trace_cleaner
+
 import time
 import imaplib
 import email
@@ -16,9 +18,6 @@ from playwright._impl._page import Page
 from enum import Enum
 from datetime import datetime, timezone
 
-from utils.trace_cleaner import trace_cleaner  # Added import for trace_cleaner
-
-
 
 TEST_URL = "https://dev.new.expensify.com:8082/" # TODO Use the URL that works in your local development. For example, it can be 'https://dev.new.expensify.com:8082/'
 
@@ -27,16 +26,8 @@ TEST_URL = "https://dev.new.expensify.com:8082/" # TODO Use the URL that works i
 
 
 
-
-
-
-
-
-
-
 USER_NAME = "expensify31" # TODO Change this to your Gmail username
 USER_PASSWORD = "Pass@123456" # TODO Change this to your password
-
 
 
 class TodayOptions(Enum):
@@ -61,8 +52,6 @@ def get_test_user_info(seed = None):
 
 def wait(page, for_seconds=1):
     page.wait_for_timeout(for_seconds * 1000)
-
-
 
 
 
@@ -159,7 +148,6 @@ def choose_link_if_any(page, link_text, retries = 5):
     expect(link).to_be_visible()
     link.click()
 
-
 def login(p: PlaywrightContextManager, user_info, if_phone=False) -> tuple[Browser, Page, str]:  
     
     login_time = datetime.now(timezone.utc).replace(second=0, microsecond=0)  
@@ -178,7 +166,7 @@ def login(p: PlaywrightContextManager, user_info, if_phone=False) -> tuple[Brows
 
     page = context.new_page()
 
-    page.goto(TEST_URL, timeout=120000) # Timeout is set to 120 seconds
+    page.goto(TEST_URL, timeout=120000) # Timeout is set to 120 seconds to avoid a Timeout error in my environment - native MacOS M1 Max. Perhaps you can set it to a lower value if you have a faster environment.
 
     phone_or_email_input = page.locator('input[type="email"]')
     expect(phone_or_email_input).to_be_visible()
@@ -206,26 +194,22 @@ def login(p: PlaywrightContextManager, user_info, if_phone=False) -> tuple[Brows
         expect(validate_code_input).to_be_visible()
         validate_code_input.fill(magic_code)
 
+
     return browser, page
 
 
 
-
-        
 def test():
     with sync_playwright() as p:
-
-        user_info = get_test_user_info(seed=None)
-
+        user_info = get_test_user_info(seed=None) # TODO Use any seed that you like 
         browser, page = login(p, user_info, True)
-        context = page.context
-
+        # Start tracing
+        context = page.context()
         context.tracing.start(screenshots=True, snapshots=True, sources=True)
-
+        trace_path = "/app/expensify/user_tool/output_browser1.zip"
         try:
-
             choose_what_to_do_today_if_any(page, TodayOptions.SOMETHING_ELSE, **user_info)
-            choose_link_if_any(page, "Get started")
+            choose_link_if_any(page, "Get started") # A new user will see this Get Started link on the first logon.
             page.wait_for_timeout(2000)
             page.get_by_label("My settings").click()
             page.get_by_test_id("InitialSettingsPage").get_by_label("Workspaces").get_by_text("Workspaces").click()
@@ -251,16 +235,15 @@ def test():
             page.wait_for_timeout(2000)
             page.get_by_role("button", name="Save").click()
             page.wait_for_timeout(2000)
+
             error_selector = "text=An error occurred while"
+
             expect(page.locator(error_selector)).not_to_be_visible(timeout=100)
-        except Exception as e:
-            print("Test failed:" , e)
-            raise e
         finally:
-
-            context.tracing.stop()
-            trace_path = "/app/expensify/user_tool/output_browser1.zip"
-            context.tracing.export(path=trace_path)
+            context.tracing.stop(path=trace_path)
             trace_cleaner(trace_path)
-
             browser.close()
+
+
+
+test()

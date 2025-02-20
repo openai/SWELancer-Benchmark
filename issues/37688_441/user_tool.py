@@ -9,7 +9,6 @@ from playwright.sync_api import sync_playwright, expect
 from playwright.sync_api._context_manager import PlaywrightContextManager
 from playwright._impl._browser import Browser
 from playwright._impl._page import Page
-
 from utils.trace_cleaner import trace_cleaner
 
 def generate_future_date_string():
@@ -19,31 +18,28 @@ def generate_future_date_string():
 TIMEOUT = 200000
 
 def login_user(p, first_name="Milan", last_name="T", user_email=None):
-    browser = p.chromium.launch(headless=True, args=[
-        "--disable-web-security",
-        "--disable-features=IsolateOrigins,site-per-process",
-    ], slow_mo=1000)
 
+    browser = p.chromium.launch(headless=True, args=[
+            "--disable-web-security",
+            "--disable-features=IsolateOrigins,site-per-process",
+        ], slow_mo=1000)
+    
     context_args = {}
     context_args["timezone_id"] = "Asia/Dhaka"
 
+    # Create context and start tracing
     context = browser.new_context()
     context.set_default_navigation_timeout(TIMEOUT)
     context.set_default_timeout(TIMEOUT)
     context.set_default_navigation_timeout(TIMEOUT)
-
-
     context.tracing.start(screenshots=True, snapshots=True, sources=True)
 
     page = context.new_page()
 
-
     page.goto("https://dev.new.expensify.com:8082/")
-
 
     page.locator('input[type="email"]').fill(user_email)
     page.get_by_role("button", name="Continue").click()
-
 
     page.get_by_role("button", name="Join").click()
     
@@ -51,7 +47,6 @@ def login_user(p, first_name="Milan", last_name="T", user_email=None):
 
         something_else_button = page.locator('div[aria-label="Something else"]')
         something_else_button.click()
-
 
         page.locator('input[name="fname"]').fill(first_name)
         page.locator('input[name="lname"]').fill(last_name)
@@ -64,15 +59,10 @@ def login_user(p, first_name="Milan", last_name="T", user_email=None):
 
 def test_banned_user_banner_appears_in_chat_instead_of_textbox():
     with sync_playwright() as p:
-        user_email_1 = "rgarciatammy4+1733074305@gmail.com"
-        user_email_2 = "rgarciatammy4+1733074306@gmail.com"
+        # Initialize browser sessions
+        browser, context, page, email = login_user(p, "User", "One", user_email="rgarciatammy4+1733074305@gmail.com")
+        browser1, context1, page1, email1 = login_user(p, "User", "Two", user_email="rgarciatammy4+1733074306@gmail.com")
         
-
-        browser, context, page, email = login_user(p, "User", "One", user_email_1)
-
-
-        browser1, context1, page1, email1 = login_user(p, "User", "Two", user_email_2)
-
         try:
             start_chat_fab = page.get_by_role("button", name="Start chat (Floating action)")
             start_chat_fab.click()
@@ -98,8 +88,8 @@ def test_banned_user_banner_appears_in_chat_instead_of_textbox():
 
             page.evaluate(
                 """async (date) => {
-            await Onyx.set('nvp_private_blockedFromChat', date);
-        }""",
+                await Onyx.set('nvp_private_blockedFromChat', date);
+            }""",
                 generate_future_date_string(),
             )
             page.wait_for_timeout(3000)
@@ -107,21 +97,20 @@ def test_banned_user_banner_appears_in_chat_instead_of_textbox():
 
             report_actions_view = page.get_by_test_id("report-actions-view-wrapper").last
             expect(report_actions_view).to_contain_text("Note: You've been banned from chatting in this channel")
-
-        except Exception as e:
-
-            raise e
         finally:
-
-            context.tracing.stop()
-            trace_path_1 = "/app/expensify/user_tool/output_browser1.zip"
-            context.tracing.export(trace_path_1)
-            trace_cleaner(trace_path_1)
-
-            context1.tracing.stop()
-            trace_path_2 = "/app/expensify/user_tool/output_browser2.zip"
-            context1.tracing.export(trace_path_2)
-            trace_cleaner(trace_path_2)
-
+            # Stop tracing for the first browser context and export the trace
+            trace_path1 = "/app/expensify/user_tool/output_browser1.zip"
+            context.tracing.stop(path=trace_path1)
+            trace_cleaner(trace_path1)
             browser.close()
+            
+            # Stop tracing for the second browser context and export the trace
+            trace_path2 = "/app/expensify/user_tool/output_browser2.zip"
+            context1.tracing.stop(path=trace_path2)
+            trace_cleaner(trace_path2)
             browser1.close()
+
+
+# If you want to run the test directly
+if __name__ == '__main__':
+    test_banned_user_banner_appears_in_chat_instead_of_textbox()

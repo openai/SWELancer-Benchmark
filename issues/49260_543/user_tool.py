@@ -258,6 +258,5 @@ async def test_tags_disabled_button(browser_context):
         print("Test failed:", e)
         raise e
     finally:
-        await context.tracing.stop()
-        await context.tracing.export(trace_path)
+        await context.tracing.stop(path=trace_path)
         trace_cleaner(trace_path)

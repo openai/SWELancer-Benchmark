@@ -6,9 +6,8 @@ sys.path.insert(0, base_path)
 from playwright.sync_api import Page, expect, sync_playwright
 from utils.trace_cleaner import trace_cleaner
 
-def create_user(
-    page: Page, firstname: str, lastname: str, email: str
-):
+
+def create_user(page: Page, firstname: str, lastname: str, email: str):
 
     page.get_by_test_id("username").fill(email)
     page.wait_for_timeout(1000)
@@ -26,15 +25,14 @@ def create_user(
 
 
 def test_task_preview():
-
     with sync_playwright() as p:
-        browser = p.chromium.launch(headless=True, slow_mo = 1000,
-            proxy = {"server": "http://127.0.0.1:8080/"},
-            args=[
-            "--ignore-certificate-errors",
-            "--disable-web-security", 
-            "--disable-features=IsolateOrigins,site-per-process"
-        ])
+        browser = p.chromium.launch(headless=True, slow_mo=1000,
+                                      proxy={"server": "http://127.0.0.1:8080/"},
+                                      args=[
+                                          "--ignore-certificate-errors",
+                                          "--disable-web-security", 
+                                          "--disable-features=IsolateOrigins,site-per-process"
+                                      ])
         context_args = {}
         context_args["geolocation"] = {"latitude": 37.7749, "longitude": 122.4194}
         context_args["permissions"] = ["geolocation"]
@@ -42,29 +40,28 @@ def test_task_preview():
         context_args["user_agent"] = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/94.0.4606.61 Safari/537.36"
         context_args["ignore_https_errors"] = True
 
+        # Create first context and start tracing
         context = browser.new_context(**context_args)
+        context.tracing.start(screenshots=True, snapshots=True, sources=True)
+
+        # Initialize context1 outside the try block
+        context1 = None
+
         try:
-
-            context.tracing.start(screenshots=True, snapshots=True)
-
-
             page = context.new_page()
             page.wait_for_timeout(5000)
-
             page.goto("https://127.0.0.1:8082/")
 
-
             email1 = create_user(page, "Test", "User1", "t1533148+1734358702@gmail.com")
-
-
+            
+            # Create a second context and start tracing for it
             context1 = browser.new_context(**context_args)
-
-            context1.tracing.start(screenshots=True, snapshots=True)
+            context1.tracing.start(screenshots=True, snapshots=True, sources=True)
             page1 = context1.new_page()
             page1.wait_for_timeout(5000)
-
             page1.goto("https://127.0.0.1:8082/")
             email2 = create_user(page1, "Test", "User2", "t1533148+1734358725@gmail.com")
+
             page.wait_for_timeout(2000)
             page.get_by_label("My settings").click()
             page.get_by_test_id("InitialSettingsPage").get_by_label("Workspaces").click()
@@ -111,27 +108,29 @@ def test_task_preview():
             page.wait_for_timeout(5000)
             expect(page.locator("text=Approve what's not on hold, or approve the entire report.")).not_to_be_visible()
 
-
-            page1.close()
-            page.close()
-            context1.close()
-            context.close()
-
-            browser.close()
-        except Exception as e:
-            raise e
         finally:
-
-            try:
-                context.tracing.stop()
-                context.tracing.export("/app/expensify/user_tool/output_browser1.zip")
-                trace_cleaner("/app/expensify/user_tool/output_browser1.zip")
-            except:  # In case anything goes wrong stopping or exporting the trace
-                pass
-
-            try:
-                context1.tracing.stop()
-                context1.tracing.export("/app/expensify/user_tool/output_browser2.zip")
+            # Stop tracing and export trace files for each context if available
+            if context1 is not None:
+                context1.tracing.stop(path="/app/expensify/user_tool/output_browser2.zip")
                 trace_cleaner("/app/expensify/user_tool/output_browser2.zip")
-            except:
+                try:
+                    context1.close()
+                except Exception:
+                    pass
+            context.tracing.stop(path="/app/expensify/user_tool/output_browser1.zip")
+            trace_cleaner("/app/expensify/user_tool/output_browser1.zip")
+            try:
+                # Attempt to close pages if they exist
+                page1.close()
+            except Exception:
                 pass
+            try:
+                page.close()
+            except Exception:
+                pass
+            context.close()
+            browser.close()
+
+
+if __name__ == "__main__":
+    test_task_preview()
