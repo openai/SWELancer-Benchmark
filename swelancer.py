@@ -75,10 +75,9 @@ class SWELancerTask(ComputerTask):
     manager_data: dict[str, Any] | None = None
     manager_commit: str | None = None
     
-    # retry_message: str = "The task isn't complete yet! You can submit your answer using apply_patch via the command-line." 
     retry_message: str = "The task isn't complete yet! You must write your output to this path exactly: '/app/expensify/manager_decisions.json'. You cannot submit to /mnt/data!"         
+    
     # Install jupyter in the correct conda environment and start it within that environment.
-    # Ensures the model can properly run unit tests.
     jupyter_setup: Sequence[str] | None = (
         "bash",
         "-c",
@@ -97,10 +96,8 @@ class SWELancerTask(ComputerTask):
             logger.info("Correct Jupyter environment is loaded.")
 
         if self.variant == "swe_manager":
-            # reset to the broken commit
             await computer.check_shell_command(f"bash -c 'git reset --hard {self.manager_commit}^'")
         else:
-            # instead of a time based check, check until the SETUP_DONE environment variable is set
             print("Waiting for setup to be done")
             while True:
                 res = await computer.send_shell_command("cat /setup_done.txt")
@@ -154,16 +151,14 @@ class SWELancerTask(ComputerTask):
         if self.variant == "swe_manager":
             # === Grade Manager Tasks ===
 
-            # cat the json file
             manager_decisions = await computer.send_shell_command(
                 """bash -c 'cat /app/expensify/manager_decisions.json'"""
             )
             manager_decisions_json = json.loads(manager_decisions.output.decode("utf-8"))
             print(manager_decisions_json)
 
-            # check if the manager decisions are correct
             correct = 0.0
-            correct_option = int(self.manager_data["game"]["correct_proposal"]["id"])  # type: ignore
+            correct_option = int(self.manager_data["game"]["correct_proposal"]["id"])
             submitted_option = int(list(manager_decisions_json.values())[0])
 
             if submitted_option == correct_option:
@@ -196,23 +191,18 @@ class SWELancerTask(ComputerTask):
         finally:
             pass
         
-        # TODO: Make a new computer? 
         grading_computer = computer 
 
         # First, we need to identify all applicable test folders.
         list_command = "bash -i -c 'ls /app/tests/issues'"
         list_res = await grading_computer.send_shell_command(list_command)
         folders = list_res.output.decode("utf-8").splitlines()
-
-        # Remove the folders that are from testbed variant tasks, since they share tests.
         filtered_folders = [
             folder for folder in folders if not folder.startswith("Reintroduce-")
         ]
 
         # Get the raw GitHub issue ID from the Question ID
         issue_id = self.question_id.replace("Reintroduce-", "").split("_")[0]
-
-        # Find all relevant tests to run
         matching_folders = [
             folder for folder in filtered_folders if folder.split("_")[0] == issue_id
         ]
@@ -230,13 +220,11 @@ class SWELancerTask(ComputerTask):
                     f"""mkdir -p /app/tests/logs/{env_issue_id}"""
                 )
 
-                # Run tests against the model's code
                 res = await grading_computer.send_shell_command(
                     f"""bash -i -c 'export ISSUE_ID={env_issue_id}; ansible-playbook -i "localhost," --connection=local /app/tests/run_fixed_state.yml'"""
                 )
                 print(f"Ansible playbook output: {res.output.decode('utf-8')}")
 
-                # Get pytest.log
                 pytest_log = await grading_computer.send_shell_command(
                     f"""bash -i -c 'export ISSUE_ID={env_issue_id}; cat /app/tests/logs/$ISSUE_ID/pytest.log'"""
                 )
