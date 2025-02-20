@@ -158,7 +158,7 @@ class SWELancerTask(ComputerTask):
             print(manager_decisions_json)
 
             correct = 0.0
-            correct_option = int(self.manager_data["game"]["correct_proposal"]["id"])
+            correct_option = int(self.manager_data["game"]["correct_proposal"]["id"]) #type: ignore
             submitted_option = int(list(manager_decisions_json.values())[0])
 
             if submitted_option == correct_option:
