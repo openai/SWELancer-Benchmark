@@ -1,0 +1,49 @@
+diff --git a/src/components/AddressSearch/index.tsx b/src/components/AddressSearch/index.tsx
+index 9c72b371c40..460433b929f 100644
+--- a/src/components/AddressSearch/index.tsx
++++ b/src/components/AddressSearch/index.tsx
+@@ -117,7 +117,6 @@ function AddressSearch(
+                     address: autocompleteData.description ?? '',
+                     lat: details.geometry.location.lat ?? 0,
+                     lng: details.geometry.location.lng ?? 0,
+-                    name: details.name,
+                 });
+             }
+             return;
+@@ -175,7 +174,6 @@ function AddressSearch(
+ 
+         const values = {
+             street: `${streetNumber} ${streetName}`.trim(),
+-            name: details.name ?? '',
+             // Autocomplete returns any additional valid address fragments (e.g. Apt #) as subpremise.
+             street2: subpremise,
+             // Make sure country is updated first, since city and state will be reset if the country changes
+@@ -380,16 +378,6 @@ function AddressSearch(
+                         listEmptyComponent={listEmptyComponent}
+                         listLoaderComponent={listLoader}
+                         renderHeaderComponent={renderHeaderComponent}
+-                        renderRow={(data) => {
+-                            const title = data.isPredefinedPlace ? data.name : data.structured_formatting.main_text;
+-                            const subtitle = data.isPredefinedPlace ? data.description : data.structured_formatting.secondary_text;
+-                            return (
+-                                <View>
+-                                    {!!title && <Text style={styles.googleSearchText}>{title}</Text>}
+-                                    <Text style={[title ? styles.textLabelSupporting : styles.googleSearchText]}>{subtitle}</Text>
+-                                </View>
+-                            );
+-                        }}
+                         onPress={(data, details) => {
+                             saveLocationDetails(data, details);
+                             setIsTyping(false);
+diff --git a/src/components/AddressSearch/types.ts b/src/components/AddressSearch/types.ts
+index b654fcad99d..ef167ee58dd 100644
+--- a/src/components/AddressSearch/types.ts
++++ b/src/components/AddressSearch/types.ts
+@@ -16,7 +16,6 @@ type OnPressProps = {
+     address: string;
+     lat: number;
+     lng: number;
+-    name: string;
+ };
+ 
+ type StreetValue = {

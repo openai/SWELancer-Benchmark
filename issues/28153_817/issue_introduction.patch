@@ -1,0 +1,12 @@
+diff --git a/src/styles/utils/generators/TooltipStyleUtils/index.ts b/src/styles/utils/generators/TooltipStyleUtils/index.ts
+index 07dba25844e..21954bfc7a8 100644
+--- a/src/styles/utils/generators/TooltipStyleUtils/index.ts
++++ b/src/styles/utils/generators/TooltipStyleUtils/index.ts
+@@ -246,7 +246,6 @@ const createTooltipStyleUtils: StyleUtilGenerator<GetTooltipStylesStyleUtil> = (
+                 fontSize: variables.fontSizeSmall,
+                 overflow: 'hidden',
+                 lineHeight: variables.lineHeightSmall,
+-                textAlign: 'center',
+             },
+             pointerWrapperStyle: {
+                 ...tooltipPlatformStyle,

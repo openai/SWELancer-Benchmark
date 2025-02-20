@@ -1,0 +1,26 @@
+ diff --git a/src/libs/MoneyRequestUtils.ts b/src/libs/MoneyRequestUtils.ts
+index 206bb8509af..ff2ebdfb42f 100644
+--- a/src/libs/MoneyRequestUtils.ts
++++ b/src/libs/MoneyRequestUtils.ts
+@@ -34,7 +34,7 @@ function stripDecimalsFromAmount(amount: string): string {
+  * @param amount - Changed amount from user input
+  */
+ function addLeadingZero(amount: string): string {
+-    return amount.startsWith('.') ? `0${amount}` : amount;
++    return amount === '.' ? '0.' : amount;
+ }
+ 
+ /**
+diff --git a/src/pages/iou/MoneyRequestAmountForm.tsx b/src/pages/iou/MoneyRequestAmountForm.tsx
+index ba406c3ddef..41905d706cd 100644
+--- a/src/pages/iou/MoneyRequestAmountForm.tsx
++++ b/src/pages/iou/MoneyRequestAmountForm.tsx
+@@ -185,7 +185,7 @@ function MoneyRequestAmountForm(
+                 if (currentAmount.length > 0) {
+                     const selectionStart = selection.start === selection.end ? selection.start - 1 : selection.start;
+                     const newAmount = `${currentAmount.substring(0, selectionStart)}${currentAmount.substring(selection.end)}`;
+-                    moneyRequestAmountInput.current?.setNewAmount(MoneyRequestUtils.addLeadingZero(newAmount));
++                    moneyRequestAmountInput.current?.setNewAmount(newAmount);
+                 }
+                 return;
+             }

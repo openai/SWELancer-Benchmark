@@ -1,0 +1,12 @@
+diff --git a/src/components/TagPicker/index.tsx b/src/components/TagPicker/index.tsx
+index 8abcdb25aa6..08d3eeb9112 100644
+--- a/src/components/TagPicker/index.tsx
++++ b/src/components/TagPicker/index.tsx
+@@ -91,7 +91,7 @@ function TagPicker({selectedTag, tagListName, policyTags, tagListIndex, policyRe
+         [searchValue, enabledTags, selectedOptions, policyRecentlyUsedTagsList],
+     );
+ 
+-    const headerMessage = OptionsListUtils.getHeaderMessageForNonUserList((sections?.[0]?.data?.length ?? 0) > 0, searchValue);
++    const headerMessage = OptionsListUtils.getHeaderMessageForNonUserList((sections?.[0]?.data?.length ?? 0) > 0, '');
+ 
+     const selectedOptionKey = sections[0]?.data?.filter((policyTag) => policyTag.searchText === selectedTag)?.[0]?.keyForList;

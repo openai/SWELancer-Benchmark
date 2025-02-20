@@ -1,0 +1,13 @@
+diff --git a/src/pages/workspace/WorkspaceInviteMessagePage.tsx b/src/pages/workspace/WorkspaceInviteMessagePage.tsx
+index 3899656424a..2b3f7f7d860 100644
+--- a/src/pages/workspace/WorkspaceInviteMessagePage.tsx
++++ b/src/pages/workspace/WorkspaceInviteMessagePage.tsx
+@@ -82,7 +82,7 @@ function WorkspaceInviteMessagePage({policy, route, currentUserPersonalDetails}:
+         if (isEmptyObject(policy)) {
+             return;
+         }
+-        Navigation.goBack(ROUTES.WORKSPACE_INVITE.getRoute(route.params.policyID), true);
++        Navigation.goBack(ROUTES.WORKSPACE_INITIAL.getRoute(route.params.policyID), true);
+         // eslint-disable-next-line react-compiler/react-compiler, react-hooks/exhaustive-deps
+     }, []);
+ 

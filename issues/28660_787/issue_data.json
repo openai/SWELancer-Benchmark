@@ -1,0 +1,1 @@
+{"price": 500.0, "title": "[HOLD for payment 2023-11-13] [$500]  Composer height is not resized when resizing browser", "issue_repo_steps": "Action performed: 1. Type anything long on the first line of composer\r\n2. Resize the browser window to be smaller\n\nExpected result: None\n\nActual result: None"}
