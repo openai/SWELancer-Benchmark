@@ -2,7 +2,18 @@
 
 This repo contains the dataset and code for the paper ["SWE-Lancer: Can Frontier LLMs Earn $1 Million from Real-World Freelance Software Engineering?"](https://www.openai.com/index/swe-lancer/).
 
-**Note:** We will continue to update this repository with new tasks and updates to the scaffolding; the code and data here does not exactly match what was used in the paper.
+---
+
+Thank you so much for checking out our benchmark! If you have questions, run into issues, or want to contribute, please open an issue or pull request. You can also reach us at samuelgm@openai.com and michele@openai.com at any time.
+
+We will continue to update this repository with the latest tasks, updates to the scaffolding, and improvements to the codebase 
+
+- If you'd like to use the latest version, please use the `main` branch.
+
+- If you'd like to use the version of the dataset from the paper and codebase at time of paper release, please check out the `paper` branch. Note that the performance outlined in our paper is on our internal scaffold. We've aimed to open-source as much of it as possible, but the open-source agent and harness may not be exactly the same. 
+
+
+---
 
 **Step 1: Package Management and Requirements**
 
@@ -160,6 +171,3 @@ For a complete example of a ComputerInterface implementation, you can refer to t
    - Provide meaningful error messages
    - Handle network issues gracefully
 
-## Contributing
-
-For questions or contributions, please open an issue or pull request.
