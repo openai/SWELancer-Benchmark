@@ -171,3 +171,15 @@ For a complete example of a ComputerInterface implementation, you can refer to t
    - Provide meaningful error messages
    - Handle network issues gracefully
 
+## Citation
+```
+@misc{miserendino2025swelancerfrontierllmsearn,
+      title={SWE-Lancer: Can Frontier LLMs Earn $1 Million from Real-World Freelance Software Engineering?}, 
+      author={Samuel Miserendino and Michele Wang and Tejal Patwardhan and Johannes Heidecke},
+      year={2025},
+      eprint={2502.12115},
+      archivePrefix={arXiv},
+      primaryClass={cs.LG},
+      url={https://arxiv.org/abs/2502.12115}, 
+}
+```
