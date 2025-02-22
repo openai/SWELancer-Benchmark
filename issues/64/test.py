@@ -1,195 +1,148 @@
-import sys, os
-
-base_path = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
-sys.path.insert(0, base_path)
-
-import email
-import imaplib
 import os
 import re
-import time
-from email.header import decode_header
 
-from playwright.sync_api import Page, TimeoutError, expect, sync_playwright
+import pytest
+from playwright.async_api import Page, TimeoutError, async_playwright, expect
 
-NOW = int(time.time())
 EMAIL_USERNAME = "xecuycismfsga"
-EMAIL_ALIAS = "lmpleo"
+EMAIL_ALIAS = "1wagfzgm"
 USER_EMAIL = f"{EMAIL_USERNAME}+{EMAIL_ALIAS}@gmail.com"
 PASSWORD = "uwgb zzoc cofa kaaq"
 SLOW_MO: int | None = 500
-CACHED: bool = True
 PROXY_URL = os.getenv("PROXY_URL")
-NEW_DOT_URL = "https://dev.new.expensify.com:8082/"
+NEW_DOT_URL = "https://dev.new.expensify.com:8082"
 
 
-def get_magic_code(
-    user_email: str = USER_EMAIL,
-    password: str = PASSWORD,
-    current_timestamp: int = NOW,
-    retries=3,
-    delay=8,
-    slow_mo: int | None = SLOW_MO,
-    cached: bool = CACHED,
-):
-    if cached:
-        return "123456"
-    imap = imaplib.IMAP4_SSL("imap.gmail.com")
-    imap.login(user_email, password)
+def extract_magic_link(message_body: str):
+    # Regular expression to find the URL in the HTML anchor tag
+    url_pattern = re.compile(r'<a\s+href=["\']([^"\']+?)["\'][^>]*?>')
 
-    additional_delay = (slow_mo / 1000) if slow_mo else 0
-    total_delay = delay + additional_delay
+    # Search for the pattern in the message body
+    match = url_pattern.search(message_body)
 
-    for _attempt in range(retries):
-        print(f"Attempt {_attempt}")
+    if match:
+        # Return the first captured group, which is the URL
+        return match.group(1)
 
-
-        if _attempt > 0:
-            print(f"Waiting {total_delay} seconds before next attempt...")
-            time.sleep(total_delay)
-
-        imap.select("inbox")
-        status, messages = imap.search(
-            None, '(UNSEEN SUBJECT "Expensify magic sign-in code:")'
-        )
-
-        if status == "OK":
-            email_ids = messages[0].split()
-
-            if email_ids:
-                latest_email_id = email_ids[-1]
-                status, msg_data = imap.fetch(latest_email_id, "(RFC822)")
-
-                for response_part in msg_data:
-                    if isinstance(response_part, tuple):
-                        msg = email.message_from_bytes(response_part[1])
-
-
-                        email_date = msg.get("Date")
-                        email_timestamp = email.utils.mktime_tz(
-                            email.utils.parsedate_tz(email_date)
-                        )
-
-
-                        current_utc = time.time()
-
-
-                        imap.store(latest_email_id, "+FLAGS", "\\Seen")
-
-                        print(
-                            f"Email time: {email_timestamp}, Current time: {current_utc}"
-                        )
-
-
-                        if email_timestamp < current_timestamp:
-                            print(
-                                f"Found old email from {email_date}, waiting for new one..."
-                            )
-                            break  # Break the response_part loop
-
-                        subject, encoding = decode_header(msg["Subject"])[0]
-                        if isinstance(subject, bytes):
-                            subject = subject.decode(encoding or "utf-8")
-
-                        match = re.search(
-                            r"Expensify magic sign-in code: (\d+)", subject
-                        )
-                        if match:
-                            code = match.group(1)
-                            imap.logout()
-                            return code
-
-    imap.logout()
-    print("Max retries reached. Email not found.")
+    # If no URL is found, return None or some other default value
     return None
 
 
-def create_user(page: Page, firstname: str = "User", lastname: str = EMAIL_ALIAS):
-    page.get_by_role("button", name="Join").click()
+def extract_path(url):
+    # Split the URL by the scheme and domain
+    parts = url.split("https://new.expensify.com")
+
+    # The path is the second element in the list
+    if len(parts) > 1:
+        return parts[1]
+
+    return None
 
 
-    page.get_by_text("Track and budget expenses").click()
-    page.get_by_role("button", name="Continue").last.click()
-    page.get_by_role("textbox", name="First name").fill(firstname)
-    page.get_by_role("textbox", name="Last name").fill(lastname)
+def replace_last_n_chars(string: str, n: int = 2, replacement_char: str = "*"):
+    if n <= 0:
+        raise ValueError(
+            "The number of characters to replace must be greater than zero."
+        )
 
-    try:
-        page.get_by_role("button", name="Continue").click(timeout=2000)
-    except TimeoutError:
-        pass
+    if len(string) < n:
+        raise ValueError(
+            "The input string is shorter than the number of characters to replace."
+        )
 
-    try:
-        page.get_by_role("button", name="Get Started").click(timeout=200)
-    except TimeoutError:
-        pass
+    return string[:-n] + (replacement_char * n)
 
 
-def login(page: Page):
+def read_magic_link(user_email: str, password: str, retries=5, delay=6):
+    """
+    Retrieves the Magic Link from unread emails.
 
-    magic_code = get_magic_code()
+    Args:
+        retries (int): Number of retries to attempt fetching the OTP code.
+        delay (int): Delay in seconds between retries.
 
-    if magic_code is None:
-        raise ValueError("Failed to retrieve magic code")
-    page.get_by_role("textbox").fill(magic_code)
+    Returns:
+        str: The Magic Link if found, else None.
+    """
+    return f"{NEW_DOT_URL}/v/19171331/3837**"
 
 
-def login_or_create_user(
+async def create_user(page: Page, firstname: str = "User", lastname: str = EMAIL_ALIAS):
+    await page.get_by_role("button", name="Join").click()
+
+    # Update profile
+    await page.get_by_text("Track and budget expenses").click()
+    await page.get_by_role("textbox", name="First name").fill(firstname)
+    await page.get_by_role("textbox", name="Last name").fill(lastname)
+    await page.get_by_role("button", name="Continue").click()
+
+
+async def attempt_login(page: Page, user_email=USER_EMAIL, password=PASSWORD):
+    request_new_link = page.get_by_label("Didn't receive a magic code?")
+
+    await request_new_link.click(timeout=60000)
+    # get current timestamp
+    magic_link = read_magic_link(user_email, password)
+
+    if magic_link is None:
+        raise ValueError("Failed to retrieve magic link")
+
+    await page.goto(magic_link)
+
+
+async def logout(page: Page):
+    await page.get_by_label("My settings").click()
+    await page.get_by_label("Sign out").click()
+
+
+async def login_or_create_user(
     page: Page,
+    firstname: str = "User",
+    lastname: str = EMAIL_ALIAS,
     user_email: str = USER_EMAIL,
 ):
-    page.get_by_test_id("username").fill(user_email)
-    page.get_by_role("button", name="Continue").click()
+    await page.goto(NEW_DOT_URL, timeout=60000)
+    await page.get_by_test_id("username").fill(user_email)
+    await page.get_by_role("button", name="Continue").click()
 
     try:
-        page.get_by_role("button", name="Join").wait_for(state="visible", timeout=2000)
-        create_user(page)
+        await page.get_by_role("button", name="Join").wait_for(
+            state="visible", timeout=2000
+        )
+        await create_user(page, firstname, lastname)
+        await logout(page)
+        await login_or_create_user(page, firstname, lastname, user_email)
     except TimeoutError:
-        login(page)
+        await attempt_login(page)
 
 
-def test_lhn_popup():
-    with sync_playwright() as p:
-
-        browser = p.chromium.launch(
-            headless=True,
-            slow_mo=SLOW_MO,
+@pytest.mark.asyncio
+async def test_scroll_to_comments():
+    async with async_playwright() as p:
+        browser = await p.chromium.launch(
             proxy={"server": PROXY_URL} if PROXY_URL else None,
+            headless=False,
             args=[
+                "--no-sandbox",
+                "--disable-dev-shm-usage",
+                "--ignore-certificate-errors",
                 "--disable-web-security",
                 "--disable-features=IsolateOrigins,site-per-process",
             ],
+            slow_mo=SLOW_MO,
         )
-        context = browser.new_context()
-        page = context.new_page()
 
-        page.goto(NEW_DOT_URL)
+        context = await browser.new_context()
+        page = await context.new_page()
 
+        # admin login
+        await login_or_create_user(page)
 
-        login_or_create_user(page)
+        await expect(
+            page.get_by_text("Hmm... it's not here", exact=True)
+        ).to_be_visible()
 
-
-        personal_chat = page.locator(
-            'button[aria-label="Navigates to a chat"]:has-text("(you)")'
-        ).first
-        personal_chat.click()  # Open own chat
-        page.get_by_role("textbox").fill("Hello")  # Focus the input field
-        personal_chat.click(button="right")  # open chat popup
-        page.get_by_role("textbox").fill("Hello world")  # continue typing
-        page.get_by_role("textbox").press("Enter")  # Send message
-
-        page.get_by_role("textbox").press("ArrowUp")  # Edit last message
-        page.locator("#messageEditInput").fill("\n")
-        page.locator("#messageEditInput").press("Enter")
-
-        delete_button_visible = page.get_by_role("button", name="Delete").is_visible()
-        cancel_button_visible = page.get_by_role("button", name="Cancel").is_visible()
-
-        if delete_button_visible and cancel_button_visible:
-
-            expect(page.get_by_label("Mark as unread")).not_to_be_visible()
-            expect(page.get_by_label("Unpin")).not_to_be_visible()
-            expect(page.get_by_label("Copy Onyx data")).not_to_be_visible()
-
-
-        context.close()
-        browser.close()
+        # Close all tabs and browser
+        await page.close()
+        await context.close()
+        await browser.close()

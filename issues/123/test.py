@@ -1,95 +1,98 @@
-import sys, os
-
-base_path = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
-sys.path.insert(0, base_path)
-
-import base64
-import io
 import os
-import pytest
-from playwright.async_api import async_playwright, Page
-from utils import login
-
-PROXY_URL = os.getenv("PROXY_URL")
-LOGIN_EMAIL = "testerfreelancer555+38130_rcrd@gmail.com"
-EMAIL_PASSWORD = "snct ajbr yadx kwlq"
+from playwright.sync_api import sync_playwright, expect
 
 
-IMAGE_BASE64 = "iVBORw0KGgoAAAANSUhEUgAAAIAAAACACAIAAABMXPacAAABLUlEQVR4nO3RQREAIAzAsIF/z0NGHjQKetczO4GuDvhdA7AGYA3AGoA1AGsA1gCsAVgDsAZgDcAagDUAawDWAKwBWAOwBmANwBqANQBrANYArAFYA7AGYA3AGoA1AGsA1gCsAVgDsAZgDcAagDUAawDWAKwBWAOwBmANwBqANQBrANYArAFYA7AGYA3AGoA1AGsA1gCsAVgDsAZgDcAagDUAawDWAKwBWAOwBmANwBqANQBrANYArAFYA7AGYA3AGoA1AGsA1gCsAVgDsAZgDcAagDUAawDWAKwBWAOwBmANwBqANQBrANYArAFYA7AGYA3AGoA1AGsA1gCsAVgDsAZgDcAagDUAawDWAKwBWAOwBmANwBqANQBrANYArAFYA7AGYA3AGoA1AGsA9gDO4gH/iDJCTQAAAABJRU5ErkJggg=="
+# Expensify app URL
+EXPENSIFY_URL = "https://dev.new.expensify.com:8082/"
 
+# Email login credentials
+EMAIL_USERNAME = "naturesv057+52319_4@gmail.com"
 
-async def reproduce_scenario(page: Page):
-
-    await page.get_by_label("Workspaces").click()
-    await page.get_by_label("New workspace").click()
-    await page.get_by_label("Back").click()
-    await page.get_by_test_id("selection-list").get_by_label(
-        "'s Workspace"
-    ).first.click()
-
-    await page.get_by_label("Find something...").click()
-    await page.get_by_test_id("selection-list-text-input").fill("Workspace")
-    await page.get_by_test_id("selection-list").get_by_label(
-        "'s Workspace"
-    ).first.click()
-
-
-    await page.get_by_role("button", name="Create").click()
-    await page.get_by_label("Split expense").click()
-    async with page.expect_file_chooser() as fc_info:
-        await page.get_by_label("Choose file").click()
-    file_chooser = await fc_info.value
-    await file_chooser.set_files(
-        [
-            {
-                "name": "image.png",
-                "mimeType": "image/png",
-                "buffer": io.BytesIO(base64.b64decode(IMAGE_BASE64)).getvalue(),
-            }
-        ]
+def launch_browser(pw, device=None, geolocation=None):
+    """
+    Launch the browser.
+    """
+    browser = pw.chromium.launch(
+        headless=False,
+        proxy = {"server": "http://127.0.0.1:8080/"},
+        args=[
+            "--ignore-certificate-errors",
+            "--disable-web-security",
+            "--disable-features=IsolateOrigins,site-per-process",
+        ],
+        slow_mo=500
     )
-
-    await page.get_by_role("button", name="Split expense").click()
-
-
-    try:
-        await page.get_by_text("Receipt", exact=True).click()
-    except:
-        await page.get_by_text("Receipt", exact=True).nth(1).click()
-
-
-    split_expense_button = page.get_by_role("button", name="Split expense")
-
-    await split_expense_button.click()
+    context_args = {}
+    if device:
+        context_args.update(pw.devices[device])
+    if geolocation:
+        context_args["geolocation"] = geolocation
+        context_args["permissions"] = ["geolocation"]
+    context = browser.new_context(**context_args)
+    page = context.new_page()
+    return browser, context, page
 
 
-    assert (
-        not await split_expense_button.evaluate(
-            "button => getComputedStyle(button).cursor"
-        )
-        == "not-allowed"
-    ), "The 'Split expense' button is disabled based on cursor style; we don't disable buttons when there's an error on the form"
+def login_user(page):
+    """
+    Login to the Expensify app and complete the onboarding.
+    """
+    # Open the Expensify app
+    page.goto(EXPENSIFY_URL)
+
+    # Login user
+    page.get_by_role("textbox", name="Phone or email").fill(EMAIL_USERNAME)
+    page.locator("div", has_text="Continue").last.click()
+    
+    # Get the OTP code from the email
+    otp = "123456"
+    
+    # Enter the OTP code
+    page.keyboard.type(otp)
 
 
-@pytest.mark.asyncio
-async def test_split_expense():
-    async with async_playwright() as playwright:
-        browser = await playwright.chromium.launch(
-            headless=True,
-            slow_mo=300,
-            args=[
-                "--disable-web-security",
-                "--disable-features=IsolateOrigins,site-per-process",
-            ],
-            proxy={"server": PROXY_URL} if PROXY_URL else None,
-        )
-        context = await browser.new_context(ignore_https_errors=True)
-        page = await context.new_page()
-        await login.sign_up(page, LOGIN_EMAIL)
-        try:
-            await login.complete_onboarding(page)
-        except (AssertionError, TimeoutError):
-            pass
+def upload_attachment(page):
+    filename = "output.txt"
+
+    with open(filename, "wb") as file:
+        for i in range(1, 101):
+            line = f"Line {i}: This is a sample line of content.\n"
+            file.write(line.encode("utf-8"))  # Convert string to bytes
+
+    edit_text_button = page.locator('div[aria-label="Add attachment"]').locator("visible=true")
+    
+    with page.expect_file_chooser() as file_chooser_info:
+        edit_text_button.click()
+    page.wait_for_timeout(3000)
+    file_chooser = file_chooser_info.value
+    file_path = os.path.join(os.getcwd(), filename)
+    file_chooser.set_files(file_path)
+    page.wait_for_timeout(2000)
+
+    page.locator('button:has-text("Send")').click()
+    page.wait_for_timeout(2000) 
+    return page
 
 
-        await reproduce_scenario(page)
+def test_52319():
+    with sync_playwright() as p:
+        # Step 1: Login user
+        browser, context, page = launch_browser(p)
+        login_user(page)
+        page.wait_for_timeout(2000)
+
+        # Step 2: Reintroduce scenario
+        page.get_by_label("Start chat (Floating action)").click()
+        page.get_by_label("Start chat", exact=True).click()
+        chat_email = "naturesv057+378357843@gmail.com"
+        page.get_by_test_id("selection-list-text-input").fill(chat_email)
+        page.get_by_label(chat_email).last.click()
+        page.locator("#composer").last.fill("Hi There")
+        page.get_by_label("Create").last.click() 
+
+        page = upload_attachment(page)
+
+        #Step 3: Check if the issue is resolved
+        page.locator("#composer").last.click()
+        page.locator("#composer").last.press("ArrowUp")
+        expect(page.get_by_role("button", name="Save changes")).to_be_visible()

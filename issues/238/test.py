@@ -3,80 +3,113 @@ import sys, os
 base_path = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
 sys.path.insert(0, base_path)
 
-"""
-Test whether the following console warning disappears on self-dm page: Function components cannot be given refs.
-
-"""
-import os
 import pytest
 from utils.login import sign_up, complete_onboarding
-from utils.browser import start_browser, close_browser
-from playwright.async_api import expect
+from utils.email_handler import get_unique_derived_email
+from utils.browser import close_browser
+from playwright.async_api import expect, async_playwright
+from playwright._impl._browser import Browser
+from playwright._impl._page import Page
 
 
-EXPENSIFY_USERNAME_FIRSTNAME = "osaidtest"
-EXPENSIFY_USERNAME_LASTNAME = "testaccount"
-EXPENSIFY_USERNAME = f"{EXPENSIFY_USERNAME_FIRSTNAME} {EXPENSIFY_USERNAME_LASTNAME}"
-EXPENSIFY_EMAIL_USERNAME = "osaidtest5"
-EXPENSIFY_EMAIL = "osaidtest5@gmail.com"
-NEW_DOT_URL = "https://dev.new.expensify.com:8082"
-OLD_DOT_URL = "http://localhost:9000/"
-EXPENSIFY_PASSWORD = "ntvd acej mmaa qqmd"
-DATA_DIR = 'browser_context'
+async def start_browser(headless=True, mobile_device=None, launch_args=["--ignore-certificate-errors"]):
 
-EXPENSIFY_DERIVED_EMAIL = "osaidtest5+49062_7@gmail.com"
+    playwright = await async_playwright().start()
+    device_profile = playwright.devices[mobile_device] if mobile_device else {}
+    browser = await playwright.chromium.launch(headless=headless, args=launch_args)
+    context = await browser.new_context(ignore_https_errors=True, **device_profile)
+    page = await context.new_page()
+    return context, page, playwright
 
-async def get_user_email(page):
-    """
-    Get User Email.
-    """
-    return await page.evaluate(
-        """async () => {
-        const credentials = await Onyx.get('credentials');
-        const {login} = credentials; 
-        return login
-    }"""
-    )
 
-console_warning_detected = False
+async def track_expense(page: Page):
 
-def track_console_warning(msg):
-    if msg.type == 'error' and "Warning: Function components cannot be given refs. Attempts to access this ref will fail. Did you mean to use React.forwardRef()?" in msg.text:
-        global console_warning_detected 
-        console_warning_detected = True
+    await page.locator('button[aria-label="Start chat (Floating action)"]').click()
 
-async def open_self_dm_page(page, email):
-    await page.get_by_label("Start chat (Floating action)").click()
-    await page.get_by_text("Start chat").click()
-    await page.get_by_test_id("selection-list-text-input").fill(email)
-    try:
-        await page.get_by_label(f"{EXPENSIFY_USERNAME} (you)").filter(has_text=email).click()
-    except:
-        await page.get_by_label(EXPENSIFY_DERIVED_EMAIL).click()
+
+    await page.locator('div[aria-label="Track expense"]').click()
+
+
+    await page.locator('button:has-text("Got it")').click()
+
+
+    await page.locator('button[aria-label="Manual"]').click()
+
+
+    await page.locator('input[role="presentation"]').fill("50")
+
+
+    await page.locator('button[data-listener="Enter"]', has_text="Next").first.click()
+
+
+    await page.locator('button:has-text("Track expense")').click()
+
+
 
 @pytest.mark.asyncio
-async def test_console_warning_for_function_components_cannot_be_given_refs_should_not_appear_in_self_dm(): 
+async def test_issue_46374():
+    """
+    Sign up and check if Inbox is visible
+    """
 
 
-    derived_email = EXPENSIFY_DERIVED_EMAIL
+    original_email = "testuserexpensify@gmail.com"
+    derived_email = "testuserexpensify+15114188@gmail.com"
 
 
-    context, page, playwright = await start_browser(persistent=False, data_dir=DATA_DIR, launch_args=["--ignore-certificate-errors",
-                                                        "--disable-web-security",
-                                                        "--disable-features=IsolateOrigins,site-per-process"
-                                                ])
-    page.on("console", track_console_warning)
+    context, page, playwright = await start_browser(launch_args=[
+        '--disable-web-security',
+        '--disable-features=IsolateOrigins,site-per-process'
+    ], mobile_device='iPhone 12 Pro')
+
+
     await sign_up(page, derived_email)
+
+
     try:
-        await complete_onboarding(page, first_name=EXPENSIFY_USERNAME_FIRSTNAME, last_name=EXPENSIFY_USERNAME_LASTNAME) 
-    except:
+        await complete_onboarding(page)
+    except Exception:
         pass
 
 
-    await open_self_dm_page(page, derived_email)
+    await expect(page.get_by_label("Inbox")).to_be_visible()
+    await page.mouse.click(0,0)
 
 
-    assert not console_warning_detected, "Console Warning 'Function components cannot be given refs' appears in self-dm."
+    await track_expense(page)
+    await page.wait_for_timeout(1000)
+
+
+    back_button = page.locator('button[aria-label="Back"]')
+    await back_button.wait_for()
+    await back_button.click()
+
+    await page.wait_for_timeout(4000)
+    await page.locator('button[aria-label="Search"]').click()
+    button = page.get_by_test_id('selection-list').locator('button[tabindex="0"]')
+    await button.wait_for()
+
+
+    await button.hover()
+    await page.mouse.down()
+    await page.wait_for_timeout(1000)
+    await page.mouse.up()
+
+
+    await page.locator('div[aria-label="Select"]').click()
+
+
+    await page.locator('button:has-text("1 selected")').click()
+
+
+    await page.locator('div[aria-label="Delete"]').click()
+
+
+    await page.locator('button:has-text("Delete")').click()
+
+    await page.wait_for_timeout(1000)
+    b_button = page.locator('button[aria-label="Back"]')
+    assert await b_button.count() == 0, "Back button was not found, This is accepted."
 
 
     await close_browser(context, page, playwright)

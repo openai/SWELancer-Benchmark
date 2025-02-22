@@ -3,216 +3,208 @@ import sys, os
 base_path = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
 sys.path.insert(0, base_path)
 
-import pytest
-from playwright.sync_api import sync_playwright, Page
-from utils.trace_cleaner import trace_cleaner
+from utils.trace_cleaner import trace_cleaner  # <--- Added import for trace_cleaner
+import email
+import imaplib
+import time
 
-SITE_URL = "https://dev.new.expensify.com:8082/"
-
-EMAIL_SUBMITTER = "expensifyolddot+1733902498@gmail.com"
-NAME_SUBMITTER = "Sender"
-
-EMAIL_APPROVER_1 = "t56826807+13@gmail.com"
-NAME_APPROVER_1 = "Employee"
-
-EMAIL_APPROVER_2 = "expensifyolddot+1733902499@gmail.com"
-NAME_APPROVER_2 = "Approver 2"
+from playwright.sync_api import TimeoutError, expect, sync_playwright
 
 
-@pytest.fixture
-def setup_playwright():
-    playwright = sync_playwright().start()
+EMAIL_USERNAME = "expensifytesting1@gmail.com"
+EMAIL_PASSWORD = "redx tbmr hzpc rbzr"
 
-    browser_user1 = playwright.chromium.launch(
-        channel="chrome",
+
+EMAIL_USERNAME_POSTFIX = "46528"
+
+
+def generate_user_email(user_id=None):
+    """
+    Generate an email address for a user login.
+    """
+    temp = EMAIL_USERNAME.rsplit("@", 1)
+    username = temp[0].strip()
+    domain = temp[1].strip()
+    return f"{username}+{EMAIL_USERNAME_POSTFIX}{user_id or ''}@{domain}"
+
+
+def clear_inbox(username, password):
+    """
+    Delete all the messages from the Inbox.
+    """
+
+    return
+    with imaplib.IMAP4_SSL(host="imap.gmail.com") as imap:
+        imap.login(username, password)
+        imap.select("inbox")
+        imap.store("1:*", "+FLAGS", "\\Deleted")
+        imap.expunge()
+        imap.close()
+
+
+def get_otp_from_email(username, password, retries=12, delay=5):
+    """
+    Read the OTP email and return the OTP code.
+    """
+
+    return "123456"
+    with imaplib.IMAP4_SSL(host="imap.gmail.com") as imap:
+        imap.login(username, password)
+        for i in range(1, retries + 1):
+            imap.select("inbox")
+            status, messages = imap.search(None, "ALL")
+            if status == "OK":
+                for message_id in reversed(messages[0].split()):
+                    status, data = imap.fetch(message_id, "(RFC822)")
+                    if status == "OK":
+                        email_message = email.message_from_bytes(data[0][1])
+                        subject, encoding = email.header.decode_header(email_message["Subject"])[0]
+                        if isinstance(subject, bytes):
+                            subject = subject.decode(encoding)
+                        if subject.startswith("Expensify magic sign-in code:"):
+                            otp_code = subject.split(":")[-1].strip()
+                            return otp_code
+            time.sleep(delay)
+        imap.close()
+    raise AssertionError("Failed to read the OTP from the email")
+
+
+
+
+def login_member(p, member_first_name: str, member_last_name: str) -> tuple:
+    browser = p.chromium.launch(
         headless=True,
-        args=[
-            "--ignore-certificate-errors",
-            "--disable-web-security",
-            "--disable-features=IsolateOrigins,site-per-process"
-        ],
-        proxy={"server": "http://localhost:8080"},
-        slow_mo=500
+        args=["--disable-web-security", "--disable-features=IsolateOrigins,site-per-process"],
     )
-    context_args = {}
-    context_args["timezone_id"] = "Asia/Kathmandu"
-    context_user1 = browser_user1.new_context(**context_args)
-    page_user1 = context_user1.new_page()
+    context = browser.new_context()
+    page = context.new_page()
 
-    browser_user2 = playwright.chromium.launch(
-        channel="chrome",
-        headless=True,
-        args=[
-            "--ignore-certificate-errors",
-            "--disable-web-security",
-            "--disable-features=IsolateOrigins,site-per-process"
-        ],
-        proxy={"server": "http://localhost:8080"},
-        slow_mo=500
-    )
-    context_user2 = browser_user2.new_context(**context_args)
-    page_user2 = context_user2.new_page()
+    user_email = generate_user_email()
 
-    yield page_user1, page_user2
-
-
-    browser_user1.close()
-    browser_user2.close()
-    playwright.stop()
-
-
-def login_user(page: Page, email: str):
-    page.goto(SITE_URL)
-    page.locator('input[type="email"]').fill(email)
+    page.goto("https://dev.new.expensify.com:8082/")
+    clear_inbox(EMAIL_USERNAME, EMAIL_PASSWORD)
+    page.locator('input[type="email"]').fill(user_email)
     page.locator('button[tabindex="0"]').click()
+
     try:
-        page.locator("button", has_text="Join").click()
+        page.locator('button[tabindex="0"]').click()
     except Exception:
         pass
 
 
-def complete_onboarding(page: Page, first_name: str, last_name: str = ""):
-    page.locator("text='Track and budget expenses'").click()
-
-
-    page.locator('input[name="fname"]').fill(first_name)
-    page.locator('input[name="lname"]').fill(last_name)
-    page.get_by_role("button", name="Continue").last.click()
-
-
-def invite_workspace_member(page: Page, member_email: str, member_name: str):
-    page.locator('div[aria-label="Members"]').click()
-    page.locator("button", has_text="Invite member").click()
-    page.locator('input[aria-label="Name, email, or phone number"]').fill(member_email)
-    page.locator("button", has_text=member_name).last.click()
-    page.locator('button[data-listener="Enter"]', has_text="Next").click()
-    page.locator('button[data-listener="Enter"]', has_text="Invite").click()
-
-
-def browse_to_workspace(page: Page, workspace_name: str):
-    page.locator('button[aria-label="Workspaces"]').click()
     try:
-        page.locator(f'button[aria-label="{workspace_name}"]').click()
-    except Exception:
-        page.locator(f'button[aria-label="{workspace_name}"]').nth(1).click()
+        expect(page.get_by_test_id("SignInPage").get_by_test_id("validateCode")).to_be_visible(timeout=5000)
+    except AssertionError:
 
+        page.get_by_test_id("SignInPage").get_by_role("button", name="Join").click()
+    else:
 
-def browse_to_chat(page: Page, chat_label: str):
-    page.locator('button[aria-label="Navigates to a chat"]', has_text=chat_label).nth(
-        0
-    ).click()
-
-
-def submit_manual_expense(page: Page, amount: int, merchant: str):
-    page.locator('button[aria-label="Create"]').last.click()
-    page.locator('div[aria-label="Submit expense"]').click()
-    page.locator('button[aria-label="Manual"]').click()
-    page.locator('input[placeholder="0"]').fill(str(amount))
-    page.locator('button[data-listener="Enter"]', has_text="Next").first.click()
-    page.locator('div[role="menuitem"]', has_text="Merchant").click()
-    page.locator('input[aria-label="Merchant"]').fill(merchant)
-    page.locator('button[data-listener="Enter"]', has_text="Save").click()
-    page.locator('button[data-listener="Enter"]', has_text="Submit").click()
-
-
-def test(setup_playwright):
-    page_submitter, page_approver_2 = setup_playwright
-
-
-    context_user1 = page_submitter.context
-    context_user2 = page_approver_2.context
-    context_user1.tracing.start(title="trace_user1", screenshots=True, snapshots=True, sources=True)
-    context_user2.tracing.start(title="trace_user2", screenshots=True, snapshots=True, sources=True)
+        otp_code = get_otp_from_email(EMAIL_USERNAME, EMAIL_PASSWORD)
+        page.get_by_test_id("SignInPage").get_by_test_id("validateCode").fill(otp_code)
+        try:
+            page.get_by_test_id("SignInPage").get_by_role("button", name="Sign in").click(timeout=2000)
+        except (AssertionError, TimeoutError):
+            pass
 
     try:
-        email_submitter, name_submitter = EMAIL_SUBMITTER, NAME_SUBMITTER
-        email_approver_1, name_approver_1 = EMAIL_APPROVER_1, NAME_APPROVER_1
-        email_approver_2, name_approver_2 = EMAIL_APPROVER_2, NAME_APPROVER_2
+        expect(page.get_by_text("What do you want to do today?")).to_be_visible(timeout=5000)
+    except AssertionError:
+        pass
+    else:
 
-        login_user(page_submitter, email_submitter)
-        login_user(page_approver_2, email_approver_2)
+        page.get_by_label("Track and budget expenses").click()
+        page.locator('input[name="fwork"]').fill(f"Work_{int(time.time())}")
+        page.get_by_role("button", name="Continue").last.click()
+        page.get_by_role("textbox", name="First name").fill(member_first_name)
+        page.get_by_role("textbox", name="Last name").fill(member_last_name)
+        page.get_by_role("button", name="Continue").click()
 
-        complete_onboarding(page_submitter, name_submitter)
-        complete_onboarding(page_approver_2, name_approver_2)
+    expect(page.get_by_test_id("BaseSidebarScreen")).to_be_visible(timeout=10000)
 
-
-        workspace_name = f"{name_submitter}'s Workspace"
-        page_submitter.locator('button[aria-label="Workspaces"]').click()
-        (
-            page_submitter.get_by_test_id("WorkspaceSwitcherPage")
-            .get_by_role("button", name="New workspace")
-            .click()
-        )
-
-        invite_workspace_member(page_submitter, email_approver_1, name_approver_1)
-        invite_workspace_member(page_submitter, email_approver_2, name_approver_2)
+    return browser, page, user_email
 
 
-        page_submitter.locator('div[aria-label="More features"]').click()
-        workflows_toggle = page_submitter.locator('button[aria-label="Configure how spend is approved and paid."][role="switch"]')
-        if workflows_toggle.get_attribute('aria-checked') == "false":
-            workflows_toggle.click()
+def add_member(page):
+    page.get_by_label("My settings").click()
+    page.get_by_test_id("InitialSettingsPage").get_by_label("Workspaces").get_by_text("Workspaces").click()
+
+    test_workspace = "WS Test"
+    existing_workspaces = [
+        item.split("\n")[0].strip()
+        for item in page.get_by_test_id("WorkspacesListPage").get_by_label("row", exact=True).all_inner_texts()
+    ]
+    if test_workspace not in existing_workspaces:
+        page.get_by_test_id("WorkspacesListPage").get_by_role("button", name="New workspace").first.click()
+        page.wait_for_timeout(2000)
+        page.get_by_test_id("WorkspacePageWithSections").get_by_text("Name", exact=True).click()
+        page.get_by_test_id("WorkspaceNamePage").get_by_role("textbox").fill(test_workspace)
+        page.get_by_test_id("WorkspaceNamePage").get_by_role("button", name="Save").click()
+        page.wait_for_timeout(2000)
+        page.get_by_test_id("WorkspaceInitialPage").get_by_role("button", name="Back").click()
+    page.get_by_test_id("WorkspacesListPage").get_by_label("row").get_by_text(test_workspace).first.click()
+    page.get_by_text("More features").click()
+
+    try:
+        expect(page.get_by_label("Set up custom fields for")).to_be_checked(timeout=1000)
+    except (AssertionError, TimeoutError):
+        page.get_by_label("Set up custom fields for").click()
+        page.get_by_role("button", name="Upgrade").click()
+        page.get_by_role("button", name="Got it, thanks").click()
+    page.get_by_test_id("WorkspaceInitialPage").get_by_text("Report fields").click()
+    field_name = f"Filed_{int(time.time())}"
+    page.get_by_role("button", name="Add field").click()
+    page.get_by_test_id("CreateReportFieldsPage").get_by_text("Name").click()
+    page.get_by_role("textbox", name="Name").fill(field_name)
+    page.get_by_test_id("TextSelectorModal").get_by_role("button", name="Save").click()
+    page.get_by_test_id("CreateReportFieldsPage").get_by_text("Type").click()
+    page.get_by_test_id("selection-list").get_by_label("List").click()
+    page.get_by_role("button", name="Save").click()
+    page.locator(f"#field_id_{field_name.upper()}").click()
+    page.get_by_text("List values").click()
+    page.get_by_role("button", name="Add value").click()
+    page.get_by_role("textbox", name="Value").fill("c479")
+    page.get_by_role("button", name="Save").click()
+    page.get_by_role("button", name="Add value").click()
+    page.get_by_role("textbox", name="Value").fill("b789")
+    page.get_by_role("button", name="Save").click()
+    page.get_by_role("button", name="Add value").click()
+    page.get_by_role("textbox", name="Value").fill("t963")
+    page.get_by_role("button", name="Save").click()
+
+    first_list_value = page.locator('div[data-testid="selection-list"]').nth(1)
+    assert (
+        first_list_value.inner_text() == "b789\nEnabled\nc479\nEnabled\nt963\nEnabled"
+    ), "The first list value is not 'b789'"
 
 
-        page_submitter.locator('div[aria-label="Workflows"]').click()
-        approval_toggle = page_submitter.locator('button[aria-label="Require additional approval before authorizing a payment."][role="switch"]')
-        if approval_toggle.get_attribute('aria-checked') == "false":
-            approval_toggle.click()
+def test_run(admin_first_name="Yagna", admin_last_name="Sai", member_first_name="Sai", member_last_name="Yagna"):
+    with sync_playwright() as p:
+        browser_member = None
+        page_member = None
+        try:
+
+            browser_member, page_member, user_email = login_member(p, member_first_name, member_last_name)
+
+            page_member.context.tracing.start(screenshots=True, snapshots=True, sources=True)
+
+            add_member(page_member)
+        except Exception as e:
+            print("Test failed with exception:", e)
+            raise
+        finally:
+            trace_path = "/app/expensify/user_tool/output_browser1.zip"
+            if page_member is not None:
+                try:
+                    page_member.context.tracing.stop(path=trace_path)
+                except Exception as stop_err:
+                    print("Error while stopping trace:", stop_err)
+            try:
+                trace_cleaner(trace_path)
+            except Exception as cleaner_err:
+                print("Error while cleaning trace:", cleaner_err)
+            if browser_member is not None:
+                browser_member.close()
 
 
-        page_submitter.locator('button[aria-label="Add approvals"]').click()
-        page_submitter.locator(
-            'div[data-tag="pressable"]', has_text="Additional Approver"
-        ).click()
-
-
-        page_submitter.locator("button", has_text="Upgrade").click()
-        page_submitter.locator("button", has_text="Got it, thanks").click()
-
-
-        page_submitter.locator(
-            f'div[aria-label="{name_submitter}"]', has_text="Approver"
-        ).first.click()
-        page_submitter.locator(f'button[aria-label="{name_approver_1}"]').last.click()
-        page_submitter.locator(
-            'button[data-listener="Enter"]', has_text="Save"
-        ).last.click()
-
-        page_submitter.locator(
-            'div[data-tag="pressable"]', has_text="Additional Approver"
-        ).first.click()
-        page_submitter.locator(f'button[aria-label="{name_approver_2}"]').last.click()
-        page_submitter.locator(
-            'button[data-listener="Enter"]', has_text="Save"
-        ).last.click()
-
-        page_submitter.locator(
-            'button[data-listener="Enter"]', has_text="Save"
-        ).last.click()
-        page_submitter.locator('button[aria-label="Back"]').nth(0).click()
-        page_submitter.locator('button[aria-label="Back"]').nth(0).click()
-
-
-        browse_to_workspace(page_submitter, workspace_name)
-        browse_to_chat(page_submitter, workspace_name)
-        submit_manual_expense(page_submitter, 10, "abc")
-
-
-        page_approver_2.wait_for_timeout(2000)
-        page_approver_2.goto("https://dev.new.expensify.com:8082/settings/workspaces")
-        page_approver_2.get_by_label("Inbox").click()
-
-        browse_to_workspace(page_approver_2, workspace_name)
-        browse_to_chat(page_approver_2, f"{workspace_name} owes")
-        expense_text = page_approver_2.locator(
-            'button[aria-label="View details"]'
-        ).last.inner_text()
-
-        assert "Submit" not in expense_text
-
-    finally:
-
-        context_user1.tracing.stop(path="/app/expensify/user_tool/output_browser1.zip")
-        trace_cleaner("/app/expensify/user_tool/output_browser1.zip")
-        context_user2.tracing.stop(path="/app/expensify/user_tool/output_browser2.zip")
-        trace_cleaner("/app/expensify/user_tool/output_browser2.zip")
+if __name__ == "__main__":
+    test_run()

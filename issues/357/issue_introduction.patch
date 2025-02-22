@@ -1,0 +1,13 @@
+diff --git a/src/pages/settings/Profile/ProfilePage.tsx b/src/pages/settings/Profile/ProfilePage.tsx
+index 46f280abf19..c5012a2bf25 100755
+--- a/src/pages/settings/Profile/ProfilePage.tsx
++++ b/src/pages/settings/Profile/ProfilePage.tsx
+@@ -11,7 +11,7 @@ import * as Illustrations from '@components/Icon/Illustrations';
+ import MenuItemGroup from '@components/MenuItemGroup';
+ import MenuItemWithTopDescription from '@components/MenuItemWithTopDescription';
+ import ScreenWrapper from '@components/ScreenWrapper';
+-import ScrollView from '@components/ScrollView';
++import {ScrollView} from 'react-native-gesture-handler';
+ import Section from '@components/Section';
+ import useCurrentUserPersonalDetails from '@hooks/useCurrentUserPersonalDetails';
+ import useLocalize from '@hooks/useLocalize';

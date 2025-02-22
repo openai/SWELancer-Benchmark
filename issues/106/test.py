@@ -1,67 +1,61 @@
 from playwright.sync_api import sync_playwright, expect
 
+user_email = "totherandomuser+52642@gmail.com"
 
-# Expensify app URL
-EXPENSIFY_URL = "https://dev.new.expensify.com:8082/"
-
-# Email login credentials
-EMAIL_USERNAME = "naturesv057+52907_1@gmail.com"
-
-def launch_browser(pw, device=None, geolocation=None):
-    """
-    Launch the browser.
-    """
-    browser = pw.chromium.launch(
-        headless=False,
-        proxy = {"server": "http://127.0.0.1:8080/"},
-        args=[
-            "--ignore-certificate-errors",
-            "--disable-web-security",
-            "--disable-features=IsolateOrigins,site-per-process",
-        ],
-        slow_mo=500
-    )
-    context_args = {}
-    if device:
-        context_args.update(pw.devices[device])
-    if geolocation:
-        context_args["geolocation"] = geolocation
-        context_args["permissions"] = ["geolocation"]
-    context = browser.new_context(**context_args)
+def login(p, context):
     page = context.new_page()
-    return browser, context, page
+    page.goto('https://dev.new.expensify.com:8082')
+
+    # Step 1: Enter username and continue
+    page.get_by_test_id("username").click()
+    page.get_by_test_id("username").fill(user_email)
+    page.get_by_role("button", name="Continue").click()
+
+    # Step 2: Mark Inbox read and then get magic code from email
+    magic_code = "123456"
+
+    # Step 3: Fill in the magic code
+    validate_code_input = page.locator('input[name="validateCode"]')
+    expect(validate_code_input).to_be_visible()
+    validate_code_input.fill(magic_code)
+    page.wait_for_timeout(1000)
+
+    return page
 
 
-def login_user(page):
-    """
-    Login to the Expensify app and complete the onboarding.
-    """
-    # Open the Expensify app
-    page.goto(EXPENSIFY_URL)
-
-    # Login user
-    page.get_by_role("textbox", name="Phone or email").fill(EMAIL_USERNAME)
-    page.locator("div", has_text="Continue").last.click()
-    
-    # Get the OTP code from the email
-    otp = "123456"
-    
-    # Enter the OTP code
-    page.keyboard.type(otp)
-
-
-def test_52907():
+def test():
     with sync_playwright() as p:
-        # Step 1: Login user
-        browser, context, page = launch_browser(p)
-        login_user(page)
-        page.wait_for_timeout(5000)
 
-        # Step 2: Reintroduce scenario
-        page.get_by_test_id("CustomBottomTabNavigator").get_by_label("Search").click()
-        page.get_by_test_id("Search").get_by_label("Search").click()
-        page.get_by_test_id("search-router-text-input").fill("type:chat status:all in:in category:car")
-        page.get_by_role("textbox", name="Search for something").press("Enter")
+        # Step 1: Main Browser Login
+        browser = p.chromium.launch(headless=False, args=[
+                "--disable-web-security",
+                "--disable-features=IsolateOrigins,site-per-process"],
+                slow_mo=500)
+        
+        context = browser.new_context()
+        page = login(p, context)
 
-        #Step 3: Check if the issue is resolved
-        expect(page.locator("#root")).to_contain_text("Nothing to show")
+        page.get_by_label("My settings").click()
+        page.get_by_label("Subscription").click()
+        page.get_by_role("button", name="Add payment card").click()
+        page.get_by_role("textbox", name="Card number").click()
+        page.get_by_role("textbox", name="Card number").fill("4111 1111 1111 1111")
+        page.get_by_role("textbox", name="Name on card").click()
+        page.get_by_role("textbox", name="Name on card").fill("Test Test")
+        page.get_by_role("textbox", name="Expiration date").click()
+        page.get_by_placeholder("MMYY").fill("1228")
+        page.get_by_role("textbox", name="CVV").click()
+        page.get_by_role("textbox", name="CVV").fill("564")
+        try:
+            page.get_by_role("textbox", name="Zip code").click()
+            page.get_by_role("textbox", name="Zip code").fill("EH1 1BB")
+        except:
+            page.get_by_role("textbox", name="Zip / Postcode").click()
+            page.get_by_role("textbox", name="Zip / Postcode").fill("EH1 1BB")
+
+        page.get_by_text("Currency").click()
+        page.get_by_test_id("selection-list").get_by_label("GBP").click()
+        page.get_by_label("I accept the Expensify Terms").click()
+        page.get_by_test_id("AddPaymentCard").get_by_role("button", name="Add payment card").click()
+
+        expect(page.get_by_text("Please enter a valid zip code.")).not_to_be_visible()

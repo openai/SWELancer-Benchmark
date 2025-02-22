@@ -1,64 +1,66 @@
-import sys, os
-
-base_path = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
-sys.path.insert(0, base_path)
-
-import os
 from playwright.sync_api import sync_playwright
 from utils.trace_cleaner import trace_cleaner
 
-NEW_DOT_URL = "https://dev.new.expensify.com:8082/"
-PROXY_URL = os.getenv("PROXY_URL")
-SLOW_MO: int | None = 500
+NEWDOT_URL = "https://dev.new.expensify.com:8082/"
 
 
-def test():
-    with sync_playwright() as playwright:
-        browser = playwright.chromium.launch(
-            headless=True,
-            slow_mo=SLOW_MO,
-            proxy={"server": PROXY_URL} if PROXY_URL else None,
-            args=[
-                "--disable-web-security",
-                "--disable-features=IsolateOrigins,site-per-process",
-            ],
-        )
+def new_dot_login(page, email):
+    page.goto(NEWDOT_URL)
+    
+    page.locator('input[type="email"]').fill(email)
+    page.keyboard.press('Enter')
+
+    # Magic code entry
+    page.wait_for_timeout(3000)
+    my_otp_code = '123456'
+
+    page.keyboard.type(my_otp_code)
+    try:
+        page.get_by_role("button", name="Sign in").click()
+    except Exception:
+        pass
+
+
+def test_same_tab():
+    with sync_playwright() as p:
+        browser = p.chromium.launch(channel="chrome", headless=False,
+                                      proxy={"server": "http://127.0.0.1:8080/"},
+                                      args=[
+                                          "--disable-web-security",
+                                          "--disable-features=IsolateOrigins,site-per-process"
+                                      ])
         context = browser.new_context()
-
-
-        context.tracing.start(
-            screenshots=True,
-            snapshots=True,
-            sources=True
-        )
-
+        # Start tracing
+        context.tracing.start(screenshots=True, snapshots=True, sources=True)
+        page = context.new_page()
         try:
+            email = 't2815719+2893@gmail.com'
+            # login user
+            new_dot_login(page, email)
 
-            page = context.new_page()
-            page.goto(NEW_DOT_URL)
-
-
-            page_1 = context.new_page()
-            page_1.goto(NEW_DOT_URL)
-
-
-            page.bring_to_front()
-            page.wait_for_timeout(3000)
-
-
-            page_1.evaluate("window.dispatchEvent(new Event('beforeunload'));")
-            page_1.close()
-
-            visible = False
-            if page.locator("text=Get started below.").is_visible():
-                visible = True
-
-            assert visible, "The text 'Get started below.' should be visible."
-        except Exception as e:
-
-            raise e
+            new_pages = []
+            context.on("page", lambda new_page: new_pages.append(new_page))
+            
+            # Navigate to settings
+            page.get_by_label("My settings").click()
+            page.get_by_label("Switch to Expensify Classic").click()
+            
+            # Fill out necessary info to continue with operation
+            page.get_by_label("I don't understand how to use").click()
+            page.get_by_role("button", name="Next").click()
+            page.get_by_role("textbox", name="Your response").fill("test")
+            page.get_by_role("button", name="Next").click()
+            page.get_by_role("button", name="Switch to Expensify Classic").click()
+            page.wait_for_timeout(50000)  # waiting for page to load and fail
+           
+            # Test title of page is loading
+            assert len(new_pages) == 0, 'Switch to classic should open in same tab'
         finally:
-
+            # Stop tracing and export the trace file
             context.tracing.stop(path="/app/expensify/user_tool/output_browser1.zip")
-
             trace_cleaner("/app/expensify/user_tool/output_browser1.zip")
+            browser.close()
+
+
+if __name__ == '__main__':
+    test_same_tab()

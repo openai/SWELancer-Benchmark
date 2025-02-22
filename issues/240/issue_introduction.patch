@@ -1,13 +1,94 @@
-diff --git a/src/libs/ReportUtils.ts b/src/libs/ReportUtils.ts
-index 223e94e0bdd..b6bf031762a 100644
---- a/src/libs/ReportUtils.ts
-+++ b/src/libs/ReportUtils.ts
-@@ -3835,7 +3835,7 @@ function getReportName(
-     if (reportID) {
-         const reportNameFromCache = reportNameCache.get(cacheKey);
+diff --git a/src/libs/actions/Policy/Policy.ts b/src/libs/actions/Policy/Policy.ts
+index 60cab178770..809b66dc92c 100644
+--- a/src/libs/actions/Policy/Policy.ts
++++ b/src/libs/actions/Policy/Policy.ts
+@@ -359,7 +359,6 @@ function deleteWorkspace(policyID: string, policyName: string) {
+         });
+     });
  
--        if (reportNameFromCache?.reportName && reportNameFromCache.reportName === report?.reportName && reportNameFromCache.reportName !== CONST.REPORT.DEFAULT_REPORT_NAME) {
-+        if (reportNameFromCache?.reportName && reportNameFromCache.reportName === report?.reportName) {
-             return reportNameFromCache.reportName;
-         }
-     }
+-    const policy = getPolicy(policyID);
+     // Restore the old report stateNum and statusNum
+     const failureData: OnyxUpdate[] = [
+         {
+@@ -369,13 +368,6 @@ function deleteWorkspace(policyID: string, policyName: string) {
+                 errors: reimbursementAccount?.errors ?? null,
+             },
+         },
+-        {
+-            onyxMethod: Onyx.METHOD.MERGE,
+-            key: `${ONYXKEYS.COLLECTION.POLICY}${policyID}`,
+-            value: {
+-                avatarURL: policy?.avatarURL,
+-            },
+-        },
+     ];
+ 
+     reportsToArchive.forEach((report) => {
+diff --git a/src/pages/workspace/WorkspaceProfilePage.tsx b/src/pages/workspace/WorkspaceProfilePage.tsx
+index cbd43fd1752..8429f0a41d1 100644
+--- a/src/pages/workspace/WorkspaceProfilePage.tsx
++++ b/src/pages/workspace/WorkspaceProfilePage.tsx
+@@ -4,7 +4,7 @@ import React, {useCallback, useState} from 'react';
+ import type {ImageStyle, StyleProp} from 'react-native';
+ import {Image, StyleSheet, View} from 'react-native';
+ import type {OnyxEntry} from 'react-native-onyx';
+-import {useOnyx, withOnyx} from 'react-native-onyx';
++import {withOnyx} from 'react-native-onyx';
+ import Avatar from '@components/Avatar';
+ import AvatarWithImagePicker from '@components/AvatarWithImagePicker';
+ import Button from '@components/Button';
+@@ -55,8 +55,6 @@ function WorkspaceProfilePage({policyDraft, policy: policyProp, currencyList = {
+     const {activeWorkspaceID, setActiveWorkspaceID} = useActiveWorkspace();
+     const {canUseSpotnanaTravel} = usePermissions();
+ 
+-    const [currentUserAccountID = -1] = useOnyx(ONYXKEYS.SESSION, {selector: (session) => session?.accountID});
+-
+     // When we create a new workspace, the policy prop will be empty on the first render. Therefore, we have to use policyDraft until policy has been set in Onyx.
+     const policy = policyDraft?.id ? policyDraft : policyProp;
+     const outputCurrency = policy?.outputCurrency ?? '';
+@@ -86,7 +84,6 @@ function WorkspaceProfilePage({policyDraft, policy: policyProp, currencyList = {
+             }),
+         );
+     const readOnly = !PolicyUtils.isPolicyAdmin(policy);
+-    const isOwner = PolicyUtils.isPolicyOwner(policy, currentUserAccountID);
+     const imageStyle: StyleProp<ImageStyle> = shouldUseNarrowLayout ? [styles.mhv12, styles.mhn5, styles.mbn5] : [styles.mhv8, styles.mhn8, styles.mbn5];
+     const shouldShowAddress = !readOnly || formattedAddress;
+ 
+@@ -272,15 +269,15 @@ function WorkspaceProfilePage({policyDraft, policy: policyProp, currencyList = {
+                                     onPress={onPressShare}
+                                     icon={Expensicons.QrCode}
+                                 />
+-                                {isOwner && (
+-                                    <Button
+-                                        accessibilityLabel={translate('common.delete')}
+-                                        text={translate('common.delete')}
+-                                        style={[styles.ml2]}
+-                                        onPress={() => setIsDeleteModalOpen(true)}
+-                                        icon={Expensicons.Trashcan}
+-                                    />
+-                                )}
++
++                                <Button
++                                    accessibilityLabel={translate('common.delete')}
++                                    text={translate('common.delete')}
++                                    style={[styles.ml2]}
++                                    onPress={() => setIsDeleteModalOpen(true)}
++                                    medium
++                                    icon={Expensicons.Trashcan}
++                                />
+                             </View>
+                         )}
+                     </Section>
+diff --git a/src/pages/workspace/WorkspacesListPage.tsx b/src/pages/workspace/WorkspacesListPage.tsx
+index 1dd3ee4a74d..90aee403380 100755
+--- a/src/pages/workspace/WorkspacesListPage.tsx
++++ b/src/pages/workspace/WorkspacesListPage.tsx
+@@ -146,7 +146,7 @@ function WorkspacesListPage() {
+             // In such cases, let us use the available chat report ids from the policy.
+             const threeDotsMenuItems: PopoverMenuItem[] = [];
+ 
+-            if (isOwner) {
++            if (isAdmin) {
+                 threeDotsMenuItems.push({
+                     icon: Expensicons.Trashcan,
+                     text: translate('workspace.common.delete'),

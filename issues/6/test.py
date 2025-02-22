@@ -1,67 +1,60 @@
-import sys, os
+import re
+import time
 
-base_path = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
-sys.path.insert(0, base_path)
-
-from playwright.sync_api import sync_playwright, expect
-from playwright.sync_api._context_manager import PlaywrightContextManager
-from playwright._impl._page import Page
-
-FIRST_NAME = "Milan"
-LAST_NAME = "T"
+from playwright.sync_api import Page, expect, sync_playwright
 
 
-def get_user_email():
-    return f"nitish.expensify+{92}@gmail.com"
+# Utility to generate a random email
+def generate_random_email(timestamp: int = int(time.time())):
+    return f"turingtemp+1739871051@gmail.com"
 
 
-def login_user(p: PlaywrightContextManager):
-    browser = p.chromium.launch(headless=True, args=[
-        "--ignore-certificate-errors", "--disable-web-security", "--disable-features=IsolateOrigins,site-per-process"],
-        slow_mo=2000)
+def create_user(
+    page: Page, firstname: str, lastname: str = None, timestamp: int = None
+):
+    timestamp = timestamp or int(time.time())
+    # Sign up
+    page.get_by_test_id("username").fill(generate_random_email())
+    page.get_by_role("button", name="Continue").click()
+    page.get_by_role("button", name="Join").click()
 
-    page = browser.new_page()
-    user_email = get_user_email()
-
-    page.goto('https://dev.new.expensify.com:8082/')
-
-    page.locator('input[type="email"]').fill(user_email)
-    page.locator('button[tabindex="0"]').click()
-
-    try:
-        expect(page.get_by_role("button", name="Sign in")).to_be_visible()
-        page.get_by_test_id("validateCode").fill("123456")
-    except Exception:
-        page.get_by_role("button", name="Join").click()
-
-    return browser, page
+    # Update profile
+    page.get_by_text("Track and budget expenses").click()
+    page.get_by_role("textbox", name="First name").fill(firstname)
+    page.get_by_role("textbox", name="Last name").fill(lastname)
+    page.get_by_role("button", name="Continue").click()
 
 
-def navigate_to_profile(page: Page):
-    page.locator('button[aria-label="My settings"]').click()
-    page.locator('div[aria-label="Profile"]').first.click()
-
-
-def edit_legal_name(page: Page):
-    page.locator('div[role="menuitem"]', has_text="Legal name").click()
-
-    fname_input_field = page.locator('div[aria-label="Legal first name"] input')
-    lname_input_field = page.locator('div[aria-label="Legal last name"] input')
-    save_button = page.get_by_role('button', name="Save")
-
-    fname_input_field.fill(FIRST_NAME + '÷×')
-    lname_input_field.fill(LAST_NAME + '÷×')
-    save_button.click()
-    error_msg = page.get_by_text("Name can only include Latin characters.").all()
-    assert len(error_msg) == 2
-
-
-def test_fake_assignee_name_removed():
+def test_issue():
 
     with sync_playwright() as p:
-        browser, page = login_user(p)
+        timestamp = int(time.time())
 
-        navigate_to_profile(page)
-        edit_legal_name(page)
+        # Launch chromium and open new page
+        browser = p.chromium.launch(headless=False, slow_mo=500, args=["--disable-web-security", "--disable-features=IsolateOrigins, site-per-process"])
+        context = browser.new_context()
+        page = context.new_page()
 
+        page.goto("https://dev.new.expensify.com:8082/")
+
+        # create user
+        create_user(page, "TestUser", "Surname", timestamp)
+
+        page.get_by_label("Start chat (Floating action)").click()
+        page.get_by_text("New workspace").click()
+        page.get_by_role("button", name="Confirm").click()
+        page.get_by_test_id("WorkspaceInitialPage").get_by_label("TestUser Surname's Workspace").click()
+        page.get_by_label("Create").last.click()
+
+        menu_items = page.locator('[role="menuitem"]')
+
+        all_menu_texts = menu_items.all_text_contents()
+
+        if all_menu_texts[0] == "Split expense":
+            raise AssertionError(f"Test Failed! 'Split expense' is still the first item of the menu'")
+
+        # ---------------------
+        context.close()
+    
         browser.close()
+

@@ -1,91 +1,82 @@
-import re
-from playwright.sync_api import Playwright, sync_playwright, expect
-import time
+from playwright.sync_api import sync_playwright, expect
+from playwright._impl._browser import Browser
+from playwright._impl._page import Page
+from playwright.sync_api._context_manager import PlaywrightContextManager
 
-def get_mail_addr():
-    timestamp = int(time.time())
-    return f"aliceogleoggglu+{timestamp}@gmail.com"
+# Expensify app URL
+NEWDOT_URL = "https://dev.new.expensify.com:8082"
+OLDDOT_URL = "http://127.0.0.1:9000/"
 
-def run(playwright: Playwright) -> None:
-
-    browser = playwright.chromium.launch(headless=False, args=[
-            "--disable-web-security",
-            "--disable-features=IsolateOrigins,site-per-process",
-            "--ignore-certificate-errors"],slow_mo=800)
-    context = browser.new_context(ignore_https_errors=True)
+def login_user(p: PlaywrightContextManager, first_name="Milan", last_name="T") -> tuple[Browser, Page, str]:
+    email = "rgarciatammy4+17397256036989@gmail.com"
+    # Launch chromiun and open new page
+    browser = p.chromium.launch(headless=False, args=[
+        "--ignore-certificate-errors",
+        "--disable-web-security",
+        "--disable-features=IsolateOrigins,site-per-process"
+    ], slow_mo=3000, proxy = {"server": "http://127.0.0.1:8080/"})
+    context = browser.new_context()
     page = context.new_page()
 
-    # Step 1: Login
-    user_mail_addr = get_mail_addr()
-    page.goto("https://dev.new.expensify.com:8082/")
-    page.get_by_test_id("username").fill(user_mail_addr)
-    page.get_by_role("button", name="Continue").click()
+    # Step 1: Open expensify url
+    page.goto('https://dev.new.expensify.com:8082/') 
+
+    # Step 2: Enter email and click continue
+    page.locator('input[type="email"]').fill(email)
+    page.locator('button[tabindex="0"]').click()
+    page.wait_for_timeout(3000)
+
+    # Step 3: Click join button
     page.get_by_role("button", name="Join").click()
-    page.wait_for_timeout(1000)
-    
-    # Step 2: Enter user information
-    page.get_by_text("Track and budget expenses").click()
-    page.get_by_role("textbox", name="First name").fill("ali")
-    page.get_by_role("textbox", name="Last name").click()
-    page.get_by_role("textbox", name="Last name").fill("veli")
+
+    if(page.locator("text='Track and budget expenses'").is_visible() == False):
+        page.reload()
+        page.wait_for_timeout(3000)
+    # Step 4: Select 'Track and budget expenses' in onobarding page and click Continue
+    page.locator("text='Track and budget expenses'").click()
     page.get_by_role("button", name="Continue").click()
-    page.wait_for_timeout(1000)
-    
-    # Step 3: Create WS
-    page.get_by_label("My settings").click()
-    page.get_by_test_id("InitialSettingsPage").get_by_label("Workspaces").get_by_text("Workspaces").click()
-    page.get_by_label("New workspace").click()
-    page.get_by_label("Back").click()
-    page.get_by_label("Inbox").click()
-    page.wait_for_timeout(1000)
+    page.wait_for_timeout(3000)
 
-    # Step 4: Submit Expense
-    page.locator("[data-testid='DisplayNamesWithTooltip']", has_text="Ali veli's Workspace").first.click()
-    page.get_by_label("Create").last.click()
-    page.get_by_text("Submit expense", exact=True).click()
-    page.get_by_label("Manual").click()
-    page.get_by_placeholder("0").fill("1234")
-    page.locator("#numPadContainerView").get_by_role("button", name="Next").click()
-    page.get_by_text("Merchant").click()
-    page.get_by_role("textbox", name="Merchant").fill("w")
-    page.get_by_role("button", name="Save").click()
-    page.locator("div[data-selection-scrapper-hidden-element]", has_text="Submit").last.click() 
-    page.wait_for_timeout(1000)
+    # Step 5: Enter first name, last name and click continue
+    page.locator('input[name="fname"]').fill(first_name)
+    page.locator('input[name="lname"]').fill(last_name)
+    page.get_by_role("button", name="Continue").last.click()
+    page.wait_for_timeout(3000)
 
-    # Step 4: Add category to expense
-    page.get_by_label("View details").click()
-    page.get_by_text("Category").click()
-    page.get_by_label("Fees").click()
-    page.get_by_text("Category", exact=True).last.click()
-    page.get_by_label("Back").click()
-    page.wait_for_timeout(1000)
+    return browser, page, email
 
-    # Step 5: Disable all categories
-    page.get_by_label("My settings").click()
-    page.locator("div[dir='auto']", has_text="Ali veli's Workspace").last.click()
-    page.get_by_text("Categories").click()
-    page.get_by_label("Select all").click()
-    page.get_by_role("button", name="selected").click()
-    page.get_by_text("Disable categories").click()
-    page.get_by_label("Back").click()
-    page.get_by_label("Inbox").click()
-    # Refresh is needed for mitm record file
-    page.goto("https://dev.new.expensify.com:8082/")
-    page.wait_for_timeout(1000)
-    page.locator("div[data-testid='DisplayNamesWithTooltip']", has_text="Ali veli's Workspace").first.click()
-    page.locator("div[aria-label='Last chat message preview']", has_text="Ali veli's Workspace").last.click()
-    page.locator("div[dir='auto']", has_text="Ali veli's Workspace owes:").last.click()
-    page.locator("div[dir='auto']", has_text="Category").last.click()
-    page.wait_for_timeout(2000)
+def test_duplicate_rate_issue():
+    with sync_playwright() as pw:
+        browser, page, email = login_user(pw, "A", "Local")
+        page.wait_for_timeout(3000)
+        page.get_by_label("My settings").click()
+        page.wait_for_timeout(3000)
+        page.get_by_test_id("InitialSettingsPage").get_by_label("Workspaces").click()
+        page.wait_for_timeout(4000)
+        page.get_by_label("New workspace").click()
+        page.wait_for_timeout(3000)
+        page.get_by_label("More features").click()
+        page.wait_for_timeout(3000)
+        page.get_by_label("Add, update, and enforce").click()
+        page.wait_for_timeout(3000)
+        page.get_by_label("Distance rates").click()
+        page.wait_for_timeout(3000)
+        page.get_by_role("button", name="Add rate").click()
+        page.wait_for_timeout(3000)
+        page.get_by_placeholder("0").fill("0.2")
+        page.get_by_role("button", name="Save").click()
+        page.wait_for_timeout(3000)
+        page.get_by_role("button", name="Add rate").click()
+        page.get_by_placeholder("0").fill("0.2")
+        page.get_by_role("button", name="Save").click()
+        page.wait_for_timeout(3000)
 
-    # Step 6: Verify expense category is highlighted
-    button = page.locator("button[aria-label='Fees'][role='button'][data-tag='pressable']")
-    expect(button).to_have_css("background-color", "rgb(230, 225, 218)")
+        # Check if the URL is still the same after clicking on Save button
+        assert page.url[len(page.url)-3: len(page.url)] == "new", "Able to save duplicate rate"
 
-    # ---------------------
-    context.close()
-    browser.close()
+        # Check if the error message indicator is displayed as error message is not stated in the issue and it can be different message when client update the code.
+        # So only checking for the indicator since, we need to see the error message to validate the issue.
+        expect(page.get_by_test_id("CreateDistanceRatePage").locator("circle")).to_be_visible()
 
-def test_52259():
-    with sync_playwright() as playwright:
-        run(playwright)
+        # Close the browser
+        browser.close()

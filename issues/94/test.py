@@ -1,170 +1,331 @@
-"""
-Test for the issue: https://github.com/Expensify/App/issues/52678
-"""
+import csv
+import os
 
-from playwright.sync_api import TimeoutError, expect, sync_playwright
+import pytest
+from playwright.async_api import (
+    BrowserContext,
+    Page,
+    TimeoutError,
+    async_playwright,
+    expect,
+)
 
-# Expensify app URL
-EXPENSIFY_URL = "https://dev.new.expensify.com:8082/"
+EMAIL_USERNAME = "xecuycismfsga"
+EMAIL_ALIAS = "v1pmabnf"
+USER_EMAIL = f"{EMAIL_USERNAME}+{EMAIL_ALIAS}@gmail.com"
+PASSWORD = "uwgb zzoc cofa kaaq"
+SLOW_MO: int | None = 500
+PROXY_URL = os.getenv("PROXY_URL")
+WORKSPACE_NAME = "5jvnxtxT"
+FILENAME = "tags_import.csv"
+WORKSPACE_NAME = "vSRAAJ6t"
+OLD_DOT_URL = "http://127.0.0.1:9000/"
 
-# Email login credentials
-EMAIL_USERNAME = "expensifytesting1@gmail.com"
-EMAIL_PASSWORD = "redx tbmr hzpc rbzr"
-
-# Email username postfix
-EMAIL_USERNAME_POSTFIX = "52678.4"
+EMPLOYEE_ALIAS = "zpt4gjv4"
+EMPLOYEE_EMAIL = f"{EMAIL_USERNAME}+{EMPLOYEE_ALIAS}@gmail.com"
 
 
-def generate_user_email(user_id=None):
+def create_spreadsheet(filename=FILENAME):
+    # Write CSV
+    with open(filename, "w", newline="", encoding="utf-8") as f:
+        writer = csv.writer(f)
+        writer.writerow(["State", "State GL", "Region", "Region GL", "City", "City GL"])
+
+        # Define hierarchical structure
+        states = {
+            "California": {
+                "GL": 100,
+                "regions": {
+                    "North": {
+                        "GL": 20,
+                        "cities": [("San Francisco", 1), ("Oakland", 2)],
+                    },
+                    "South": {
+                        "GL": 30,
+                        "cities": [("Los Angeles", 3), ("San Diego", 4)],
+                    },
+                },
+            },
+        }
+
+        for state, state_data in states.items():
+            for region, region_data in state_data["regions"].items():
+                for city, city_gl in region_data["cities"]:
+                    writer.writerow(
+                        [
+                            state,
+                            state_data["GL"],
+                            region,
+                            region_data["GL"],
+                            city,
+                            city_gl,
+                        ]
+                    )
+    return filename
+
+
+async def login_user_old_dot(page, user_email=USER_EMAIL):
+    await page.goto(OLD_DOT_URL)
+    try:
+        await page.locator('div[id="js_modalClose"]').click(timeout=2000)
+    except TimeoutError:
+        pass
+
+    await page.get_by_role("button", name="Sign In").click()
+    await page.get_by_role("button", name="Email ").click()
+    await page.get_by_placeholder("Enter your email to begin").fill(user_email)
+    await page.get_by_role("button", name="Next").click()
+
+    if await page.get_by_text("We are having trouble connecting.").is_visible():
+        print("Try a different IP address with a VPN")
+        return
+
+    magic_code = await get_magic_code(page)
+    await page.get_by_placeholder("Magic Code").fill(magic_code)
+    await page.locator("#js_click_signIn").click()
+    await page.wait_for_timeout(
+        3000
+    )  # Waiting to make sure that the request was sent to the backend
+    await page.goto(f"{OLD_DOT_URL}inbox")
+
+
+async def create_workspace(page: Page, workspace_name: str = WORKSPACE_NAME):
     """
-    Generate an email address for user login.
+    Create a workspace if it does not already exist
     """
-    temp = EMAIL_USERNAME.rsplit("@", 1)
-    username = temp[0].strip()
-    domain = temp[1].strip()
-    return f"{username}+{EMAIL_USERNAME_POSTFIX}{user_id or ''}@{domain}"
+    await page.get_by_label("My Settings").click()
+    await page.get_by_test_id("InitialSettingsPage").get_by_label("Workspaces").click()
+
+    try:
+        await (
+            page.locator('button[aria-label="row"]')
+            .filter(has_text=workspace_name)
+            .last.click(timeout=3000)
+        )
+    except TimeoutError:
+        await page.get_by_label("New workspace").last.click()
+
+        await page.get_by_text("Name", exact=True).click()
+        name_input = page.get_by_role("textbox", name="Name")
+        await name_input.clear()
+        await name_input.type(workspace_name, delay=200)
+        await page.get_by_role("button", name="Save").click()
 
 
-def launch_browser(pw, headless=False, device=None, permissions=None, geolocation=None):
-    """
-    Launch the browser.
-    """
-    browser = pw.chromium.launch(
-        channel="chrome",
-        headless=False,
-        args=[
-            "--ignore-certificate-errors",
-            "--disable-web-security",
-            "--disable-features=IsolateOrigins,site-per-process",
-        ],
-        slow_mo=1000,
+async def open_tags(page: Page):
+    tags = page.get_by_label("Tags")
+    try:
+        await tags.wait_for(state="visible", timeout=2000)
+    except TimeoutError:
+        await page.get_by_label("More features").click()
+        await page.get_by_label("Classify costs and track").click()  # enable tags
+
+    await tags.click()
+
+
+def get_test_dir():
+    try:
+        test_dir = os.path.dirname(os.path.abspath(__file__))
+    except NameError:  # We're in a notebook
+        test_dir = os.getcwd()
+
+    return test_dir
+
+
+async def upload_tags(page: Page, context: BrowserContext):
+    try:
+        await page.get_by_role("button", name="State").wait_for(
+            state="visible", timeout=2000
+        )
+        await page.get_by_role("button", name="Region").wait_for(
+            state="visible", timeout=2000
+        )
+        await page.get_by_role("button", name="City").wait_for(
+            state="visible", timeout=2000
+        )
+    except TimeoutError:
+        old_dot_page = await context.new_page()
+        await login_user_old_dot(old_dot_page)
+
+        # Define the relative path to the text file
+        filename = create_spreadsheet()
+        script_dir = get_test_dir()
+        image_file_path = os.path.join(script_dir, filename)
+
+        old_dot_page.on(
+            "filechooser", lambda file_chooser: file_chooser.set_files(image_file_path)
+        )
+
+        await old_dot_page.get_by_role("link", name=" Settings").click()
+        await old_dot_page.get_by_role("link", name=" Settings").click()
+        await old_dot_page.locator("#page_admin_policies").click()
+        await (
+            old_dot_page.locator("a").filter(has_text="Group").click()
+        )  # group policies
+        await old_dot_page.get_by_role("link", name=WORKSPACE_NAME).click()
+        await old_dot_page.get_by_role("link", name="Tags").click()
+        await (
+            old_dot_page.locator("li")
+            .filter(has_text="Use multiple levels of")
+            .locator("label")
+            .nth(1)
+            .click()
+        )
+        await old_dot_page.get_by_role("button", name="Import from Spreadsheet").click()
+        await old_dot_page.get_by_label("Are these independent tags?").uncheck()
+        await old_dot_page.get_by_label("Is there a GL code in the").check()
+        await old_dot_page.get_by_role("button", name="Select File").first.click(
+            force=True
+        )
+        await old_dot_page.get_by_role("button", name="Upload Tags").click()
+
+
+async def get_magic_code(
+    page: Page, user_email: str = EMAIL_USERNAME, password: str = PASSWORD
+):
+    return "123456"
+
+
+async def create_user(page: Page, firstname: str = "User", lastname: str = EMAIL_ALIAS):
+    await page.get_by_role("button", name="Join").click()
+
+    # Update profile
+    await page.get_by_text("Track and budget expenses").click()
+    await page.get_by_role("textbox", name="First name").fill(firstname)
+    await page.get_by_role("textbox", name="Last name").fill(lastname)
+    await page.get_by_role("button", name="Continue").click()
+
+
+async def login(page: Page):
+    # get current timestamp
+    magic_code = await get_magic_code(page)
+
+    if magic_code is None:
+        raise ValueError("Failed to retrieve magic code")
+
+    await page.get_by_role("textbox").fill(magic_code)
+
+
+async def login_or_create_user(
+    page: Page,
+    firstname: str = "User",
+    lastname: str = EMAIL_ALIAS,
+    user_email: str = USER_EMAIL,
+):
+    await page.goto("https://dev.new.expensify.com:8082/", timeout=60000)
+    await page.get_by_test_id("username").fill(user_email)
+    await page.get_by_role("button", name="Continue").click()
+
+    try:
+        await page.get_by_role("button", name="Join").wait_for(
+            state="visible", timeout=2000
+        )
+        await create_user(page, firstname=firstname, lastname=lastname)
+    except TimeoutError:
+        await login(page)
+
+    await page.get_by_label("Inbox").wait_for(state="visible", timeout=10000)
+
+
+async def create_expense(page: Page, workspace_name: str = WORKSPACE_NAME):
+    await page.locator(
+        'button[aria-label="Navigates to a chat"]',
+        has_text=workspace_name,
+    ).first.click()
+
+    await page.get_by_label("Create").last.click()
+    await page.get_by_label("Create expense").click()
+    await page.get_by_label("Manual").click()
+    await page.get_by_placeholder("0").fill("100")
+    await (
+        page.locator("#numPadContainerView").get_by_role("button", name="Next").click()
     )
-    context_args = {"permissions": permissions or []}
-    if device:
-        context_args.update(pw.devices[device])
-    if geolocation:
-        context_args["geolocation"] = geolocation
-        context_args["permissions"].append("geolocation")
-    context = browser.new_context(**context_args)
-    page = context.new_page()
-    return browser, context, page
+    await expect(page.get_by_text("California")).to_be_visible()
 
 
-def login_user(page, user_email, first_name="John", last_name="Doe"):
+async def close_button_if_present(page: Page):
     """
-    Log into the Expensify app.
+    Occasionally, there is a close button that prevents any clicks on the page as
+    it covers most of the screen. This button cannot be seen visually.
     """
-    # Open the Expensify app
-    page.goto(EXPENSIFY_URL)
-    # Login user
-    page.get_by_test_id("username").fill(user_email)
-    page.get_by_role("button", name="Continue").click()
-    # Check if OTP is required for the login
+    close_button = page.locator('button[aria-label="Close"]')
+    if await close_button.is_visible():
+        await close_button.click()
+
+
+async def invite_member_to_workspace(
+    page: Page,
+    user_email: str = EMPLOYEE_EMAIL,
+    name: str = f"User {EMPLOYEE_ALIAS}",
+):
+    await page.get_by_label("Members").click()
+
+    member_locator = (
+        page.get_by_test_id("WorkspaceMembersPage").get_by_label(name).first
+    )
+
     try:
-        expect(page.get_by_test_id("SignInPage").get_by_test_id("validateCode")).to_be_visible(timeout=7000)
-    except (AssertionError, TimeoutError):
-        # If not required, expect the join button to appear and click the button
-        page.get_by_test_id("SignInPage").get_by_role("button", name="Join").click()
-    else:
-        # Get the OTP and complete verification
-        otp_code = "123456"
-        page.get_by_test_id("SignInPage").get_by_test_id("validateCode").fill(otp_code)
-        try:
-            page.get_by_test_id("SignInPage").get_by_role("button", name="Sign in").click(timeout=2000)
-        except (AssertionError, TimeoutError):
-            pass
-    # Check if onboarding is required
-    try:
-        expect(page.get_by_text("What do you want to do today?")).to_be_visible(timeout=5000)
-    except (AssertionError, TimeoutError):
-        pass
-    else:
-        # Complete the onboarding
-        page.get_by_label("Track and budget expenses").click()
-        page.get_by_role("button", name="Continue").first.click()
-        page.get_by_role("textbox", name="First name").fill(first_name)
-        page.get_by_role("textbox", name="Last name").fill(last_name)
-        page.get_by_role("button", name="Continue").last.click()
-    # Dismiss get started dialog if appears
-    try:
-        page.get_by_role("button", name="Get started").click(timeout=3000)
-    except (AssertionError, TimeoutError):
-        pass
-    # Expect the main screen to appear
-    expect(page.get_by_test_id("BaseSidebarScreen")).to_be_visible(timeout=7000)
+        await member_locator.wait_for(state="visible", timeout=3000)
+    except TimeoutError:
+        await page.get_by_role("button", name="Invite member").click()
+
+        await page.get_by_test_id("selection-list-text-input").fill(user_email)
+        await page.get_by_test_id("selection-list").get_by_label(name).first.click()
+
+        await page.get_by_role("button", name="Next").click()
+
+        await (
+            page.get_by_test_id("WorkspaceInviteMessagePage")
+            .get_by_role("button", name="Invite")
+            .click()
+        )
 
 
-def test_approver_field_in_tag_editor_shows_user_name():
-    """
-    Verify that the approver field in the tag editor shows the user name instead of user email.
-    """
-    with sync_playwright() as pw:
-        # Login user
-        user_email = generate_user_email()
-        fname, lname = "John", "Doe"
-        user_name = " ".join([fname, lname]).strip()
-        browser, context, page = launch_browser(pw)
-        login_user(page, user_email, first_name=fname, last_name=lname)
-
-        # Create a new workspace, if one is not already created
-        page.get_by_role("button", name="My settings").click()
-        page.get_by_test_id("InitialSettingsPage").get_by_role("menuitem", name="Workspaces", exact=True).click()
-        texts = page.get_by_test_id("WorkspacesListPage").get_by_label("row").all_inner_texts()
-        if not texts:
-            page.get_by_test_id("WorkspacesListPage").get_by_role("button", name="New workspace").first.click()
-        else:
-            page.get_by_test_id("WorkspacesListPage").get_by_label("row").first.click()
-
-        # Enable workflows, rules, and tags, if not already enabled
-        page.get_by_test_id("WorkspaceInitialPage").get_by_role("menuitem", name="More features").click()
-        ws_workflows = page.get_by_test_id("WorkspaceMoreFeaturesPage").get_by_label("Configure how spend is approved")
-        if not ws_workflows.is_checked():
-            ws_workflows.click()
-        ws_rules = page.get_by_test_id("WorkspaceMoreFeaturesPage").get_by_label("Require receipts, flag high spend")
-        if not ws_rules.is_checked():
-            ws_rules.click()
-            if page.get_by_test_id("workspaceUpgradePage").is_visible():
-                page.get_by_test_id("workspaceUpgradePage").get_by_role("button", name="Upgrade").click()
-                page.get_by_test_id("workspaceUpgradePage").get_by_role("button", name="Got it").click()
-        ws_tags = page.get_by_test_id("WorkspaceMoreFeaturesPage").get_by_label("Classify costs and track billable")
-        if not ws_tags.is_checked():
-            ws_tags.click()
-
-        # Enable approvals, if not already enabled
-        page.get_by_test_id("WorkspaceInitialPage").get_by_role("menuitem", name="Workflows").click()
-        ws_approvals = page.get_by_test_id("WorkspacePageWithSections").get_by_label("Require additional approval")
-        if not ws_approvals.is_checked():
-            ws_approvals.click()
-
-        # Delete, if the tag already exists
-        tag_name = "Tag 1"
-        page.get_by_test_id("WorkspaceInitialPage").get_by_role("menuitem", name="Tags").click()
-        tag = page.get_by_test_id("WorkspaceTagsPage").get_by_role("button", name=tag_name).first
-        if tag.is_visible():
-            tag.click()
-            page.get_by_test_id("TagSettingsPage").get_by_role("menuitem", name="Delete").click()
-            page.get_by_role("button", name="Delete").click()
-
-        # Create tag
-        page.get_by_test_id("WorkspaceTagsPage").get_by_role("button", name="Add tag").click()
-        page.get_by_test_id("CreateTagPage").get_by_role("textbox", name="Name").fill(tag_name)
-        page.get_by_test_id("CreateTagPage").get_by_role("button", name="Save").click()
-
-        # Assign approver to the tag
-        tag.click()
-        page.get_by_test_id("TagSettingsPage").get_by_text("Approver").click()
-        page.get_by_test_id("TagApproverPage").get_by_role("button", name=user_name).click()
-
-        # Verify approver field in tag editor shows user name
-        expect(
-            page.get_by_test_id("TagSettingsPage").get_by_role("menuitem", name=user_name),
-            "User name should be visible in the approver field",
-        ).to_be_visible(timeout=2000)
-
-        # Cleanup
-        context.close()
-        browser.close()
+async def logout(page: Page):
+    await page.get_by_label("My settings").click()
+    await page.get_by_label("Sign out").click()
 
 
-if __name__ == "__main__":
-    test_approver_field_in_tag_editor_shows_user_name()
+@pytest.mark.asyncio
+async def test_prefill_state():
+    async with async_playwright() as p:
+        browser = await p.chromium.launch(
+            proxy={"server": PROXY_URL} if PROXY_URL else None,
+            headless=False,
+            args=[
+                "--no-sandbox",
+                "--disable-dev-shm-usage",
+                "--ignore-certificate-errors",
+                "--disable-web-security",
+                "--disable-features=IsolateOrigins,site-per-process",
+            ],
+            slow_mo=SLOW_MO,
+            channel="chromium",
+        )
+        context = await browser.new_context()
+        page = await context.new_page()
+
+        # admin login
+        await login_or_create_user(page)
+        await close_button_if_present(page)
+
+        employee_context = await browser.new_context()
+        employee_page = await employee_context.new_page()
+
+        await login_or_create_user(
+            employee_page, user_email=EMPLOYEE_EMAIL, lastname=EMPLOYEE_ALIAS
+        )
+
+        await create_workspace(page)
+        await invite_member_to_workspace(page)
+        await open_tags(page)
+        await upload_tags(page, context)
+
+        await create_expense(employee_page)
+
+        # Close all tabs and browser
+        await page.close()
+        await employee_page.close()
+        await context.close()
+        await employee_context.close()
+        await browser.close()

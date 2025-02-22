@@ -1,69 +1,77 @@
-import time
-from playwright.sync_api import sync_playwright, expect
-from playwright.sync_api._context_manager import PlaywrightContextManager
-from playwright._impl._browser import Browser
+import sys, os
+
+base_path = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
+sys.path.insert(0, base_path)
+
+import pytest
+from utils.login import sign_up, complete_onboarding
+from utils.browser import close_browser
+from playwright.async_api import expect, async_playwright
 from playwright._impl._page import Page
 
-# Utility to generate a random email
-def generate_random_email():
-    return f"testerbro7077+45756976678@gmail.com"
 
-# Login as member and fill in personal details
-def login_member_a(p, membera_first_name: str, membera_last_name: str) -> tuple:
-    browser = p.chromium.launch(
-        proxy = {"server": "http://localhost:8080"}, headless = False, args = ["--ignore-certificate-errors", "--disable-web-security", "--disable-features=IsolateOrigins,site-per-process"], slow_mo = 500, channel = "chromium")
+async def check_if_wrapped(element):
+    is_wrapped = await element.evaluate(
+        """(element) => {
+            const lineHeight = parseFloat(getComputedStyle(element).lineHeight);
+            const lines = element.clientHeight / lineHeight;
+            return lines > 1;
+        }"""
+    )
 
-    context = browser.new_context()
-    page = context.new_page()
+    return is_wrapped
 
 
-    user_email2 = generate_random_email()
 
-    page.goto('https://dev.new.expensify.com:8082/')
-    page.locator('input[type="email"]').fill(user_email2)
-    page.get_by_role("button", name="Continue").click()
-    page.wait_for_timeout(1000)
+@pytest.mark.asyncio
+async def test_workspace_header():
+    derived_email = "testuserexpensify+25215188@gmail.com"
+
+
+    playwright = await async_playwright().start()
+    browser = await playwright.chromium.launch(
+        headless=True,
+        proxy={
+            'server': 'http://127.0.0.1:8080'
+        },
+        args=[
+            '--disable-web-security',
+            '--disable-features=IsolateOrigins,site-per-process'
+        ]
+    )
+    context = await browser.new_context(
+        ignore_https_errors=True,
+        viewport={
+            "width": 375,
+            "height": 812
+        }
+    )
+    page = await context.new_page()
+
+
+    await sign_up(page, derived_email)
+
 
     try:
-        page.get_by_role("button", name="Join").click()
-        page.wait_for_timeout(1000)
+        await complete_onboarding(page)
     except Exception:
         pass
-    expect(page.locator("text=What do you want to do today?")).to_be_visible()
-    page.wait_for_timeout(1000)
-
-    page.get_by_text("Track and budget expenses").click()
-
-    page.locator('input[name="fname"]').fill(membera_first_name)
-    page.locator('input[name="lname"]').fill(membera_last_name)
-    page.get_by_role("button", name="Continue").last.click()
-    page.wait_for_timeout(1000)
-
-    return browser, page, user_email2
-
-def added_features_check(page):
-    page.get_by_label("My settings").click()
-    page.get_by_test_id("InitialSettingsPage").get_by_label("Workspaces").get_by_text("Workspaces").click()
-    page.get_by_label("New workspace").click()
-    assert page.get_by_test_id("WorkspaceInitialPage").get_by_text("Workspace profile").is_visible(), "profile is not chnged to Workspace profile in the LHN"
-    assert page.get_by_test_id("WorkspacePageWithSections").get_by_text("Workspace profile").is_visible(), "Profile is not changed to Workspace profile in title"
-    assert page.locator("#simple-illustration__building_svg__Layer_1 path").first.is_visible(), "Workspace profile is not changed in the illustration"
-    ws_name = page.get_by_test_id("WorkspacePageWithSections").get_by_text("Workspace name")
-    assert ws_name.is_visible(), "Name is not changed to Workspace name"
-    ws_name.click()
-    assert page.get_by_text("Workspace name").nth(2).is_visible(), "Name is not changed to Workspace name in name edit page"
 
 
-def test_run(membera_first_name="Sai", membera_last_name="Yagna"):
-    with sync_playwright() as p:
+    await expect(page.get_by_label("Inbox")).to_be_visible()
+    await page.mouse.click(0,0)
+    await page.locator('button[aria-label="My settings"]').click()
+    await page.locator('div[aria-label="Workspaces"]').click()
 
-        browser_membera, page_membera, user_email2 = login_member_a(p, membera_first_name, membera_last_name)
-        added_features_check(page_membera)
+    back_button_parent = page.locator("#backButton").locator("..")
+    workspaces_div = back_button_parent.locator("div", has_text="Workspaces").last
 
-        
+    if await workspaces_div.count() == 0:
+        print("No 'Workspaces' div found.")
+        return None
 
-        browser_membera.close()
+    is_wrapped = await check_if_wrapped(workspaces_div)
 
+    assert not is_wrapped, "Workspaces header is wrapped into multiple lines!"
 
-if __name__ == "__main__":
-    test_run()
+    await close_browser(context, page, playwright)

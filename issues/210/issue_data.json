@@ -1,6 +1,6 @@
 {
     "price": 250.0,
-    "title": "[HOLD for payment 2024-08-09] [$250] Draft disappears from the LHN when clicking away after starting a thread",
-    "issue_repo_steps": "Action performed: 1. Create a group as user A with user B and user C\r\n2. Send a message to group as user A\r\n3. Start a thread as user B \r\n4. Without joining click away\n\nExpected result: Draft should stay in the LHN\n\nActual result: None",
-    "_issue_id": "45543_1016"
+    "title": "[HOLD for payment 2024-10-22] [$250] Book travel - Report screen changes to profile view when clicking Country field",
+    "issue_repo_steps": "Action performed: 1. Go to staging.new.expensify.com\r\n2. Go to FAB > Book travel.\r\n3. Click Book travel.\r\n4. Click Country.\n\nExpected result: The report screen in the background will not change to profile page.\n\nActual result: None",
+    "_issue_id": "50155_1008"
 }

@@ -1,119 +1,64 @@
-import time
-import pytest
-from playwright.sync_api import (
-    sync_playwright,
-    Page,
-    TimeoutError as PlaywrightTimeoutError,
-)
+from typing import Any
+from playwright._impl._page import Page
+# from playwright._impl._locator import Locator
+from playwright.sync_api import sync_playwright, expect
+from playwright.sync_api._context_manager import PlaywrightContextManager
 
 
-def generate_random_email():
-    # return f"t56826807+{int(time.time())}@gmail.com"
-    return "t56826807+1739876351@gmail.com"
-   
+EMAIL = "brighturing926+51316@gmail.com"
+user_workspace_admin = "https://dev.new.expensify.com:8082/r/524783183199166"
+invalid_member = "+1 631-791-8378"
 
-@pytest.fixture
-def setup_playwright():
-    playwright = sync_playwright().start()
 
-    browser = playwright.chromium.launch(
-        headless=False,
-        args=[
-            "--ignore-certificate-errors",
-            "--disable-web-security",
-            "--disable-features=IsolateOrigins,site-per-process",
-        ],
-        proxy={"server": "http://localhost:8080"},
-        slow_mo=500,
-    )
-    context = browser.new_context(
-        locale="en-US",
-    )
+def login_user(p: PlaywrightContextManager, user_email: str) -> Page:
+    # Step 1: Open expensify url
+    browser = p.chromium.launch(
+        proxy = {"server": "http://localhost:8080"}, headless = False, args = ["--no-sandbox", "--disable-dev-shm-usage", "--ignore-certificate-errors", "--disable-web-security", "--disable-features=IsolateOrigins,site-per-process"], slow_mo = 500, channel = "chromium")
+    context = browser.new_context()
     page = context.new_page()
+    page.goto('https://dev.new.expensify.com:8082/')
 
-    yield page
+    page.locator('input[type="email"]').fill(user_email)
+    page.locator('button[tabindex="0"]').click()
 
-    # Cleanup: close browsers and stop Playwright
-    browser.close()
-    playwright.stop()
+    # Magic code entry
+    my_otp_code = "123456"
 
+    page.get_by_test_id("validateCode").fill(my_otp_code)
 
-def login_user(page: Page, email: str):
-    page.goto("https://dev.new.expensify.com:8082/")
-    page.locator('input[type="email"]').fill(email)
-    page.locator("button", has_text="Continue").click()
-    page.locator("button", has_text="Join").click()
-
-
-def complete_onboarding(page: Page, first_name: str, last_name: str = ""):
-    page.locator("text='Track and budget expenses'").click()
-    page.locator('input[name="fname"]').fill(first_name)
-    page.locator('input[name="lname"]').fill(last_name)
-    page.get_by_role("button", name="Continue").last.click()
-
-def get_header_text(page: Page):
-    siblings = page.locator('button[id="backButton"]').last.locator("xpath=following-sibling::*").all()
-    inner_text = ""
-    for sibling in siblings:
-        inner_text+=sibling.inner_text()
-
-    return inner_text
-
-
-def test(setup_playwright):
-    page = setup_playwright
-
-    email_user, name_user = generate_random_email(), "User A"
-    
-    login_user(page, email_user)
-    
-    complete_onboarding(page, name_user)
-
-    page.get_by_label("Start chat (Floating action)").click()
+    # Click Optional sign in button
     try:
-        page.get_by_label("Submit expense").click(timeout=1000)
+        page.get_by_role("button", name="Sign in").click()
+
     except Exception:
-        page.get_by_label("Create expense").click()
-    page.get_by_label("Manual").click()
+        pass
 
-    assert ("Create expense" in get_header_text(page)) or ("Submit expense" in get_header_text(page))
+    return page
 
-    page.locator('input[placeholder="0"]').fill('100')
-    page.locator("#numPadContainerView").get_by_role("button", name="Next").click()
 
-    assert "Choose recipient" in get_header_text(page)
-    
-    page.get_by_test_id("selection-list-text-input").fill("t56826807+11@gmail.com")
-    page.get_by_test_id("selection-list").get_by_label("Approver").click()
+def test_14513() -> Any:
+    with sync_playwright() as p:
+        # Step 1: Log in the user and begin test actions
+        page = login_user(p, EMAIL)
 
-    assert "Confirm details" in get_header_text(page)
-    
-    page.keyboard.press("Escape")
+        page.get_by_label("My settings").click()
+        page.get_by_test_id("InitialSettingsPage").get_by_label("Workspaces").click()
+        page.get_by_label("New workspace").first.click()
 
-    page.get_by_label("Start chat (Floating action)").click()
-    page.get_by_label("Start chat", exact=True).click()
-    page.get_by_test_id("selection-list-text-input").fill("t56826807+11@gmail.com")
-    page.get_by_label("Approver").click()
+        # page.pause()
+        page.get_by_label("Members").click()
+        page.get_by_role("button", name="Invite member").click()
+        page.get_by_test_id("selection-list-text-input").fill(invalid_member)
+        page.get_by_label(invalid_member).first.click()
+        page.get_by_role("button", name="Next").click()
+        page.get_by_test_id("WorkspaceInviteMessagePage").get_by_role("button", name="Invite").click()
+        page.wait_for_timeout(3000)
+        expect(page.get_by_test_id("WorkspaceInitialPage").get_by_text("Unable to add members to")).to_be_visible()
+        page.get_by_label("Back").click()
+        expect(page.get_by_text("Unable to add members to")).to_be_visible()
 
-    page.get_by_label("Create").click()
-    page.get_by_label("Pay Approver").click()
-
-    assert "Pay Approver" in get_header_text(page)
-
-    page.locator('input[placeholder="0"]').fill('100')
-    page.get_by_role("button", name="Next").click()
-
-    assert "Confirm details" in get_header_text(page)
-
-    page.keyboard.press("Escape")
-
-    page.get_by_label("Create").click()
-    page.get_by_label("Split expense").click()
-    page.get_by_label("Manual").click()
-
-    assert "Create expense" in get_header_text(page)
-
-    page.locator('input[placeholder="0"]').fill('100')
-    page.locator("#numPadContainerView").get_by_role("button", name="Next").click()
-
-    assert "Confirm details" in get_header_text(page)
+        page.wait_for_timeout(3000)
+        page.get_by_label("Inbox").click()
+        page.wait_for_timeout(3000)
+        page.get_by_text(invalid_member).first.click()
+        expect(page.get_by_text("Unexpected error creating")).to_be_visible()

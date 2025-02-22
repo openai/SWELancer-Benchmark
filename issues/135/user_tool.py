@@ -1,118 +1,138 @@
-import sys, os
-
-base_path = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
-sys.path.insert(0, base_path)
-
 from playwright.sync_api import sync_playwright, expect
+from playwright.sync_api._context_manager import PlaywrightContextManager
+from playwright._impl._browser import Browser
+from playwright._impl._page import Page
 from utils.trace_cleaner import trace_cleaner
 
-NEWDOT_URL = "https://dev.new.expensify.com:8082/"
-OLDDOT_URL = "http://localhost:9000/" 
-EMAIL = "randomturing@gmail.com"
-PASSWORD = "ryfo zezf tmlq xybs"
 
-static_email = "randomturing+40121571@gmail.com"
+# Utility to generate an email
+def generate_email():
+    timestamp = '52202001'
+    return f"freelanceapptest+{timestamp}@gmail.com"
 
-def new_dot_login_join(page, email, first_name, last_name):
-    page.goto(NEWDOT_URL)
-    page.locator('input[type="email"]').fill(email)
-    page.get_by_role("button", name="Continue").click()
-    page.get_by_role("button", name="Join").click()
 
-    page.locator("text='Track and budget expenses'").wait_for()
+# Function to log in the user and complete onboarding steps
+def login_user(p: PlaywrightContextManager, first_name="Milan", last_name="T") -> tuple[Browser, Page]:
+    # Launch Chromium and open a new page in a mobile device view
+    device = p.devices["iPhone 13"]
+    browser = p.chromium.launch(
+        channel="chrome",
+        headless=False,
+        args=[
+            "--ignore-certificate-errors",
+            "--disable-web-security",
+            "--disable-features=IsolateOrigins,site-per-process"
+        ],
+        proxy={"server": "http://localhost:8080"},
+        slow_mo=1000
+    )
+
+    context = browser.new_context(ignore_https_errors=True, **device)
+    # Start tracing with screenshots, snapshots, and sources enabled
+    context.tracing.start(screenshots=True, snapshots=True, sources=True)
+    page = context.new_page()
+    user_email = generate_email()
+
+    # Step 1: Open the Expensify URL
+    page.goto('https://dev.new.expensify.com:8082/') 
+
+    # Step 2: Enter a generated email and click continue
+    page.locator('input[type="email"]').fill(user_email)
+    page.locator('button[tabindex="0"]').click()
+    page.wait_for_timeout(1000) 
+
+    # Step 3: Click the join button if available otherwise skip
+    try:
+        page.locator('button[tabindex="0"]').click()
+        page.wait_for_timeout(1000)
+    except Exception:
+        pass
+
+    # Step 4: Ensure that the user reaches the dashboard by checking for visible text
+    expect(page.locator("text=What do you want to do today?")).to_be_visible()
+        
+    # Step 5: Select 'Track and budget expenses' on the onboarding page and click Continue
     page.locator("text='Track and budget expenses'").click()
-    page.get_by_role("button", name="Continue").click()
+    page.wait_for_timeout(1000) 
 
+    # Step 6: Enter first name last name, and continue
     page.locator('input[name="fname"]').fill(first_name)
     page.locator('input[name="lname"]').fill(last_name)
-    page.get_by_role("form").get_by_role("button", name="Continue").click()
+    page.get_by_role("button", name="Continue").last.click()
+    page.wait_for_timeout(1000) 
+
+    return browser, page
 
 
-def test_expensify():
+def submit_multiple_expenses(page, amounts, emails):
+    """
+    Creates and submits multiple expenses using the provided lists of amounts and emails.
+
+    :param amounts: List of amounts (e.g., [100, 200])
+    :param emails: List of recipient emails (e.g., ["test01@gmail.com", "test02@gmail.com"])
+    """
+
+    for amount, email in zip(amounts, emails):
+        # Step 1: Navigate to start a new expense submission
+        page.get_by_label("Start chat (Floating action)").click()
+        page.get_by_text("Submit expense").first.click()
+
+        # Step 2: Choose Manual Expense
+        page.get_by_label("Manual").click()
+
+        # Step 3: Select the currency
+        page.get_by_label("Select a currency").click()
+        page.get_by_test_id("selection-list-text-input").fill("USD")
+        page.get_by_label(f"USD - $").click()
+
+        # Step 4: Enter the expense amount
+        page.get_by_placeholder("0").fill(str(amount))
+        page.locator("#numPadContainerView").get_by_role("button", name="Next").click()
+
+        # Step 5: Enter the recipient email
+        page.get_by_test_id("selection-list-text-input").fill(email)
+        page.get_by_label(email).click()
+
+        # Step 6: Submit the expense
+        page.get_by_role("button", name=f"Submit $").click()
+
+        # Step 7: Navigate back to submit another expense
+        page.get_by_label("Back").last.click()
+
+
+def test_select_expense_by_tapping_and_holding():
     with sync_playwright() as p:
-        browser = p.chromium.launch(headless=True, slow_mo=1000, args=["--disable-web-security", "--disable-features=IsolateOrigins,site-per-process"])
-
-        first_user_context = browser.new_context(ignore_https_errors=True)
-
-        first_user_context.tracing.start(screenshots=True, snapshots=True)
-
+        browser = None
         try:
-            page = first_user_context.new_page()
-            first_user_email = static_email
-            new_dot_login_join(page, first_user_email, first_name="Tester", last_name="U")
+            # Step 1: Login as a new user and return to the main navigation page
+            browser, page = login_user(p)
+            if page.get_by_text("Welcome to Expensify").is_visible():
+                page.get_by_label("Back").click()
 
-            page.get_by_label("Start chat (Floating action)").click()
+            # Step 2: Submit multiple expenses
+            amounts = [100, 250, 500, 800]
+            emails = ["test01@gmail.com", "test02@gmail.com", "test03@gmail.com"]
 
+            submit_multiple_expenses(page, amounts, emails)
 
-            track_expense_icon = page.locator("svg path[d='M19 3.5c0 1.105-2.239 2-5 2s-5-.895-5-2 2.239-2 5-2 5 .895 5 2ZM14 7.5c1.57 0 3.084-.25 4.278-.729A6.64 6.64 0 0 0 19 6.433V7.5c0 1.105-2.239 2-5 2-.352 0-.696-.015-1.028-.042l-.003-1.383c0-.232-.036-.437-.096-.619.37.03.747.044 1.127.044ZM12.98 11.464l.008 1.995c.327.027.665.04 1.012.04 2.761 0 5-.895 5-2v-1.066a6.63 6.63 0 0 1-.722.338c-1.194.478-2.708.729-4.278.729-.344 0-.685-.012-1.02-.036ZM11 8.5c0 1.105-2.239 2-5 2s-5-.895-5-2 2.239-2 5-2 5 .895 5 2ZM6 12.5c1.57 0 3.083-.25 4.278-.729a6.63 6.63 0 0 0 .722-.338V12.5c0 1.104-2.239 2-5 2s-5-.896-5-2v-1.067c.238.13.482.242.722.338C2.916 12.25 4.43 12.5 6 12.5ZM6 16.5c1.57 0 3.083-.25 4.278-.729a6.63 6.63 0 0 0 .722-.338V16.5c0 1.105-2.239 2-5 2s-5-.895-5-2v-1.067c.238.13.482.242.722.338C2.916 16.25 4.43 16.5 6 16.5Z']")
-            expect(track_expense_icon).to_be_visible()
+            # Step 3: Go to the Expensify search page, tap and hold one of the expenses
+            page.get_by_role("button", name="Search").click()
+            expense = page.get_by_role("button", name="Milan T test02@gmail.com $")
+            expense.hover()
+            page.mouse.down(button="left")
+            page.wait_for_timeout(2000)
+            page.mouse.up(button="left")
 
-
-            request_money_icon = page.locator("svg path[d='M3 1.1V19c0 .4.5.5.7.3l.7-.9c.2-.2.4-.2.6 0l1.1 1.3c.2.2.4.2.6 0l1.1-1.3c.2-.2.4-.2.6 0l1.1 1.3c.2.2.4.2.6 0l1.1-1.3c.2-.2.4-.2.6 0l1.1 1.3c.2.2.4.2.6 0l1.1-1.3c.2-.2.4-.2.6 0l.7.9c.2.3.7.1.7-.3V1.1c0-.4-.5-.5-.7-.3l-.7.9c-.2.2-.4.2-.6 0L13.5.4c-.2-.2-.4-.2-.6 0L12 1.7c-.2.2-.4.2-.6 0L10.3.4c-.2-.2-.4-.2-.6 0L8.5 1.7c-.2.2-.4.2-.6 0L6.8.3c-.2-.2-.4-.2-.6 0L5 1.7c-.2.2-.4.2-.6 0L3.7.8C3.5.5 3 .7 3 1.1zM7 5c-.6 0-1 .4-1 1s.4 1 1 1h6c.6 0 1-.4 1-1s-.4-1-1-1H7zm0 4c-.6 0-1 .4-1 1s.4 1 1 1h4c.6 0 1-.4 1-1s-.4-1-1-1H7zm-1 5c0-.6.4-1 1-1h6c.6 0 1 .4 1 1s-.4 1-1 1H7c-.6 0-1-.4-1-1z']")
-            expect(request_money_icon).to_be_visible()
-
-
-            new_workspace_button = page.locator('div[aria-label="New workspace"]')
-            new_workspace_button.click()
-
-
-            back_arrow_button = page.locator('button[aria-label="Back"]')
-            back_arrow_button.click()
-
-            inbox_menu = page.locator('button[aria-label="Inbox"]')
-            inbox_menu.click()
-
-            page.get_by_label("Last chat message preview").last.click()
-            page.get_by_label("Create").last.click()
-
-
-
-            track_expense_icon = page.locator("svg path[d='M19 3.5c0 1.105-2.239 2-5 2s-5-.895-5-2 2.239-2 5-2 5 .895 5 2ZM14 7.5c1.57 0 3.084-.25 4.278-.729A6.64 6.64 0 0 0 19 6.433V7.5c0 1.105-2.239 2-5 2-.352 0-.696-.015-1.028-.042l-.003-1.383c0-.232-.036-.437-.096-.619.37.03.747.044 1.127.044ZM12.98 11.464l.008 1.995c.327.027.665.04 1.012.04 2.761 0 5-.895 5-2v-1.066a6.63 6.63 0 0 1-.722.338c-1.194.478-2.708.729-4.278.729-.344 0-.685-.012-1.02-.036ZM11 8.5c0 1.105-2.239 2-5 2s-5-.895-5-2 2.239-2 5-2 5 .895 5 2ZM6 12.5c1.57 0 3.083-.25 4.278-.729a6.63 6.63 0 0 0 .722-.338V12.5c0 1.104-2.239 2-5 2s-5-.896-5-2v-1.067c.238.13.482.242.722.338C2.916 12.25 4.43 12.5 6 12.5ZM6 16.5c1.57 0 3.083-.25 4.278-.729a6.63 6.63 0 0 0 .722-.338V16.5c0 1.105-2.239 2-5 2s-5-.895-5-2v-1.067c.238.13.482.242.722.338C2.916 16.25 4.43 16.5 6 16.5Z']")
-            expect(track_expense_icon).to_be_visible()
-
-
-            request_money_icon = page.locator("svg path[d='M3 1.1V19c0 .4.5.5.7.3l.7-.9c.2-.2.4-.2.6 0l1.1 1.3c.2.2.4.2.6 0l1.1-1.3c.2-.2.4-.2.6 0l1.1 1.3c.2.2.4.2.6 0l1.1-1.3c.2-.2.4-.2.6 0l1.1 1.3c.2.2.4.2.6 0l1.1-1.3c.2-.2.4-.2.6 0l.7.9c.2.3.7.1.7-.3V1.1c0-.4-.5-.5-.7-.3l-.7.9c-.2.2-.4.2-.6 0L13.5.4c-.2-.2-.4-.2-.6 0L12 1.7c-.2.2-.4.2-.6 0L10.3.4c-.2-.2-.4-.2-.6 0L8.5 1.7c-.2.2-.4.2-.6 0L6.8.3c-.2-.2-.4-.2-.6 0L5 1.7c-.2.2-.4.2-.6 0L3.7.8C3.5.5 3 .7 3 1.1zM7 5c-.6 0-1 .4-1 1s.4 1 1 1h6c.6 0 1-.4 1-1s-.4-1-1-1H7zm0 4c-.6 0-1 .4-1 1s.4 1 1 1h4c.6 0 1-.4 1-1s-.4-1-1-1H7zm-1 5c0-.6.4-1 1-1h6c.6 0 1 .4 1 1s-.4 1-1 1H7c-.6 0-1-.4-1-1z']")
-            expect(request_money_icon).to_be_visible()
-
-
-            page.get_by_text("Submit expense", exact=True).click()
-
-
-            scan_icon = page.locator("svg path[d='M3 1.364V7h14V1.364a.4.4 0 0 0-.701-.265l-.748.861a.397.397 0 0 1-.602 0L13.801.638a.397.397 0 0 0-.602 0L12.051 1.96a.397.397 0 0 1-.602 0L10.301.638a.397.397 0 0 0-.602 0L8.551 1.959a.397.397 0 0 1-.602 0L6.801.638a.397.397 0 0 0-.602 0L5.051 1.959a.397.397 0 0 1-.602 0l-.748-.861A.4.4 0 0 0 3 1.364zM3 18.636V13h14v5.636a.4.4 0 0 1-.701.265l-.748-.861a.397.397 0 0 0-.602 0l-1.148 1.322a.397.397 0 0 1-.602 0l-1.148-1.322a.397.397 0 0 0-.602 0l-1.148 1.322a.397.397 0 0 1-.602 0L8.551 18.04a.397.397 0 0 0-.602 0l-1.148 1.322a.397.397 0 0 1-.602 0L5.051 18.04a.397.397 0 0 0-.602 0l-.748.861A.4.4 0 0 1 3 18.636zM2 9a1 1 0 0 0 0 2h16a1 1 0 0 0 0-2H2z']").first
-            expect(scan_icon).to_be_visible()
-
-
-            page.get_by_label("Manual").click()
-            page.get_by_placeholder("0").fill("1000")
-            page.locator("#numPadContainerView").get_by_role("button", name="Next").click()
-            page.get_by_text("Merchant").click()
-            page.get_by_role("textbox", name="Merchant").fill("merchant")
-            page.get_by_role("button", name="Save").click()
-            page.locator('button', has_text="Submit ").last.click()
-
-
-            page.get_by_label("Start chat (Floating action)").click()
-            submit_expense_icon = page.locator("svg path[d='M3 1.1V19c0 .4.5.5.7.3l.7-.9c.2-.2.4-.2.6 0l1.1 1.3c.2.2.4.2.6 0l1.1-1.3c.2-.2.4-.2.6 0l1.1 1.3c.2.2.4.2.6 0l1.1-1.3c.2-.2.4-.2.6 0l1.1 1.3c.2.2.4.2.6 0l1.1-1.3c.2-.2.4-.2.6 0l.7.9c.2.3.7.1.7-.3V1.1c0-.4-.5-.5-.7-.3l-.7.9c-.2.2-.4.2-.6 0L13.5.4c-.2-.2-.4-.2-.6 0L12 1.7c-.2.2-.4.2-.6 0L10.3.4c-.2-.2-.4-.2-.6 0L8.5 1.7c-.2.2-.4.2-.6 0L6.8.3c-.2-.2-.4-.2-.6 0L5 1.7c-.2.2-.4.2-.6 0L3.7.8C3.5.5 3 .7 3 1.1zM7 5c-.6 0-1 .4-1 1s.4 1 1 1h6c.6 0 1-.4 1-1s-.4-1-1-1H7zm0 4c-.6 0-1 .4-1 1s.4 1 1 1h4c.6 0 1-.4 1-1s-.4-1-1-1H7zm-1 5c0-.6.4-1 1-1h6c.6 0 1 .4 1 1s-.4 1-1 1H7c-.6 0-1-.4-1-1z']").last
-            expect(submit_expense_icon).to_be_visible()   
-
-
-            page.get_by_text("Track expense").click()
-            page.get_by_role("button", name="Got it").click()
-            page.get_by_placeholder("0").fill("100")
-            page.locator("#numPadContainerView").get_by_role("button", name="Next").click()
-            page.get_by_role("button", name="Track expense").click()
-
-
-            page.get_by_label("Start chat (Floating action)").click()
-            track_expense_icon = page.locator("svg path[d='M19 3.5c0 1.105-2.239 2-5 2s-5-.895-5-2 2.239-2 5-2 5 .895 5 2ZM14 7.5c1.57 0 3.084-.25 4.278-.729A6.64 6.64 0 0 0 19 6.433V7.5c0 1.105-2.239 2-5 2-.352 0-.696-.015-1.028-.042l-.003-1.383c0-.232-.036-.437-.096-.619.37.03.747.044 1.127.044ZM12.98 11.464l.008 1.995c.327.027.665.04 1.012.04 2.761 0 5-.895 5-2v-1.066a6.63 6.63 0 0 1-.722.338c-1.194.478-2.708.729-4.278.729-.344 0-.685-.012-1.02-.036ZM11 8.5c0 1.105-2.239 2-5 2s-5-.895-5-2 2.239-2 5-2 5 .895 5 2ZM6 12.5c1.57 0 3.083-.25 4.278-.729a6.63 6.63 0 0 0 .722-.338V12.5c0 1.104-2.239 2-5 2s-5-.896-5-2v-1.067c.238.13.482.242.722.338C2.916 12.25 4.43 12.5 6 12.5ZM6 16.5c1.57 0 3.083-.25 4.278-.729a6.63 6.63 0 0 0 .722-.338V16.5c0 1.105-2.239 2-5 2s-5-.895-5-2v-1.067c.238.13.482.242.722.338C2.916 16.25 4.43 16.5 6 16.5Z']").last
-            expect(track_expense_icon).to_be_visible()  
-
-        except Exception as e:
-            print(f"Test failed: {e}")
-            raise
-
+            # Step 4: Assert that the select button is visible
+            assert page.get_by_text("Select").is_visible(), "Unable to select expenses by tapping and holding on the expense"
         finally:
+            if browser is not None:
+                context = page.context
+                trace_path = "/app/expensify/user_tool/output_browser1.zip"
+                context.tracing.stop(path=trace_path)
+                trace_cleaner(trace_path)
+                browser.close()
 
-            first_user_context.tracing.stop(path="/app/expensify/user_tool/output_browser1.zip")
-            trace_cleaner("/app/expensify/user_tool/output_browser1.zip")
-            first_user_context.close()
+
+if __name__ == "__main__":
+    test_select_expense_by_tapping_and_holding()

@@ -1,171 +1,159 @@
-import sys, os
-
-base_path = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
-sys.path.insert(0, base_path)
-
-import time
-import imaplib
-import logging
-import sys
-import re
-import email
-import string, random
 from playwright.sync_api import sync_playwright, expect
+from playwright._impl._page import Page
+import re
+import imaplib
+import email
 
 
 
-EXPENSIFY_URL = "http://localhost:8082/"
+class EmailHandler:
+    def __init__(self, email_address, password):
+        # Validate email and password input
+        if not self._validate_email(email_address):
+            raise ValueError("Invalid email address format.")
+        self.original_email = email_address
+        self.password = password
+        self.new_email = email_address
+
+    def _validate_email(self, email_address):
+        # Simple email validation
+        return bool(re.match(r"[^@]+@[^@]+\.[^@]+", email_address))
+
+    def _generate_new_email(self, email_address, suffix):
+        # Add random number suffix to the email before the "@" symbol
+        username, domain = email_address.split('@')
+        return f"{username}+{suffix}@{domain}"
+
+    def get_email_address(self):
+        # Return the generated email with "+" suffix
+        return self.new_email
+
+    def check_for_otp(self):
+        # Connect to the Gmail server using IMAP
+        try:
+            mail = imaplib.IMAP4_SSL("imap.gmail.com")
+            mail.login(self.original_email, self.password)
+            mail.select("inbox")
+
+            # Fetch all unread emails
+            status, messages = mail.search(None, "UNSEEN")
+            if status != "OK":
+                print("No unread emails found.")
+                return None
+
+            email_ids = messages[0].split()
+            # Start from the latest email by reversing the list
+            email_ids = email_ids[::-1]  # Reverse order to process latest first
+
+            # Iterate over each email until OTP is found
+            for email_id in email_ids:
+                # Fetch the email by ID
+                status, msg_data = mail.fetch(email_id, '(RFC822)')
+                if status != "OK":
+                    print("Error fetching email.")
+                    continue
+
+                for response_part in msg_data:
+                    if isinstance(response_part, tuple):
+                        msg = email.message_from_bytes(response_part[1])
+
+                        # Check if the To address matches the generated new email
+                        if msg["To"] == self.new_email:
+                            # Extract OTP from the email body
+                            otp_code = self._extract_otp_from_email(msg)
+                            if otp_code:
+                                # Delete the email containing the OTP
+                                mail.store(email_id, '+FLAGS', '\\Deleted')
+                                mail.expunge()  # Permanently removes deleted emails from the mailbox
+
+                                # Logout and return OTP
+                                mail.close()
+                                mail.logout()
+                                return otp_code
+
+            # Logout if OTP not found in unread emails
+            mail.close()
+            mail.logout()
+            print("No OTP found in unread emails.")
+            return None
+
+        except imaplib.IMAP4.error:
+            print("Failed to connect to Gmail. Please check your email address or password.")
+            return None
+
+    def _extract_otp_from_email(self, msg):
+        # Extract OTP code from the email content
+        if msg.is_multipart():
+            for part in msg.walk():
+                if part.get_content_type() == "text/plain":
+                    email_body = part.get_payload(decode=True).decode()
+                    otp_code = self._extract_otp(email_body)
+                    if otp_code:
+                        return otp_code
+        else:
+            email_body = msg.get_payload(decode=True).decode()
+            otp_code = self._extract_otp(email_body)
+            if otp_code:
+                return otp_code
+        return None
+
+    def _extract_otp(self, text):
+        # Find a 6-digit code in the email body
+        match = re.search(r"\b\d{6}\b", text)
+        return match.group(0) if match else None
+
+# Function to log in to the application
+def login(page: Page, user_email: str, email_handler, first_name: str = "Milan", last_name: str = "T"):
+    # Open Expensify URL and log in
+    page.locator('input[type="email"]').fill(user_email)
+    page.get_by_role("button", name="Continue").click()
+    page.wait_for_timeout(9000)
+    if page.locator('input[data-testid="validateCode"]').is_visible():
+        # otp = email_handler.check_for_otp()
+        page.locator('input[data-testid="validateCode"]').fill("123456")
+    else:
+        page.get_by_role("button", name="Join").click()
+        page.wait_for_timeout(3000)
+        # Enter user details and complete onboarding
+        page.get_by_label("Track and budget expenses").click()
+        page.locator('input[name="fname"]').fill(first_name)
+        page.locator('input[name="lname"]').fill(last_name)
+        page.get_by_role("button", name="Continue").last.click()
 
 
-EMAIL_USERNAME = "naturesv057@gmail.com"
-EMAIL_PASSWORD = "hyjk ilxi pnom oret"
+def test_54460():
+    with sync_playwright() as p:
+        # Launch chromium and open new page
+        browser = p.chromium.launch(headless=False,args=[ # Set headless=True for headless mode
+        "--disable-web-security",
+        "--disable-features=IsolateOrigins,site-per-process"
+        ])
+        context = browser.new_context()
+        page = context.new_page()
 
 
-EMAIL_USERNAME_POSTFIX = "26235_4"
+        page.goto("https://dev.new.expensify.com:8082/")
+        email_address = "rgulraiz2000+204@gmail.com"
 
+        password = "kepw uquj myoa npvj"
+        user_fname = "Gull"
+        user_lname = ""
 
-logging.basicConfig(level=logging.INFO, stream=sys.stdout, format="%(message)s")
-LOGGER = logging.getLogger(__name__)
-
-def generate_user_email(user_id=None):
-    """
-    Generate an email address for a user login.
-    """
-    temp = EMAIL_USERNAME.rsplit("@", 1)
-    username = temp[0].strip()
-    domain = temp[1].strip()
-    return f"{username}+{EMAIL_USERNAME_POSTFIX}@{domain}"
-
-
-def clear_inbox(username, password):
-    """
-    Delete all existing messages from the Inbox.
-    """
-    LOGGER.info("Deleting all existing messages from the email inbox")
-    with imaplib.IMAP4_SSL(host="imap.gmail.com") as imap:
-        imap.login(username, password)
-        imap.select("inbox")
-        imap.store("1:*", "+FLAGS", "\\Deleted")
-        imap.expunge()
-        imap.close()
-
-
-def get_otp_from_email(username, password, retries=2, delay=2):
-    """
-    Read the OTP email and return the OTP code.
-    """
-    LOGGER.info("Reading the OTP email")
-    with imaplib.IMAP4_SSL(host="imap.gmail.com") as imap:
-        imap.login(username, password)
-        for i in range(1, retries + 1):
-            imap.select("inbox")
-            status, messages = imap.search(None, "ALL")
-            if status == "OK":
-                for message_id in reversed(messages[0].split()):
-                    status, data = imap.fetch(message_id, "(RFC822)")
-                    if status == "OK":
-                        email_message = email.message_from_bytes(data[0][1])
-                        subject, encoding = email.header.decode_header(email_message["Subject"])[0]
-                        if isinstance(subject, bytes):
-                            subject = subject.decode(encoding)
-                        if subject.startswith("Expensify magic sign-in code:"):
-                            otp_code = subject.split(":")[-1].strip()
-                            LOGGER.info("Got the OTP %s", otp_code)
-                            return otp_code
-            time.sleep(delay)
-        imap.close()
-    return "123456"
-
-
-def launch_browser(pw, headless=True, device=None, geolocation=None):
-    """
-    Launch the browser.
-    """
-    browser = pw.chromium.launch(
-        headless=True,
-        proxy={
-            'server': 'http://127.0.0.1:8080',  
-        },
-        args=[
-            '--disable-web-security',
-            '--disable-features=IsolateOrigins,site-per-process',
-        ],
-    )
-    context_args = {}
-    if device:
-        context_args.update(pw.devices[device])
-    if geolocation:
-        context_args["geolocation"] = geolocation
-        context_args["permissions"] = ["geolocation"]
-    context = browser.new_context(**context_args)
-    page = context.new_page()
-    return browser, context, page
-
-
-def login_user(page, email, first_name="John", last_name="Doe"):
-    """
-    Login to the Expensify app and complete the onboarding.
-    """
-
-    clear_inbox(EMAIL_USERNAME, EMAIL_PASSWORD)
-
-    page.goto(EXPENSIFY_URL)
-
-
-    page.get_by_role("textbox", name="Phone or email").fill(email)
-    page.locator("div", has_text="Continue").last.click()
-    
-
-    otp = get_otp_from_email(EMAIL_USERNAME, EMAIL_PASSWORD)
-    
-
-    page.keyboard.type(otp)
-
-def test_the_issue():
-    """
-    Demonstrate the Expensify app email login verification.
-    """
-    with sync_playwright() as pw:
-
-
-        email = generate_user_email()
-        LOGGER.info("User email %s", email)
-        browser, context, page = launch_browser(pw)
-        login_user(page, email)
-        page.wait_for_timeout(5000)
-
-        LOGGER.info("User logged in successfully")
+        email_handler = EmailHandler(email_address=email_address, password=password)
+        login(page, email_address, email_handler, user_fname, user_lname)
+        page.wait_for_timeout(6000)  
+        page.get_by_label("Start chat (Floating action)").click()
+        page.get_by_test_id("PopoverMenuItem-Start chat").click()
+        # Verify that on pressing on a user item outside the add to group button will add to group instead of creating a chat
+        page.get_by_test_id("base-list-item-19146297").get_by_role("button", name="Add to group").click()
+        page.get_by_test_id("selection-list").get_by_label("Concierge").click()
+        page.wait_for_timeout(2000)  
+        expect(page.get_by_test_id("NewChatSelectorPage").get_by_label("Chat")).to_be_visible()
         
-        page.route('**/*', lambda route: route.abort())
-        page.locator('div[aria-label="Send message (Floating action)"]').last.click()
-        page.wait_for_timeout(1000)
-        page.locator('text="Request money"').click()
-        page.wait_for_timeout(1000)
-        page.locator('text="Manual"').last.click()
-        page.wait_for_timeout(1000)
-        page.locator('div[aria-label="Select a currency"]').last.click()
-        page.wait_for_timeout(1000)
-        page.locator('div[aria-label="AED - AED"]').last.click()
-        page.wait_for_timeout(2000)
-        page.locator('input[placeholder="0"]').fill("200")
-        page.wait_for_timeout(1000)
-        page.keyboard.press("Enter")
-        page.wait_for_timeout(1000)
-        page.locator('input[aria-label="Name, email, or phone number"]').fill("test1@gmail.com")
-        page.wait_for_timeout(1000)
-        page.locator('div[aria-label="test1@gmail.com"]').last.click()
-        page.wait_for_timeout(1000)
-        page.locator('div', has_text="Request").last.click()
-        page.wait_for_timeout(1000)
-        page.locator('div', has_text="owes:").last.click()
-        page.wait_for_timeout(1000)
-        page.locator('div', has_text="Cash").last.click()
-
-        page.wait_for_timeout(1000)
-        chat_messages = page.locator('div[aria-label="List of chat messages"]').last
-        opacity_half = chat_messages.locator('div[class="css-view-175oi2r"][style="opacity: 0.5;"]')
-        opacity_half_count = opacity_half.count()
-        assert opacity_half_count == 4
-        page.wait_for_timeout(2000)
-        context.close()
+        # Deselecting all users and verify pressing on the user will create/open a chat with the user
+        page.get_by_test_id("selection-list").get_by_label("Concierge").click()
+        page.get_by_test_id("selection-list").get_by_label("Ehsan G").click()
+        page.get_by_test_id("selection-list").get_by_label("Concierge").click()
+        expect(page.get_by_test_id("NewChatSelectorPage").get_by_label("Chat")).not_to_be_visible()
         browser.close()
+        

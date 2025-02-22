@@ -1,138 +1,183 @@
-import sys, os
-
-base_path = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
-sys.path.insert(0, base_path)
-
-from playwright.sync_api import Page, sync_playwright, expect, ViewportSize
+from playwright.sync_api import sync_playwright
+import time
+import imaplib
+import email
+import re
+import random
+import pytest
 from utils.trace_cleaner import trace_cleaner
 
-def login_user(page: Page, user_email: str):
-
-    page.goto("https://dev.new.expensify.com:8082/")
-
-
-    page.get_by_test_id("username").fill(user_email)
-    page.get_by_role("button", name="Continue").click()
+# Constants for URLs and credentials
+NEWDOT_URL = "https://dev.new.expensify.com:8082/"
+OLDDOT_URL = "http://localhost:9000/"
+EMAIL = "ikhanle001+36@gmail.com"
+PASSWORD = "dzcr knad otxp bsuz"
 
 
-    page.get_by_role("button", name="Join").click()
+class IMAPOTPExtractor:
+    def __init__(self, email_address, password):
+        if not self._validate_email(email_address):
+            raise ValueError("Invalid email address format.")
+        self.original_email = email_address
+        self.password = password
 
-    return user_email
+        random_suffix = random.randint(1000, 9999)
+        current_timestamp = int(time.time())
+        random_suffix = f"{current_timestamp}{random_suffix}"
+
+    def _validate_email(self, email_address):
+        return bool(re.match(r"[^@]+@[^@]+\.[^@]+", email_address))
+
+    def set_new_email(self, email):
+        self.new_email = email
+
+    def check_for_otp(self):
+        try:
+            mail = imaplib.IMAP4_SSL("imap.gmail.com")
+            mail.login(self.original_email, self.password)
+            mail.select("inbox")
+
+            status, messages = mail.search(None, "UNSEEN")
+            if status != "OK":
+                return None
+
+            email_ids = messages[0].split()
+            email_ids = email_ids[::-1]
+
+            for email_id in email_ids:
+                status, msg_data = mail.fetch(email_id, '(RFC822)')
+                if status != "OK":
+                    continue
+
+                for response_part in msg_data:
+                    if isinstance(response_part, tuple):
+                        msg = email.message_from_bytes(response_part[1])
+
+                        if self.new_email in msg["To"]:
+                            otp_code = self._extract_otp_from_email(msg)
+                            if otp_code:
+                                mail.store(email_id, '+FLAGS', '\\Deleted')
+                                mail.expunge()
+                                mail.close()
+                                mail.logout()
+                                return otp_code
+
+            mail.close()
+            mail.logout()
+            return None
+
+        except imaplib.IMAP4.error:
+            return None
+
+    def _extract_otp_from_email(self, msg):
+        if msg.is_multipart():
+            for part in msg.walk():
+                if part.get_content_type() == "text/plain":
+                    email_body = part.get_payload(decode=True).decode()
+                    otp_code = self._extract_otp(email_body)
+                    if otp_code:
+                        return otp_code
+        else:
+            email_body = msg.get_payload(decode=True).decode()
+            otp_code = self._extract_otp(email_body)
+            if otp_code:
+                return otp_code
+        return None
+
+    def _extract_otp(self, text):
+        match = re.search(r"\b\d{6}\b", text)
+        return match.group(0) if match else None
 
 
-def onboarding_user(page: Page, first_name="Test", last_name="Test"):
-    expect(page.get_by_text("What do you want to do today?")).to_be_visible(
-        timeout=30000
-    )
+# Initialize the OTP extractor
+gmail_account_helper = IMAPOTPExtractor(EMAIL, PASSWORD)
 
 
-    activity_text = "Track and budget expenses"
-    page.get_by_label(activity_text).first.click()
+# Login helper function
+
+def new_dot_login(page, email):
+    page.goto(NEWDOT_URL)
+    page.locator('input[type="email"]').fill(email)
+    page.wait_for_timeout(2000)
+    page.get_by_role("button", name="Continue").nth(0).click()
+    # page.wait_for_timeout(10000)
+    # gmail_account_helper.set_new_email(email)
+    # otp = gmail_account_helper.check_for_otp()
+    otp = '123456'
+    page.locator('input[data-testid="validateCode"]').fill(otp)
+    try:
+        page.get_by_role("button", name="Sign In").click()
+    except:
+        pass
 
 
-    page.get_by_role("textbox", name="First name").fill(first_name)
-    page.get_by_role("textbox", name="Last name").fill(last_name)
-    page.get_by_role("button", name="Continue").last.click()
-
-
-def invite_member(page: Page, email: str):
-    page.get_by_label("Members").click()
-    page.get_by_role("button", name="Invite member").click()
-    page.get_by_test_id("selection-list-text-input").fill(email)
-    page.locator('button[aria-label="Test Test"]').first.click()
-    page.get_by_role("button", name="Next").click()
-    with page.expect_request(
-        lambda response: "api/AddMembersToWorkspace" in response.url
-    ) as first:
-        page.get_by_test_id("WorkspaceInviteMessagePage").get_by_role(
-            "button", name="Invite"
-        ).click()
-    first.value.response().finished()
-
-
-def create_workspace_with_precondition(page: Page, member_email: str):
-
-    page.get_by_label("Start chat (Floating action)").click()
-    page.get_by_label("New workspace").click()
-
-    page.get_by_label("Categories").click()
-    page.get_by_label("Select all").click()
-    page.get_by_role("button", name="selected").click()
-    page.get_by_label("Disable categories").click()
-
-    invite_member(page, member_email)
-
-
-def track_expense(page: Page):
-    page.get_by_label("Start chat (Floating action)").click()
-    page.get_by_label("Track expense").first.click()
-    page.get_by_role("button", name="Got it").click()
-    page.get_by_label("Manual").click()
-    page.get_by_placeholder("0").fill("88")
-    page.locator("#numPadContainerView").get_by_role("button", name="Next").click()
-    page.get_by_role("button", name="Track expense").first.click()
-
-
-def test_categorize():
-    with sync_playwright() as playwright:
-        browser = playwright.chromium.launch(
-            channel="chrome",
-            headless=True,
+@pytest.fixture(scope="module")
+def setup_browser():
+    """Initialize browser and page context for all tests within a single session with tracing enabled."""
+    with sync_playwright() as p:
+        browser = p.chromium.launch(
+            headless=False,
             args=[
                 "--ignore-certificate-errors",
                 "--disable-web-security",
-                "--disable-features=IsolateOrigins,site-per-process",
+                "--disable-features=IsolateOrigins,site-per-process"
             ],
-            proxy={"server": "http://localhost:8080"},
-            slow_mo=1000,
+            slow_mo=1000
         )
-        context_args = {}
-        context_args["timezone_id"] = "Asia/Karachi"
-        admin_user_context = browser.new_context(
-            viewport=ViewportSize(width=1280, height=620), **context_args
-        )
-        member_user_context = browser.new_context(
-            viewport=ViewportSize(width=1280, height=620), **context_args
-        )
-        admin_user_page = admin_user_context.new_page()
-        member_user_page = member_user_context.new_page()
-
-
-        admin_user_context.tracing.start(screenshots=True, snapshots=True)
-        member_user_context.tracing.start(screenshots=True, snapshots=True)
-
+        context = browser.new_context(ignore_https_errors=True)
+        # Start tracing with screenshots, snapshots and sources
+        context.tracing.start(screenshots=True, snapshots=True, sources=True)
+        page = context.new_page()
         try:
-
-            admin_email = "t56826807+1733403564@gmail.com"
-            login_user(admin_user_page, admin_email)
-            onboarding_user(admin_user_page)
-
-
-            member_email = "t56826807+1733403573@gmail.com"
-            login_user(member_user_page, member_email)
-            onboarding_user(member_user_page)
-
-
-            create_workspace_with_precondition(admin_user_page, member_email)
-
-
-            track_expense(member_user_page)
-
-
-            member_user_page.get_by_role("button", name="Categorize it").first.click()
-            member_user_page.wait_for_timeout(3000)
-
-
-            expect(
-                member_user_page.get_by_test_id("selection-list").get_by_label("Test Test")
-            ).not_to_be_visible()
+            yield page
         finally:
-
-            admin_user_context.tracing.stop(path="/app/expensify/user_tool/output_browser1.zip")
-            trace_cleaner("/app/expensify/user_tool/output_browser1.zip")
-            member_user_context.tracing.stop(path="/app/expensify/user_tool/output_browser2.zip")
-            trace_cleaner("/app/expensify/user_tool/output_browser2.zip")
-
-            member_user_page.close()
-            admin_user_page.close()
+            trace_path = "/app/expensify/user_tool/output_browser1.zip"
+            context.tracing.stop(path=trace_path)
+            trace_cleaner(trace_path)
             browser.close()
+
+
+@pytest.fixture(scope="module")
+def login_to_new_dot(setup_browser):
+    """Log into the Expensify application with the provided email."""
+    page = setup_browser
+    new_dot_login(page, EMAIL)
+    return page
+
+
+def create_room(page):
+    room_name = f"testroom-1739573689-abc"
+    page.wait_for_timeout(2000)
+    page.get_by_label("Start chat (Floating action)").click()
+    page.get_by_label("Start chat", exact=True).click()
+    page.get_by_label("Room", exact=True).click()
+    page.get_by_placeholder("social").fill(room_name)
+    page.wait_for_timeout(2000)
+    page.get_by_role("button", name="Create room").click()
+    return room_name
+
+
+def set_room_description(page, room_name):
+    page.locator(f'//button[@aria-label="#' + room_name + '"]').last.click()
+    room_setting_page = page.locator('//div[@data-testid="ReportDetailsPage"]')
+    room_setting_page.locator('//div[contains(text(), "Room description")]').click()
+    page.locator('//div[@aria-label="Room description"]').last.fill('@test')
+    page.wait_for_timeout(2000)
+    page.locator('//div[contains(text(), "Save")]').last.click()
+    room_setting_page.locator('//button[@aria-label="Back"]').last.click()
+
+
+def verify_description_text(page):
+    room_description_text = page.locator('//div[@aria-label="Room description"]').last.text_content()
+    
+    assert room_description_text == "@test", "Room description text mismatch"
+
+
+def test_search_icon_is_present_on_company_address(login_to_new_dot):
+    """Verify that the payment complete message is displayed in Spanish when language preference is set to Spanish."""
+
+    page = login_to_new_dot
+    page.wait_for_timeout(5000)
+    room_name = create_room(page)
+    set_room_description(page, room_name)
+    verify_description_text(page)

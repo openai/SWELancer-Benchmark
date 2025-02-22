@@ -1,97 +1,145 @@
-import sys, os
+"""
+Verify that RBR is shown for duplicate expenses on workspace chat, View Details card and on the respective duplicate expenses cards.
 
-base_path = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
-sys.path.insert(0, base_path)
+"""
 
-from time import time
-from playwright.sync_api import sync_playwright, expect
-from playwright._impl._page import Page
-from playwright._impl._browser_context import BrowserContext
+import pytest
+import os
+from playwright.async_api import Page, expect, async_playwright
+from utils.login import NEW_DOT_URL, sign_in
+from utils.browser import close_browser, start_browser
 
-def generate_random_email():
-    timestamp = int(time())
-    return f"bobexpensifytest+{timestamp}@gmail.com"
-
-
-def login_user(page: Page, user_email: str, first_name="Milan", last_name="T") -> Page:
-
-    page.goto('https://dev.new.expensify.com:8082/') 
-    
-
-
-    page.locator('input[type="email"]').fill(user_email)
-    page.locator('button[tabindex="0"]').click()
-    page.wait_for_timeout(1000)
-
-
-    try: 
-        page.locator('button[tabindex="0"]').click() 
-    except Exception:
-        pass
-    expect(page.locator("text=What do you want to do today?")).to_be_visible()
-        
-
-    page.locator("text='Track and budget expenses'").click()
-    page.get_by_role("button", name="Continue").click()
+STATIC_PREFIX = 52243
+EXPENSIFY_USERNAME_FIRSTNAME = "osaidtest"
+EXPENSIFY_USERNAME_LASTNAME = "testaccount"
+EXPENSIFY_USERNAME = f"{EXPENSIFY_USERNAME_FIRSTNAME} {EXPENSIFY_USERNAME_LASTNAME}"
+EXPENSIFY_EMAIL_USERNAME = "osaidtest5"
+EXPENSIFY_EMAIL = f"osaidtest5+{STATIC_PREFIX}@gmail.com"
+EXPENSIFY_PASSWORD = "ntvd acej mmaa qqmd"
+DATA_DIR = "browser_context"
+WORKSPACE_NAME = "workspace2"
+SLOW_MO = 1000
+NORMAL_RUN = False
+PROXY_SETTINGS = {"server": "http://localhost:8080"}
+RBR_HEX_COLOR = "#F25730"
 
 
-    page.locator('input[name="fname"]').fill(first_name)
-    page.locator('input[name="lname"]').fill(last_name)
-    page.get_by_role("button", name="Continue").last.click()
-
-    return page
-
-
-def create_new_workspace(
-    page: Page,  
-) -> Page:
-
-    plus_icon = page.locator('button[aria-label="Start chat (Floating action)"]')
-    plus_icon.click()
-
-    new_workspace_button = page.locator('div[aria-label="New workspace"]')
-    new_workspace_button.click()
+async def sign_in_recorded(page: Page, email: str):
+    await page.get_by_test_id("username").fill(email)
+    await page.get_by_role("button", name="Continue").click()
+    await page.get_by_test_id("validateCode").fill("123456")
 
 
-    back_arrow_button = page.locator('button[aria-label="Back"]')
-    back_arrow_button.click()
+async def start_browser(
+    headless=False,
+    persistent=False,
+    data_dir=None,
+    slow_mo=500,
+    launch_args=["--ignore-certificate-errors"],
+    proxy=None,
+):
+    """
+    Start a browser instance with the given parameters.
 
-    return page
+    :param headless: Boolean to specify if the browser should run in headless mode.
+    :param persistent: Boolean to specify if the browser context should be persistent.
+    :param data_dir: Directory to store browser data for persistent context.
+    :return: A tuple of (context, page, playwright).
+    """
+
+    # Initialize Playwright
+    playwright = await async_playwright().start()
+    device = playwright.devices["Desktop Safari"]
+    context, page = None, None
+    if persistent:
+        if data_dir is None:
+            data_dir = "browser_context"
+        if not os.path.exists(data_dir):
+            os.makedirs(data_dir)
+
+        context = await playwright.chromium.launch_persistent_context(
+            data_dir,
+            proxy=proxy,
+            headless=headless,
+            args=launch_args,
+            slow_mo=slow_mo,
+            timezone_id="Asia/Karachi",
+            **device,
+        )
+        page = context.pages[0]
+    else:
+        browser = await playwright.chromium.launch(
+            proxy = {"server": "http://localhost:8080"}, headless = False, args = ["--no-sandbox", "--disable-dev-shm-usage", "--ignore-certificate-errors", "--disable-web-security", "--disable-features=IsolateOrigins,site-per-process"], slow_mo = slow_mo, channel = "chromium")
+        context = await browser.new_context(
+            ignore_https_errors=True,
+            timezone_id="Asia/Karachi",
+            permissions=["clipboard-read", "clipboard-write"],
+            **device,
+        )
+        page = await context.new_page()
+
+    return context, page, playwright  # Return playwright to close later
 
 
-def test_fallback_avatar_background():
-    with sync_playwright() as p:
-        browser = p.chromium.launch(headless=True, args=[
-                    "--disable-web-security",
-                    "--disable-features=IsolateOrigins,site-per-process",]
-                    )
-        
-        context = browser.new_context()
-        page = context.new_page()
+@pytest.mark.asyncio(scope='session')
+async def test_52243():
+    try:
+        context, page, playwright = await start_browser(
+            persistent=False,
+            data_dir=DATA_DIR,
+            headless=False,
+            slow_mo=SLOW_MO,
+            launch_args=[
+                "--ignore-certificate-errors",
+                "--disable-web-security",
+                "--disable-features=IsolateOrigins,site-per-process",
+            ],
+            proxy=PROXY_SETTINGS,
+        )
 
-        bob_email = "blablabla+39909@example.com"
-        user_email = "blablabla@example.com"
+        # Step 1: Sign in
+        if NORMAL_RUN:
+            # Normal test run
+            await sign_in(page, EXPENSIFY_EMAIL, password=EXPENSIFY_PASSWORD)
+        else:
+            # Recorded Test Run.
+            await page.goto(NEW_DOT_URL)
+            await sign_in_recorded(page=page, email=EXPENSIFY_EMAIL)
+
+        await page.wait_for_load_state('domcontentloaded')
+        await page.get_by_role("button", name="Send").wait_for()
+
+        await page.evaluate(
+            """
+    async () => {
+        const existingBetas = await Onyx.get("betas") || [];
+        await Onyx.set("betas", [...existingBetas, "dupeDetection"]);
+    }
+"""
+        )
+
+        await page.reload()
+
+        workspace_chat = page.get_by_test_id("lhn-options-list").get_by_role(
+            "button", name="Navigates to a chat"
+        ).filter(
+            has=page.get_by_test_id("DisplayNamesWithTooltip").get_by_text(
+                WORKSPACE_NAME
+            )
+        )
+
+        await expect(workspace_chat.locator('svg:has(circle)')).to_have_attribute("fill", RBR_HEX_COLOR)
+        await workspace_chat.click()
+
+        view_details_card = page.get_by_label("View details")
+        await expect(view_details_card.locator('svg:has(circle)')).to_have_attribute("fill", RBR_HEX_COLOR)
+        await view_details_card.click()
+
+        expenses = await page.get_by_text("Cash • Duplicate$2.00test").all()
+        for expense in expenses:
+            await expect(expense.locator('svg:has(circle)')).to_have_attribute("fill", RBR_HEX_COLOR)
 
 
-        page = login_user(page, bob_email, first_name='Bob')
-
-        page = create_new_workspace(page)
-
-        plus_icon = page.locator('button[aria-label="Start chat (Floating action)"]')
-        plus_icon.click()
-
-        submit_expense_button = page.locator('div[aria-label="Start chat"]')
-        submit_expense_button.click()
-
-        page.locator('input[aria-label="Name, email, or phone number"]').last.click()
-
-        page.keyboard.type(user_email)
-
-        user_button = page.locator(f'button[aria-label="{user_email}"] div').first
-        
-
-        style_attribute = user_button.get_attribute("style")
-
-
-        assert "background-color: rgb(230, 225, 218)" in style_attribute 
-
+    finally:
+        # Step 6: Close the browser.
+        await close_browser(context, page, playwright)

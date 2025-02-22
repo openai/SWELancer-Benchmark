@@ -1,0 +1,269 @@
+diff --git a/assets/images/receipt-scan.svg b/assets/images/receipt-scan.svg
+index f7c164c948c..e69de29bb2d 100644
+--- a/assets/images/receipt-scan.svg
++++ b/assets/images/receipt-scan.svg
+@@ -1 +0,0 @@
+-<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" id="Layer_1" x="0" y="0" version="1.1" viewBox="0 0 20 20" style="enable-background:new 0 0 20 20" xml:space="preserve"><path d="M3,1.364V7h14V1.364c0-0.372-0.458-0.545-0.701-0.265l-0.748,0.861c-0.159,0.184-0.443,0.184-0.602,0l-1.148-1.322	c-0.159-0.184-0.443-0.184-0.602,0l-1.148,1.322c-0.159,0.184-0.443,0.184-0.602,0l-1.148-1.322c-0.159-0.184-0.443-0.184-0.602,0	L8.551,1.959c-0.159,0.184-0.443,0.184-0.602,0L6.801,0.638c-0.159-0.184-0.443-0.184-0.602,0L5.051,1.959	c-0.159,0.184-0.443,0.184-0.602,0L3.701,1.098C3.458,0.818,3,0.991,3,1.364z"/><path d="M3,18.636V13h14v5.636c0,0.372-0.458,0.545-0.701,0.265l-0.748-0.861c-0.159-0.184-0.443-0.184-0.602,0l-1.148,1.322	c-0.159,0.184-0.443,0.184-0.602,0l-1.148-1.322c-0.159-0.184-0.443-0.184-0.602,0l-1.148,1.322c-0.159,0.184-0.443,0.184-0.602,0	L8.551,18.04c-0.159-0.184-0.443-0.184-0.602,0l-1.148,1.322c-0.159,0.184-0.443,0.184-0.602,0L5.051,18.04	c-0.159-0.184-0.443-0.184-0.602,0l-0.748,0.861C3.458,19.182,3,19.008,3,18.636z"/><path d="M2,9c-0.552,0-1,0.448-1,1c0,0.552,0.448,1,1,1h16c0.552,0,1-0.448,1-1c0-0.552-0.448-1-1-1H2z"/></svg>
+\ No newline at end of file
+diff --git a/assets/images/coins.svg b/assets/images/tax.svg
+similarity index 100%
+rename from assets/images/coins.svg
+rename to assets/images/tax.svg
+diff --git a/src/components/Icon/Expensicons.ts b/src/components/Icon/Expensicons.ts
+index 569e467dfad..185ecac77ec 100644
+--- a/src/components/Icon/Expensicons.ts
++++ b/src/components/Icon/Expensicons.ts
+@@ -48,7 +48,6 @@ import Checkmark from '@assets/images/checkmark.svg';
+ import CircularArrowBackwards from '@assets/images/circular-arrow-backwards.svg';
+ import Close from '@assets/images/close.svg';
+ import ClosedSign from '@assets/images/closed-sign.svg';
+-import Coins from '@assets/images/coins.svg';
+ import Collapse from '@assets/images/collapse.svg';
+ import CommentBubbles from '@assets/images/comment-bubbles.svg';
+ import Concierge from '@assets/images/concierge.svg';
+@@ -151,7 +150,6 @@ import Profile from '@assets/images/profile.svg';
+ import QrCode from '@assets/images/qrcode.svg';
+ import QuestionMark from '@assets/images/question-mark-circle.svg';
+ import ReceiptPlus from '@assets/images/receipt-plus.svg';
+-import ReceiptScan from '@assets/images/receipt-scan.svg';
+ import ReceiptSearch from '@assets/images/receipt-search.svg';
+ import ReceiptSlash from '@assets/images/receipt-slash.svg';
+ import Receipt from '@assets/images/receipt.svg';
+@@ -178,6 +176,7 @@ import Sync from '@assets/images/sync.svg';
+ import Table from '@assets/images/table.svg';
+ import Tag from '@assets/images/tag.svg';
+ import Task from '@assets/images/task.svg';
++import Tax from '@assets/images/tax.svg';
+ import Thread from '@assets/images/thread.svg';
+ import ThreeDots from '@assets/images/three-dots.svg';
+ import ThumbsUp from '@assets/images/thumbs-up.svg';
+@@ -280,7 +279,7 @@ export {
+     Fullscreen,
+     Folder,
+     Tag,
+-    Coins,
++    Tax,
+     Thread,
+     Gallery,
+     Gear,
+@@ -338,7 +337,6 @@ export {
+     QuestionMark,
+     Receipt,
+     ReceiptPlus,
+-    ReceiptScan,
+     ReceiptSlash,
+     RemoveMembers,
+     ReceiptSearch,
+diff --git a/src/components/TabSelector/TabSelector.tsx b/src/components/TabSelector/TabSelector.tsx
+index 1bf753cd4aa..5be0e53c246 100644
+--- a/src/components/TabSelector/TabSelector.tsx
++++ b/src/components/TabSelector/TabSelector.tsx
+@@ -38,7 +38,7 @@ function getIconAndTitle(route: string, translate: LocaleContextProps['translate
+         case CONST.TAB_REQUEST.MANUAL:
+             return {icon: Expensicons.Pencil, title: translate('tabSelector.manual')};
+         case CONST.TAB_REQUEST.SCAN:
+-            return {icon: Expensicons.ReceiptScan, title: translate('tabSelector.scan')};
++            return {icon: Expensicons.Receipt, title: translate('tabSelector.scan')};
+         case CONST.TAB.NEW_CHAT:
+             return {icon: Expensicons.User, title: translate('tabSelector.chat')};
+         case CONST.TAB.NEW_ROOM:
+diff --git a/src/libs/getIconForAction/index.ts b/src/libs/getIconForAction/index.ts
+index ffe3dd8b76f..e69de29bb2d 100644
+--- a/src/libs/getIconForAction/index.ts
++++ b/src/libs/getIconForAction/index.ts
+@@ -1,20 +0,0 @@
+-import type {ValueOf} from 'type-fest';
+-import * as Expensicons from '@components/Icon/Expensicons';
+-import CONST from '@src/CONST';
+-
+-const getIconForAction = (actionType: ValueOf<typeof CONST.IOU.TYPE>) => {
+-    switch (actionType) {
+-        case CONST.IOU.TYPE.TRACK:
+-            return Expensicons.Coins;
+-        case CONST.IOU.TYPE.REQUEST:
+-            return Expensicons.Receipt;
+-        case CONST.IOU.TYPE.SEND:
+-            return Expensicons.Cash;
+-        case CONST.IOU.TYPE.SPLIT:
+-            return Expensicons.Transfer;
+-        default:
+-            return Expensicons.MoneyCircle;
+-    }
+-};
+-
+-export default getIconForAction;
+diff --git a/src/pages/home/report/ReportActionCompose/AttachmentPickerWithMenuItems.tsx b/src/pages/home/report/ReportActionCompose/AttachmentPickerWithMenuItems.tsx
+index 4fc7cc13706..bddc4f71a83 100644
+--- a/src/pages/home/report/ReportActionCompose/AttachmentPickerWithMenuItems.tsx
++++ b/src/pages/home/report/ReportActionCompose/AttachmentPickerWithMenuItems.tsx
+@@ -18,7 +18,6 @@ import useTheme from '@hooks/useTheme';
+ import useThemeStyles from '@hooks/useThemeStyles';
+ import useWindowDimensions from '@hooks/useWindowDimensions';
+ import * as Browser from '@libs/Browser';
+-import getIconForAction from '@libs/getIconForAction';
+ import Navigation from '@libs/Navigation/Navigation';
+ import * as ReportUtils from '@libs/ReportUtils';
+ import * as SubscriptionUtils from '@libs/SubscriptionUtils';
+@@ -136,17 +135,17 @@ function AttachmentPickerWithMenuItems({
+ 
+         const options: MoneyRequestOptions = {
+             [CONST.IOU.TYPE.SPLIT]: {
+-                icon: Expensicons.Transfer,
++                icon: Expensicons.Receipt,
+                 text: translate('iou.splitExpense'),
+                 onSelected: () => selectOption(() => IOU.startMoneyRequest(CONST.IOU.TYPE.SPLIT, report?.reportID ?? '-1'), true),
+             },
+             [CONST.IOU.TYPE.SUBMIT]: {
+-                icon: getIconForAction(CONST.IOU.TYPE.REQUEST),
++                icon: Expensicons.MoneyCircle,
+                 text: translate('iou.submitExpense'),
+                 onSelected: () => selectOption(() => IOU.startMoneyRequest(CONST.IOU.TYPE.SUBMIT, report?.reportID ?? '-1'), true),
+             },
+             [CONST.IOU.TYPE.PAY]: {
+-                icon: getIconForAction(CONST.IOU.TYPE.SEND),
++                icon: Expensicons.Send,
+                 text: translate('iou.paySomeone', {name: ReportUtils.getPayeeName(report)}),
+                 onSelected: () => {
+                     if (isDelegateAccessRestricted) {
+@@ -157,7 +156,7 @@ function AttachmentPickerWithMenuItems({
+                 },
+             },
+             [CONST.IOU.TYPE.TRACK]: {
+-                icon: getIconForAction(CONST.IOU.TYPE.TRACK),
++                icon: Expensicons.DocumentPlus,
+                 text: translate('iou.trackExpense'),
+                 onSelected: () => selectOption(() => IOU.startMoneyRequest(CONST.IOU.TYPE.TRACK, report?.reportID ?? '-1'), true),
+             },
+diff --git a/src/pages/home/sidebar/SidebarScreen/FloatingActionButtonAndPopover.tsx b/src/pages/home/sidebar/SidebarScreen/FloatingActionButtonAndPopover.tsx
+index 8791a2fc7ec..3e03c5ad693 100644
+--- a/src/pages/home/sidebar/SidebarScreen/FloatingActionButtonAndPopover.tsx
++++ b/src/pages/home/sidebar/SidebarScreen/FloatingActionButtonAndPopover.tsx
+@@ -17,7 +17,6 @@ import usePrevious from '@hooks/usePrevious';
+ import useResponsiveLayout from '@hooks/useResponsiveLayout';
+ import useThemeStyles from '@hooks/useThemeStyles';
+ import useWindowDimensions from '@hooks/useWindowDimensions';
+-import getIconForAction from '@libs/getIconForAction';
+ import interceptAnonymousUser from '@libs/interceptAnonymousUser';
+ import getTopmostCentralPaneRoute from '@libs/Navigation/getTopmostCentralPaneRoute';
+ import Navigation from '@libs/Navigation/Navigation';
+@@ -103,25 +102,19 @@ const policySelector = (policy: OnyxEntry<OnyxTypes.Policy>): PolicySelector =>
+ const getQuickActionIcon = (action: QuickActionName): React.FC<SvgProps> => {
+     switch (action) {
+         case CONST.QUICK_ACTIONS.REQUEST_MANUAL:
+-            return getIconForAction(CONST.IOU.TYPE.REQUEST);
++            return Expensicons.MoneyCircle;
+         case CONST.QUICK_ACTIONS.REQUEST_SCAN:
+-            return Expensicons.ReceiptScan;
++            return Expensicons.Receipt;
+         case CONST.QUICK_ACTIONS.REQUEST_DISTANCE:
+             return Expensicons.Car;
+         case CONST.QUICK_ACTIONS.SPLIT_MANUAL:
+         case CONST.QUICK_ACTIONS.SPLIT_SCAN:
+         case CONST.QUICK_ACTIONS.SPLIT_DISTANCE:
+-            return getIconForAction(CONST.IOU.TYPE.SPLIT);
++            return Expensicons.Transfer;
+         case CONST.QUICK_ACTIONS.SEND_MONEY:
+-            return getIconForAction(CONST.IOU.TYPE.SEND);
++            return Expensicons.Send;
+         case CONST.QUICK_ACTIONS.ASSIGN_TASK:
+             return Expensicons.Task;
+-        case CONST.QUICK_ACTIONS.TRACK_DISTANCE:
+-            return Expensicons.Car;
+-        case CONST.QUICK_ACTIONS.TRACK_MANUAL:
+-            return getIconForAction(CONST.IOU.TYPE.TRACK);
+-        case CONST.QUICK_ACTIONS.TRACK_SCAN:
+-            return Expensicons.ReceiptScan;
+         default:
+             return Expensicons.MoneyCircle;
+     }
+@@ -368,7 +361,7 @@ function FloatingActionButtonAndPopover(
+                     ...(selfDMReportID
+                         ? [
+                               {
+-                                  icon: getIconForAction(CONST.IOU.TYPE.TRACK),
++                                  icon: Expensicons.DocumentPlus,
+                                   text: translate('iou.trackExpense'),
+                                   onSelected: () => {
+                                       interceptAnonymousUser(() =>
+@@ -390,7 +383,7 @@ function FloatingActionButtonAndPopover(
+                           ]
+                         : []),
+                     {
+-                        icon: getIconForAction(CONST.IOU.TYPE.REQUEST),
++                        icon: Expensicons.MoneyCircle,
+                         text: translate('iou.submitExpense'),
+                         onSelected: () =>
+                             interceptAnonymousUser(() =>
+@@ -402,32 +395,37 @@ function FloatingActionButtonAndPopover(
+                                 ),
+                             ),
+                     },
+-                    ...(canSendInvoice
+-                        ? [
+-                              {
+-                                  icon: Expensicons.InvoiceGeneric,
+-                                  text: translate('workspace.invoices.sendInvoice'),
+-                                  onSelected: () =>
+-                                      interceptAnonymousUser(() =>
+-                                          IOU.startMoneyRequest(
+-                                              CONST.IOU.TYPE.INVOICE,
+-                                              // When starting to create an invoice from the global FAB, there is not an existing report yet. A random optimistic reportID is generated and used
+-                                              // for all of the routes in the creation flow.
+-                                              ReportUtils.generateReportID(),
+-                                          ),
+-                                      ),
+-                              },
+-                          ]
+-                        : []),
+-                    ...(canUseSpotnanaTravel
+-                        ? [
+-                              {
+-                                  icon: Expensicons.Suitcase,
+-                                  text: translate('travel.bookTravel'),
+-                                  onSelected: () => interceptAnonymousUser(() => Navigation.navigate(ROUTES.TRAVEL_MY_TRIPS)),
+-                              },
+-                          ]
+-                        : []),
++                    {
++                        icon: Expensicons.Transfer,
++                        text: translate('iou.splitExpense'),
++                        onSelected: () =>
++                            interceptAnonymousUser(() =>
++                                IOU.startMoneyRequest(
++                                    CONST.IOU.TYPE.SPLIT,
++                                    ReportUtils.generateReportID(),
++                                ),
++                            ),
++                    },
++                    {
++                        icon: Expensicons.Send,
++                        text: translate('iou.paySomeone', {}),
++                        onSelected: () =>
++                            interceptAnonymousUser(() =>
++                                IOU.startMoneyRequest(
++                                    CONST.IOU.TYPE.PAY,
++                                    ReportUtils.generateReportID(),
++                                ),
++                            ),
++                    },
++                    {
++                        icon: Expensicons.Task,
++                        text: translate('newTaskPage.assignTask'),
++                        onSelected: () => interceptAnonymousUser(() => Task.clearOutTaskInfoAndNavigate()),
++                    },
+                     ...(!isLoading && !Policy.hasActiveChatEnabledPolicies(allPolicies)
+                         ? [
+                               {
+diff --git a/src/pages/workspace/WorkspaceInitialPage.tsx b/src/pages/workspace/WorkspaceInitialPage.tsx
+index ffaeadfbbc0..0518c3576fa 100644
+--- a/src/pages/workspace/WorkspaceInitialPage.tsx
++++ b/src/pages/workspace/WorkspaceInitialPage.tsx
+@@ -241,7 +241,7 @@ function WorkspaceInitialPage({policyDraft, policy: policyProp, route}: Workspac
+     if (featureStates?.[CONST.POLICY.MORE_FEATURES.ARE_TAXES_ENABLED]) {
+         protectedCollectPolicyMenuItems.push({
+             translationKey: 'workspace.common.taxes',
+-            icon: Expensicons.Coins,
++            icon: Expensicons.Tax,
+             action: singleExecution(waitForNavigate(() => Navigation.navigate(ROUTES.WORKSPACE_TAXES.getRoute(policyID)))),
+             routeName: SCREENS.WORKSPACE.TAXES,
+             brickRoadIndicator: PolicyUtils.hasTaxRateError(policy) ? CONST.BRICK_ROAD_INDICATOR_STATUS.ERROR : undefined,

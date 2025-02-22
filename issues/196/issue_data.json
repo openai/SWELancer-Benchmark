@@ -1,6 +1,6 @@
 {
     "price": 250.0,
-    "title": "[Awaiting checklist] [$250] Composer - Cursor Position Resets to Start of Message on Page Refresh",
-    "issue_repo_steps": "Action performed: 1. Open a chat\r\n2. Write text in composer box\r\n3. Refresh the page\n\nExpected result: Cursor Position Should Not Resets to Start of Message on Page Refresh\n\nActual result: None",
-    "_issue_id": "44259_997"
+    "title": "[$250] [HOLD for payment 2024-10-29] [Search v2.4] Remove search router button from the RHP report screen",
+    "issue_repo_steps": "Coming from [this thread](https://expensify.slack.com/archives/C049HHMV9SM/p1729111663012689), we should remove the magnifying glass button from the report header when the report is opened in the RHP\n\n<details><summary>Issue Owner</summary>Current Issue Owner: @</details>\n<details><summary>Upwork Automation - Do Not Edit</summary>\n    <ul>\n        <li>Upwork Job URL: https://www.upwork.com/jobs/~021851329801599655574</li>\n        <li>Upwork Job ID: 1851329801599655574</li>\n        <li>Last Price Increase: 2024-10-29</li>\n<li>Automatic offers: </li>\n<ul>\n<li>rayane-djouah | Contributor | 104649685</li>\n</ul></li>\n    </ul>\n</details>",
+    "_issue_id": "50963"
 }

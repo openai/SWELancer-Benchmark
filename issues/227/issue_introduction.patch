@@ -1,15 +1,13 @@
-diff --git a/src/pages/WorkspaceSwitcherPage/WorkspacesSectionHeader.tsx b/src/pages/WorkspaceSwitcherPage/WorkspacesSectionHeader.tsx
-index 9c714e54704..f30147cac2d 100644
---- a/src/pages/WorkspaceSwitcherPage/WorkspacesSectionHeader.tsx
-+++ b/src/pages/WorkspaceSwitcherPage/WorkspacesSectionHeader.tsx
-@@ -33,8 +33,8 @@ function WorkspacesSectionHeader() {
-                     accessibilityLabel={translate('workspace.new.newWorkspace')}
-                     role={CONST.ROLE.BUTTON}
-                     onPress={() => {
--                        const activeRoute = Navigation.getActiveRouteWithoutParams();
--                        interceptAnonymousUser(() => App.createWorkspaceWithPolicyDraftAndNavigateToIt('', '', false, false, activeRoute));
-+                        Navigation.goBack();
-+                        interceptAnonymousUser(() => App.createWorkspaceWithPolicyDraftAndNavigateToIt());
-                     }}
-                 >
-                     {({hovered}) => (
+diff --git a/src/libs/ReportUtils.ts b/src/libs/ReportUtils.ts
+index 223e94e0bdd..b6bf031762a 100644
+--- a/src/libs/ReportUtils.ts
++++ b/src/libs/ReportUtils.ts
+@@ -3835,7 +3835,7 @@ function getReportName(
+     if (reportID) {
+         const reportNameFromCache = reportNameCache.get(cacheKey);
+ 
+-        if (reportNameFromCache?.reportName && reportNameFromCache.reportName === report?.reportName && reportNameFromCache.reportName !== CONST.REPORT.DEFAULT_REPORT_NAME) {
++        if (reportNameFromCache?.reportName && reportNameFromCache.reportName === report?.reportName) {
+             return reportNameFromCache.reportName;
+         }
+     }

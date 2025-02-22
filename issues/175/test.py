@@ -1,8 +1,6 @@
 from playwright.sync_api import sync_playwright, expect
 
-
-user_email = "totherandomuser+52599@gmail.com"
-
+user_email = "totherandomuser+51197@gmail.com"
 
 def login(p, context):
     page = context.new_page()
@@ -30,26 +28,15 @@ def test():
 
         # Step 1: Main Browser Login
         browser = p.chromium.launch(headless=False, args=[
-                "--disable-web-security",
-                "--disable-features=IsolateOrigins,site-per-process"],
-                slow_mo=500)
+                        "--disable-web-security",
+                        "--disable-features=IsolateOrigins,site-per-process"],
+                        slow_mo=500)
         
         context = browser.new_context()
         page = login(p, context)
-
-        page.get_by_label("Start chat (Floating action)").click()
-        page.get_by_label("Start chat", exact=True).click()
-        page.get_by_test_id("selection-list-text-input").click()
-        page.get_by_test_id("selection-list-text-input").fill("totherandomuser")
-        page.get_by_test_id("selection-list").get_by_label("totherandomuser+").click()
         page.wait_for_timeout(2000)
-        page.get_by_test_id("report-screen-7998596991069043").get_by_label("Search").click()
-        page.wait_for_timeout(2000)
-        page.get_by_label("Search in totherandomuser+").click()
-        page.wait_for_timeout(2000)
+        free_trial_locator = page.locator("button:has-text('Free trial: 30 days left!')").last.or_(page.get_by_label("Free trial: 30 days left!").nth(2))
+        free_trial_locator.click()
+        expect(page.get_by_test_id("SubscriptionSettingsPage").get_by_text("Subscription", exact=True)).to_be_visible()
 
-        locator = page.get_by_test_id("search-router-text-input")
-
-        scroll_left = locator.evaluate("el => el.scrollLeft")
         
-        assert scroll_left > 0, "The cursor should be at the end"

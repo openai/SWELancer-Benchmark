@@ -1,91 +1,74 @@
-import sys, os
-
-base_path = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
-sys.path.insert(0, base_path)
-
-from playwright.sync_api import sync_playwright, expect
-from playwright.sync_api._context_manager import PlaywrightContextManager
-from playwright._impl._browser import Browser
-from playwright._impl._page import Page
-
+from playwright.sync_api import sync_playwright
 from utils.trace_cleaner import trace_cleaner
 
-def get_user_email():
-    return f"nitish.expensify+{64}@gmail.com"
+user_email = "testuserexpensify1@gmail.com"
+password = "aedyeaocujbrrcal"
+user_id = "testuserexpensify1+155@gmail.com"
 
+def login(p, if_phone=False, first_name="John", last_name="Doe"):
+    # step 1: Login
+    permissions = ['clipboard-read']
+    browser = p.chromium.launch(headless=False, slow_mo=1000, args=["--disable-web-security", "--disable-features=IsolateOrigins,site-per-process"])
 
-def get_magic_code():
-    return "123456"
+    if if_phone:
+        phone = p.devices['Pixel 7']
+        context = browser.new_context(**phone, permissions=permissions, reduced_motion='no-preference')
+    else:
+        context = browser.new_context()
 
+    page = context.new_page()
 
-def login_user(p: PlaywrightContextManager, first_name="Milan", last_name="T") -> tuple[Browser, Page, str]:
-    browser = p.chromium.launch(headless=True, args=[
-        "--ignore-certificate-errors", "--disable-web-security", "--disable-features=IsolateOrigins,site-per-process"],
-        slow_mo=2000
-    )
+    page.goto('https://dev.new.expensify.com:8082/') 
 
-    page = browser.new_page()
-    user_email = get_user_email()
-    first_name = 'John'
-    last_name = 'Doe'
+    phone_or_email_input = page.locator('input[type="email"]')
+    phone_or_email_input.fill(user_id)
 
+    continue_button = page.locator('button[tabindex="0"]')
+    continue_button.click()
+    magic_code = "123456"
 
-    page.goto('https://dev.new.expensify.com:8082/')
-
-
-    page.locator('input[type="email"]').fill(user_email)
-    page.locator('button[tabindex="0"]').click()
-
-    try:
-        expect(page.get_by_role("button", name="Sign in")).to_be_visible()
-        page.get_by_test_id("validateCode").fill(get_magic_code())
-    except Exception:
-        page.get_by_role("button", name="Join").click()
-
-    try:
-        expect(page.locator('div[aria-label="Track and budget expenses"]').nth(0)).to_be_visible()
-        
-
-        page.locator('div[aria-label="Track and budget expenses"]').nth(0).click()
-
-
-        page.locator('input[name="fname"]').nth(0).fill(first_name)
-        page.locator('input[name="lname"]').nth(0).fill(last_name)
-        page.get_by_role("button", name="Continue").nth(0).click()
-    except Exception:
-        pass
-
-    try:
-        get_started_here = page.locator('div', has_text="Get started here!").nth(-1)
-        expect(get_started_here).to_be_visible()
-        page.get_by_label("Close").nth(-1).click()
-    except Exception:
-        pass
+    validate_code_input = page.locator('input[name="validateCode"]')
+    validate_code_input.fill(magic_code)
 
     return browser, page
 
 
-def test_check_background():
+def close_modal(page):
+    """Attempts to close a modal if it exists."""
+    try:
+        page.locator('button[aria-label="Close"]').click(timeout=3000)
+    except Exception:
+        pass  # Modal might not be present, safely ignore the exception
+
+
+def test_53918():
     with sync_playwright() as p:
-        browser, page = login_user(p)
+        browser, page = login(p, False)
+        # Capture the context from the page for tracing
         context = page.context
 
+        # Start tracing
         context.tracing.start(screenshots=True, snapshots=True, sources=True)
-        error = None
         try:
-
-            page.goto('https://dev.new.expensify.com:8082/settings/profile/status')
-            div_element = page.locator("#BaseOverlay")
-            tag_style = div_element.get_attribute("style")
-            expected_tag_style = 'rgb(230, 225, 218)'
-            assert expected_tag_style in tag_style, f"Expected overlay to have '{expected_tag_style}' background-color , but got '{tag_style}'"
-        except Exception as e:
-            error = e
+            close_modal(page)
+            close_modal(page)
+            page.get_by_test_id("CustomBottomTabNavigator").locator('button[aria-label="My settings"]').click()
+            close_modal(page)
+            page.get_by_test_id("CustomBottomTabNavigator").locator('div[aria-label="Subscription"]').click()
+            page.get_by_test_id("SubscriptionSettingsPage").locator('div[dir="auto"]', has_text="Add payment card").click()
+            page.get_by_test_id("AddPaymentCard").locator('div[aria-label="Zip / Postcode"] input[role="presentation"]').fill("2@,:;")
+            page.keyboard.press("Enter")
+            zip_container = page.get_by_test_id("AddPaymentCard").locator('div[aria-label="Zip / Postcode"]')
+            parent_element = zip_container.locator("..")
+            error_icon = parent_element.locator('svg[fill="#F25730"]')
+            # Assert that at least one error icon exists within the parent
+            assert error_icon.count() > 0, "Error message is not displayed when entering characters that cannot be in a zip code"
         finally:
-
-            context.tracing.stop(path="/app/expensify/user_tool/output_browser1.zip")
-            trace_cleaner("/app/expensify/user_tool/output_browser1.zip")
+            trace_path = "/app/expensify/user_tool/output_browser1.zip"
+            context.tracing.stop(path=trace_path)
+            trace_cleaner(trace_path)
             browser.close()
-        
-        if error:
-            raise error
+
+
+if __name__ == "__main__":
+    test_53918()

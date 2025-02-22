@@ -1,61 +1,134 @@
-from playwright.sync_api import sync_playwright, expect
+"""
+Test for the issue: https://github.com/Expensify/App/issues/52904
+"""
 
-user_email = "totherandomuser+52642@gmail.com"
+from playwright.sync_api import TimeoutError, expect, sync_playwright
 
-def login(p, context):
+# Expensify app URL
+EXPENSIFY_URL = "https://dev.new.expensify.com:8082/"
+
+# Email login credentials
+EMAIL_USERNAME = "expensifytesting1@gmail.com"
+EMAIL_PASSWORD = "redx tbmr hzpc rbzr"
+
+# Email username postfix
+EMAIL_USERNAME_POSTFIX = "52904.3"
+
+
+def generate_user_email(user_id=None):
+    """
+    Generate an email address for user login.
+    """
+    temp = EMAIL_USERNAME.rsplit("@", 1)
+    username = temp[0].strip()
+    domain = temp[1].strip()
+    return f"{username}+{EMAIL_USERNAME_POSTFIX}{user_id or ''}@{domain}"
+
+
+def launch_browser(pw, headless=False, device=None, permissions=None, geolocation=None):
+    """
+    Launch the browser.
+    """
+    browser = pw.chromium.launch(
+        channel="chrome",
+        headless=headless,
+        args=[
+            "--ignore-certificate-errors",
+            "--disable-web-security",
+            "--disable-features=IsolateOrigins,site-per-process",
+        ],
+        slow_mo=1000,
+    )
+    context_args = {"permissions": permissions or []}
+    if device:
+        context_args.update(pw.devices[device])
+    if geolocation:
+        context_args["geolocation"] = geolocation
+        context_args["permissions"].append("geolocation")
+    context = browser.new_context(**context_args)
     page = context.new_page()
-    page.goto('https://dev.new.expensify.com:8082')
+    return browser, context, page
 
-    # Step 1: Enter username and continue
-    page.get_by_test_id("username").click()
+
+def login_user(page, user_email, first_name="John", last_name="Doe"):
+    """
+    Log into the Expensify app.
+    """
+    # Open the Expensify app
+    page.goto(EXPENSIFY_URL)
+    # Login user
     page.get_by_test_id("username").fill(user_email)
     page.get_by_role("button", name="Continue").click()
-
-    # Step 2: Mark Inbox read and then get magic code from email
-    magic_code = "123456"
-
-    # Step 3: Fill in the magic code
-    validate_code_input = page.locator('input[name="validateCode"]')
-    expect(validate_code_input).to_be_visible()
-    validate_code_input.fill(magic_code)
-    page.wait_for_timeout(1000)
-
-    return page
-
-
-def test():
-    with sync_playwright() as p:
-
-        # Step 1: Main Browser Login
-        browser = p.chromium.launch(headless=False, args=[
-                "--disable-web-security",
-                "--disable-features=IsolateOrigins,site-per-process"],
-                slow_mo=500)
-        
-        context = browser.new_context()
-        page = login(p, context)
-
-        page.get_by_label("My settings").click()
-        page.get_by_label("Subscription").click()
-        page.get_by_role("button", name="Add payment card").click()
-        page.get_by_role("textbox", name="Card number").click()
-        page.get_by_role("textbox", name="Card number").fill("4111 1111 1111 1111")
-        page.get_by_role("textbox", name="Name on card").click()
-        page.get_by_role("textbox", name="Name on card").fill("Test Test")
-        page.get_by_role("textbox", name="Expiration date").click()
-        page.get_by_placeholder("MMYY").fill("1228")
-        page.get_by_role("textbox", name="CVV").click()
-        page.get_by_role("textbox", name="CVV").fill("564")
+    # Check if OTP is required for the login
+    try:
+        expect(page.get_by_test_id("SignInPage").get_by_test_id("validateCode")).to_be_visible(timeout=7000)
+    except (AssertionError, TimeoutError):
+        # If not required, expect the join button to appear and click the button
+        page.get_by_test_id("SignInPage").get_by_role("button", name="Join").click()
+    else:
+        # Get the OTP and complete verification
+        otp_code = "123456"
+        page.get_by_test_id("SignInPage").get_by_test_id("validateCode").fill(otp_code)
         try:
-            page.get_by_role("textbox", name="Zip code").click()
-            page.get_by_role("textbox", name="Zip code").fill("EH1 1BB")
-        except:
-            page.get_by_role("textbox", name="Zip / Postcode").click()
-            page.get_by_role("textbox", name="Zip / Postcode").fill("EH1 1BB")
+            page.get_by_test_id("SignInPage").get_by_role("button", name="Sign in").click(timeout=2000)
+        except (AssertionError, TimeoutError):
+            pass
+    # Check if onboarding is required
+    try:
+        expect(page.get_by_text("What do you want to do today?")).to_be_visible(timeout=5000)
+    except (AssertionError, TimeoutError):
+        pass
+    else:
+        # Complete the onboarding
+        page.get_by_label("Track and budget expenses").click()
+        page.get_by_role("button", name="Continue").first.click()
+        page.get_by_role("textbox", name="First name").fill(first_name)
+        page.get_by_role("textbox", name="Last name").fill(last_name)
+        page.get_by_role("button", name="Continue").last.click()
+    # Dismiss get started dialog if appears
+    try:
+        page.get_by_role("button", name="Get started").click(timeout=3000)
+    except (AssertionError, TimeoutError):
+        pass
+    # Expect the main screen to appear
+    expect(page.get_by_test_id("BaseSidebarScreen")).to_be_visible(timeout=7000)
 
-        page.get_by_text("Currency").click()
-        page.get_by_test_id("selection-list").get_by_label("GBP").click()
-        page.get_by_label("I accept the Expensify Terms").click()
-        page.get_by_test_id("AddPaymentCard").get_by_role("button", name="Add payment card").click()
 
-        expect(page.get_by_text("Please enter a valid zip code.")).not_to_be_visible()
+def test_navigating_back_from_the_access_level_page():
+    """
+    Verify that the app navigates to the confirmation page on navigating back from access level page.
+    """
+    with sync_playwright() as pw:
+        # Login user
+        user_email = generate_user_email()
+        browser, context, page = launch_browser(pw)
+        login_user(page, user_email)
+
+        # Go to Settings -> Security
+        page.get_by_test_id("CustomBottomTabNavigator").get_by_role("button", name="My Settings").click()
+        page.get_by_test_id("InitialSettingsPage").get_by_role("menuitem", name="Security").click()
+
+        # Add copilot
+        other_user_email = "otheruser@gmail.com"
+        page.get_by_test_id("SettingSecurityPage").get_by_role("menuitem", name="Add copilot").click()
+        page.get_by_test_id("AddDelegatePage").get_by_role("textbox", name="Name, email, or phone number").fill(
+            other_user_email
+        )
+        page.get_by_test_id("AddDelegatePage").get_by_text(other_user_email).last.click()
+        page.get_by_test_id("SelectDelegateRolePage").get_by_role("button", name="Full").click()
+        page.get_by_test_id("ConfirmDelegatePage").get_by_role("menuitem", name="Full").click()
+
+        # Verify navigation
+        page.get_by_test_id("SelectDelegateRolePage").get_by_role("button", name="Back").click()
+        expect(
+            page.get_by_test_id("ConfirmDelegatePage"),
+            "Confirmation page should appear on navigating back from access level page",
+        ).to_be_visible(timeout=2000)
+
+        # Cleanup
+        context.close()
+        browser.close()
+
+
+if __name__ == "__main__":
+    test_navigating_back_from_the_access_level_page()

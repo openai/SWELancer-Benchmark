@@ -1,108 +1,69 @@
-import sys, os
-
-base_path = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
-sys.path.insert(0, base_path)
-
+import time
 from playwright.sync_api import sync_playwright, expect
 from playwright.sync_api._context_manager import PlaywrightContextManager
 from playwright._impl._browser import Browser
 from playwright._impl._page import Page
 
+# Utility to generate a random email
+def generate_random_email():
+    return f"testerbro7077+45756976678@gmail.com"
 
-def login_user(p: PlaywrightContextManager, first_name="Milan", last_name="T") -> tuple[Browser, Page, str]:
+# Login as member and fill in personal details
+def login_member_a(p, membera_first_name: str, membera_last_name: str) -> tuple:
+    browser = p.chromium.launch(
+        proxy = {"server": "http://localhost:8080"}, headless = False, args = ["--ignore-certificate-errors", "--disable-web-security", "--disable-features=IsolateOrigins,site-per-process"], slow_mo = 500, channel = "chromium")
 
-    browser = p.chromium.launch(headless=True, args=[
-            "--disable-web-security",
-            "--disable-features=IsolateOrigins,site-per-process"
-        ])
-    page = browser.new_page()
-    user_email = "freelanceapptest+1733261135@gmail.com"
-
-
-    page.goto('https://dev.new.expensify.com:8082/') 
+    context = browser.new_context()
+    page = context.new_page()
 
 
-    page.locator('input[type="email"]').fill(user_email)
-    page.locator('button[tabindex="0"]').click()
+    user_email2 = generate_random_email()
+
+    page.goto('https://dev.new.expensify.com:8082/')
+    page.locator('input[type="email"]').fill(user_email2)
+    page.get_by_role("button", name="Continue").click()
     page.wait_for_timeout(1000)
 
-
-    try: 
-        page.locator('button[tabindex="0"]').click() 
+    try:
+        page.get_by_role("button", name="Join").click()
         page.wait_for_timeout(1000)
     except Exception:
         pass
     expect(page.locator("text=What do you want to do today?")).to_be_visible()
-        
-
-    page.locator("text='Track and budget expenses'").click()
-    page.get_by_role("button", name="Continue").click()
     page.wait_for_timeout(1000)
 
+    page.get_by_text("Track and budget expenses").click()
 
-    page.locator('input[name="fname"]').fill(first_name)
-    page.locator('input[name="lname"]').fill(last_name)
+    page.locator('input[name="fname"]').fill(membera_first_name)
+    page.locator('input[name="lname"]').fill(membera_last_name)
     page.get_by_role("button", name="Continue").last.click()
     page.wait_for_timeout(1000)
 
-    return browser, page, user_email
+    return browser, page, user_email2
+
+def added_features_check(page):
+    page.get_by_label("My settings").click()
+    page.get_by_test_id("InitialSettingsPage").get_by_label("Workspaces").get_by_text("Workspaces").click()
+    page.get_by_label("New workspace").click()
+    assert page.get_by_test_id("WorkspaceInitialPage").get_by_text("Workspace profile").is_visible(), "profile is not chnged to Workspace profile in the LHN"
+    assert page.get_by_test_id("WorkspacePageWithSections").get_by_text("Workspace profile").is_visible(), "Profile is not changed to Workspace profile in title"
+    assert page.locator("#simple-illustration__building_svg__Layer_1 path").first.is_visible(), "Workspace profile is not changed in the illustration"
+    ws_name = page.get_by_test_id("WorkspacePageWithSections").get_by_text("Workspace name")
+    assert ws_name.is_visible(), "Name is not changed to Workspace name"
+    ws_name.click()
+    assert page.get_by_text("Workspace name").nth(2).is_visible(), "Name is not changed to Workspace name in name edit page"
 
 
-def open_submit_expense_and_click_on_next_button(
-    browser: Browser, 
-    page: Page, 
-    user_email: str, 
-) -> tuple[Browser, Page, str]:
-    plus_icon = page.locator('button[aria-label="Start chat (Floating action)"]')
-    expect(plus_icon).to_be_visible()
-    plus_icon.click()
-    page.wait_for_timeout(1000)
-
-    new_workspace_button = page.locator('div[aria-label="Submit expense"]')
-    expect(new_workspace_button).to_be_visible()
-    new_workspace_button.click()
-    page.wait_for_timeout(1000)
-
-    manual_button = page.locator('button[aria-label="Manual"]')
-    expect(manual_button).to_be_visible()
-    manual_button.click()
-    page.wait_for_timeout(1000)
-
-    page.get_by_placeholder("0").fill("0")
-    page.locator("#numPadContainerView").get_by_role("button", name="Next").click()
-    page.wait_for_timeout(2000)
-
-    return browser, page, user_email
-
-
-def test_error_message_top_margin():
+def test_run(membera_first_name="Sai", membera_last_name="Yagna"):
     with sync_playwright() as p:
 
-        browser, page, user_email = login_user(p)
+        browser_membera, page_membera, user_email2 = login_member_a(p, membera_first_name, membera_last_name)
+        added_features_check(page_membera)
 
-
-        browser, page, user_email = open_submit_expense_and_click_on_next_button(browser, page, user_email)
-
-
-        error_message = page.get_by_text("Please enter a valid amount before continuing.", exact=True)
-        next_button = page.locator("#numPadContainerView").get_by_role("button", name="Next")
-        page.wait_for_timeout(1000)
-
-
-        error_message_box = error_message.bounding_box()
-        next_button_box = next_button.bounding_box()
-
-
-        assert error_message_box is not None, "Error message bounding box not found."
-        assert next_button_box is not None, "Next button bounding box not found."
-
-
-        distance_between_elements = next_button_box['y'] - (error_message_box['y'] + error_message_box['height'])
-
-
-        print(f"Distance between elements: {distance_between_elements}px")
-        assert distance_between_elements == 14, f"Expected 14px distance, but found {distance_between_elements}px"
-        page.wait_for_timeout(1000)
         
 
-        browser.close()
+        browser_membera.close()
+
+
+if __name__ == "__main__":
+    test_run()

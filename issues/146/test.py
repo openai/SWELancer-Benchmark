@@ -1,103 +1,130 @@
-import sys, os
-
-base_path = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
-sys.path.insert(0, base_path)
-
-PROXY = False
-PROXY_OTP = True
-
-"""
-The test verifies if the distance rates and workflows gray out when offline.
-"""
+import pytest_asyncio
 import pytest
-from playwright.async_api import Page, expect, async_playwright
+from moviepy import VideoClip
+import numpy as np
+from PIL import Image, ImageDraw
+import io
+import tempfile
+import os
+import re
 
-from utils.login import sign_in
-from utils.email_handler import EmailHandler
-from utils.browser import start_browser, close_browser
-from utils.email_handler import get_specific_derived_email
+from playwright.async_api import async_playwright, expect
+from utils.login import EmailHandler, complete_onboarding
 
+NEWDOT_URL = "http://dev.new.expensify.com:8082/"
+EXPENSIFY_EMAIL = "testingq186+52114@gmail.com"
+EXPENSIFY_PASSWORD = "kkfr hqiv yuxq rbso"
 
-BASE_EMAIL = "testerfreelancer555@gmail.com"
-PASSWORD = "snct ajbr yadx kwlq"
-ISSUE_NUMBER = "41529"
+TESTING_FLOW = True
 
-async def sign_in_new_dot(page: Page, email: str, password: str):
+@pytest_asyncio.fixture
+async def page():
     """
-    Sign in into the new Expensify dot.
+    Launch the Expensify app.
     """
-    
+    pw = await async_playwright().start()
+    browser = await pw.chromium.launch(
+        channel="chrome",
+        headless=False,
+        args=[
+            "--ignore-certificate-errors",
+            "--disable-web-security",
+            "--disable-features=IsolateOrigins,site-per-process"
+        ],
+        proxy={"server": "http://localhost:8080"},
+        slow_mo=500
+    )
 
+    context = await browser.new_context(ignore_https_errors=True,viewport={'width': 400, 'height': 600})
+    page = await context.new_page()
+
+    yield page
+    await browser.close()
+    await pw.stop()
+
+async def create_video():
+    """
+    Create a WebM video using moviepy, save it temporarily, and return it as a BytesIO buffer.
+    """
+    def make_frame(t):
+        """Generate a frame for the video at time `t`."""
+        frame_index = int(t * 30)  # Assuming 30 FPS
+        img = Image.new("RGB", (640, 480), "white")
+        draw = ImageDraw.Draw(img)
+        draw.rectangle((50, 50, 590, 430), outline="red", width=5)
+        draw.text((240, 220), f"Frame {frame_index + 1}", fill="blue")
+        return np.array(img)
+
+    # Create the video clip using moviepy
+    video_clip = VideoClip(make_frame, duration=5)  # 5-second video
+
+    # Create a temporary file to store the WebM video
+    with tempfile.NamedTemporaryFile(suffix=".webm", delete=False) as temp_video_file:
+        temp_file_path = temp_video_file.name
+        video_clip.write_videofile(temp_file_path, codec="libvpx", fps=30, preset="ultrafast", audio=False)
+
+    # Read the temporary file into a BytesIO buffer
+    video_buffer = io.BytesIO()
+    with open(temp_file_path, "rb") as f:
+        video_buffer.write(f.read())
+
+    # Ensure cleanup by removing the temporary file
+    os.remove(temp_file_path)
+    video_buffer.seek(0)
+    return video_buffer
+
+async def new_dot_login(page, email, password):
+    await page.goto(NEWDOT_URL)
     with EmailHandler(email, password) as email_handler:
-        if not PROXY_OTP: 
+        if not TESTING_FLOW :
             email_handler.clean_inbox()  # Clean inbox
 
-        await page.goto("https://dev.new.expensify.com:8082")
-
-        await page.get_by_test_id("username").fill(email)
+        # Enter email
+        await page.get_by_role("textbox", name="Phone or email").fill(email)
         await page.get_by_role("button", name="Continue").click()
-  
-
-        otp = "123456" if PROXY_OTP else email_handler.read_otp_code()
-        await page.wait_for_timeout(1000) if PROXY_OTP else False
-        await page.get_by_test_id("validateCode").fill(otp)
-
-
-        await page.get_by_text("Please enter the magic code").wait_for(state="hidden")
+        
+        try:
+            await expect(page.locator('input[name="validateCode"]').first).to_be_visible()
+            otp = email_handler.read_otp_code() if not TESTING_FLOW else "123456"
+            await page.locator('input[name="validateCode"]').first.fill(otp)
+            # Wait sign in to complete
+            await page.get_by_text("Please enter the magic code").wait_for(state="hidden")
+        except Exception:
+            await page.get_by_role("button", name="Join").click()
+            await complete_onboarding(page, "Testing", "52114")
 
 @pytest.mark.asyncio
-async def test_distance_rate_and_workflow_graying_out():
-    async with async_playwright() as playwright:
-        proxy = {"server":  "http://127.0.0.1:8080/"} if PROXY else None
-        launch_args=[
-        "--ignore-certificate-errors",
-        "--disable-web-security",
-        "--disable-features=IsolateOrigins,site-per-process"
-        ]
-        playwright = await async_playwright().start()
-        browser = await playwright.chromium.launch(slow_mo=2000, headless=True, args=launch_args, proxy=proxy)
-        context = await browser.new_context()
-        page = await context.new_page()
-        try:
+async def test_scrollable_playback_speeds(page):
+    await new_dot_login(page, EXPENSIFY_EMAIL, EXPENSIFY_PASSWORD)
 
-            user_email = get_specific_derived_email(email=BASE_EMAIL, suffix=ISSUE_NUMBER)
-            await sign_in_new_dot(page, email=user_email, password=PASSWORD)
+    try:
+        # Need to press back for sign up
+        await page.get_by_label("Back").click(timeout=5000)
+    except Exception:
+        pass
+    await page.get_by_label("Navigates to a chat").get_by_text("Testing 52114 (you)").click(timeout=10_000)
+    await page.get_by_label("Create").last.click()
+    async with page.expect_file_chooser() as fc:
+        await page.get_by_label("Add attachment").click()
+    file_chooser = await fc.value
 
-            settings = page.locator('button[aria-label="My settings"]')
-            await expect(settings).to_be_visible()
-            await settings.click()
+    video_buffer = await create_video()
+    await file_chooser.set_files({
+      "name": "test.webm",
+      "mimeType": "video/webm",
+      "buffer": video_buffer.getvalue()
+    })
+    await page.get_by_role("dialog").get_by_role("button", name="Send").click()
+    
+    # Click the video
+    await page.wait_for_timeout(3000)
+    await page.get_by_label(re.compile(r".*\.webm$")).first.click()
+    await page.get_by_role("dialog").get_by_role("button").last.hover()
+    await page.get_by_label("More").click()
+    await page.get_by_label("Playback speed").click()
+    await page.mouse.wheel(0, 200)
 
-            await context.set_offline(True)
-            await page.locator('div[aria-label="Workspaces"]').click()
-            await page.locator('button[aria-label="New workspace"]').first.click()
-            await page.locator('text="More features"').click()
-
-            await page.locator('button[aria-label="Add, update, and enforce rates."]').click()
-            await page.locator('button[aria-label="Configure how spend is approved and paid."]').click()
-            distance_rates = page.get_by_test_id("WorkspaceInitialPage").get_by_label("Distance rates")
-            await expect(distance_rates).to_be_visible()
-
-            workflows = page.get_by_test_id("WorkspaceInitialPage").get_by_label("Workflows")
-            await expect(workflows).to_be_visible()
-            await distance_rates.click()
-
-            distance_rate_row = page.locator("button").filter(has_text="0.6700 / mileEnabled").locator("xpath=../..")
-            is_dr_grayed_out = await page.evaluate("""
-                (element) => {
-                    const computedStyle = window.getComputedStyle(element);
-                    return computedStyle.opacity === '0.5';
-                }
-            """, await distance_rate_row.element_handle())
-
-            await workflows.click()
-            delay_submission_workflow = page.get_by_label('Delay expense submissions based on a custom schedule, or keep this option disabled to maintain realtime spend visibility.').locator("xpath=../../../..")
-            is_wf_grayed_out = await page.evaluate("""
-                (element) => {
-                    const computedStyle = window.getComputedStyle(element);
-                    return computedStyle.opacity === '0.5';
-                }
-            """, await delay_submission_workflow.element_handle())
-            assert is_dr_grayed_out and is_wf_grayed_out, "Distance rate or workflow section is not grayed out after going offline."
-
-        finally:
-            await close_browser(context, page, playwright)
+    await expect(page.get_by_label("1.25", exact=True)).to_be_in_viewport()
+    await expect(page.get_by_label("1.5", exact=True)).to_be_in_viewport()
+    await expect(page.get_by_label("1.75", exact=True)).to_be_in_viewport()
+    await expect(page.get_by_label("2", exact=True)).to_be_in_viewport()

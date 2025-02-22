@@ -3,136 +3,108 @@ import sys, os
 base_path = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
 sys.path.insert(0, base_path)
 
-import time
-from playwright._impl._page import Page
-from playwright.sync_api import sync_playwright
+import re
+import pytest
+from playwright.sync_api import sync_playwright, expect, Page
+from playwright.sync_api._context_manager import PlaywrightContextManager
+from playwright._impl._browser import Browser
+
 from utils.trace_cleaner import trace_cleaner
 
-first_name = "Alice"
-last_name = "Aliceoglu"
-workspace_name = f"{first_name} {last_name}'s Workspace"
+EMAIL = "Adebayovicktor0+test47282@gmail.com"
+TWO_SECONDS = 2000
+THREE_SECONDS = 3000
+FIVE_SECONDS = 5000
 
+def login_user(p: PlaywrightContextManager) -> tuple[Browser, Page, str]:
+    user_email = EMAIL
+    browser = p.chromium.launch(
+        headless=True,
+        proxy = {"server": "http://127.0.0.1:8080/"},
+        args=[
+        "--ignore-certificate-errors",
+        "--disable-web-security", 
+        "--disable-features=IsolateOrigins,site-per-process"
+        ]
+    )
+    context = browser.new_context()
+    page: Page = context.new_page()
 
-def generate_random_email():
-    timestamp = int(time.time())
-    return f"aliceoglualice+1733406917@gmail.com"
+    page.goto('https://dev.new.expensify.com:8082')
+    phone_or_email_input = page.locator('input[type="email"]')
+    expect(phone_or_email_input).to_be_visible()
+    phone_or_email_input.fill(user_email)
 
-def login_user(page: Page) -> None:
+    page.locator('button[tabindex="0"]').click()
 
-    username_input = page.get_by_test_id("username")
-    username_input.click()
-
-    username_input.fill(generate_random_email())
-
-    continue_button = page.get_by_role("button", name="Continue")
-    continue_button.click()
-    
-
-    join_button = page.get_by_role("button", name="Join")
-    join_button.click()
-    
-
-    track_expenses_text = page.get_by_text("Track and budget expenses")
-    track_expenses_text.click()
-
-def enter_user_information(page:Page) -> None:
-
-    first_name_input = page.get_by_role("textbox", name="First name")
-    first_name_input.fill(first_name)
-
-    first_name_input.press("Tab")
-
-    last_name_input = page.get_by_role("textbox", name="Last name")
-    last_name_input.fill(last_name)
-    
-
-    continue_button_after_names = page.get_by_role("button", name="Continue")
-    continue_button_after_names.click()
-
-def reproduce_scenario(page: Page) -> None:
-
-    page.get_by_label("Start chat (Floating action)").click()
-    page.get_by_text("New workspace").click()
-
-
-    page.get_by_text("More features").click()
-    page.get_by_label("Add, update, and enforce").click()
-    page.get_by_label("Back").click()
-    page.get_by_label("Inbox").click()
-    page.get_by_label("Start chat (Floating action)").click()
-
-
-    page.locator("body").press("ControlOrMeta+d")
-    page.get_by_label("Force offline").click()
-    page.get_by_label("Force offline").press("Escape")
-
-
-    page.get_by_label("Start chat (Floating action)").click()
-    page.get_by_text("Submit expense", exact=True).click()
-    page.get_by_label("Distance").click()
-    page.get_by_text("ManualManualScanScanDistanceDistance").click()
-    page.get_by_label("Distance").click()
-    page.get_by_test_id("IOURequestStartPage").get_by_role("button", name="Start").click()
-
-
-    page.get_by_test_id("IOURequestStepWaypoint").get_by_role("textbox").fill("fakeAddress1")
-    page.get_by_role("button", name="Save").click()
-    page.get_by_role("button", name="Stop").click()
-
-
-    page.get_by_test_id("IOURequestStepWaypoint").get_by_role("textbox").fill("fakeAddress2")
-    page.get_by_role("button", name="Save").click()
-    page.get_by_role("button", name="Next").nth(1).click()
-   
-    page.get_by_test_id("selection-list").get_by_label("Alice Aliceoglu's Workspace").click()
-    page.get_by_role("button", name="Submit expense").click()
-
-
-    page.locator("body").press("ControlOrMeta+d")
-    page.get_by_label("Force offline").click()
-    page.wait_for_timeout(1000)
-    page.get_by_label("Force offline").press("Escape")
-    page.wait_for_timeout(1000)
-    page.get_by_label("View details").click()
-    page.get_by_label("Start chat (Floating action)").click()
-
-
-    page.get_by_text("Submit expense", exact=True).click()
-    page.get_by_test_id("IOURequestStartPage").get_by_role("button", name="Start").click()
-    page.get_by_role("textbox").click()
     page.wait_for_timeout(1000)
 
+    magic_code = '123456'
+    page.wait_for_timeout(FIVE_SECONDS)
+    validate_code_input = page.locator('input[name="validateCode"]').nth(0)
+    expect(validate_code_input).to_be_visible()
+    validate_code_input.fill(magic_code)
+    page.wait_for_timeout(THREE_SECONDS)
+    return browser, page, user_email
 
-    assert not page.get_by_text("fakeAddress1").is_visible(), "The 'fakeAddress1' is unexpectedly visible"
-  
-def test_room_name_is_highlighted() -> None:
+
+def check_members(page: Page, formatted_currency):
+    page.get_by_label(f"Tracking {formatted_currency}", exact=False).first.click()
+    page.wait_for_timeout(1000)
+    members = page.locator("div").filter(has_text=re.compile(r"^Members$")).nth(3)
+    assert not members.is_visible()
+
+
+@pytest.mark.parametrize("first_name, last_name", [("Yagna", "Sai")])
+def test_run(first_name: str, last_name: str) -> None:
     with sync_playwright() as playwright:
-        browser = playwright.chromium.launch(headless=True, slow_mo=1000, args=["--disable-web-security", "--disable-feature=IsolaterOrigins,site-per-process"] )
-        context = browser.new_context(viewport={"width": 1000, "height": 550})
+        browser, page, user_email = login_user(playwright)
+        context = page.context
 
 
         context.tracing.start(screenshots=True, snapshots=True, sources=True)
 
         try:
-            page = context.new_page()
-            page.goto("https://dev.new.expensify.com:8082/")
-            
+            print(f"Logged in with email: {user_email}")
+            page.wait_for_timeout(3000)
+            page.locator(
+                'button[aria-label="Inbox"]').nth(-1).click()
+            page.wait_for_timeout(2000)
+            page.locator('div[data-testid="DisplayNamesWithTooltip"]',
+                has_text=f"{first_name} {last_name}").last.click()
+            page.wait_for_timeout(2000)
+            page.get_by_label("Back").click()
+            page.wait_for_timeout(2000)
+            page.locator(
+                'button[aria-label="Create"]').last.click()
+            page.wait_for_timeout(2000)
+            page.get_by_text("Track expense").click()
+            page.get_by_text('Manual').last.click()
+            amount = 9226
+            formatted_amount = "{:,}".format(amount)
+            page.get_by_placeholder("0").fill(str(amount))
+            page.wait_for_timeout(2000)
+            page.get_by_role("button", name="Next").first.click()
+            page.wait_for_timeout(2000)
+            currencies = page.get_by_test_id("IOURequestStepConfirmation").get_by_test_id(
+                "selection-list"
+            ).filter(has_text=formatted_amount).all_inner_texts()
+            currencies = [item for item in currencies[0].split('\n') if formatted_amount in item]
+            currency = currencies[0].split('\xa0')[0]
+            page.get_by_role("button", name="Track expense").last.click()
+            page.get_by_test_id("report-actions-list").get_by_text(f"{formatted_amount}.00").last.click()
+            page.wait_for_timeout(2000)
+            check_members(page, currency)
 
-            login_user(page)
-
-
-            enter_user_information(page)
-            
-
-            reproduce_scenario(page)
-        except Exception as e:
-
-            raise e
         finally:
 
             trace_path = "/app/expensify/user_tool/output_browser1.zip"
             context.tracing.stop(path=trace_path)
+
             trace_cleaner(trace_path)
 
-        context.close()
-        browser.close()
+            browser.close()
+
+
+if __name__ == "__main__":
+    pytest.main([__file__])

@@ -1,77 +1,54 @@
-import time
-import pytest
-from playwright.sync_api import (
-    sync_playwright,
-    Page,
-    TimeoutError as PlaywrightTimeoutError,
-)
+from playwright.sync_api import  expect, sync_playwright
 
+NEWDOT_URL = "https://dev.new.expensify.com:8082/"
 
-def generate_random_email():
-    # return f"t56826807+{int(time.time())}@gmail.com"
-    return "t56826807+1739787921@gmail.com"
-   
-
-@pytest.fixture
-def setup_playwright():
-    playwright = sync_playwright().start()
-
-    browser = playwright.chromium.launch(
-        headless=False,
-        args=[
-            "--ignore-certificate-errors",
-            "--disable-web-security",
-            "--disable-features=IsolateOrigins,site-per-process",
-        ],
-        proxy={"server": "http://localhost:8080"},
-        slow_mo=500,
-    )
-    context = browser.new_context(
-        **playwright.devices["iPhone 12"],
-        locale="en-US",
-    )
-    page = context.new_page()
-
-    yield page
-
-    # Cleanup: close browsers and stop Playwright
-    browser.close()
-    playwright.stop()
-
-
-def login_user(page: Page, email: str):
-    page.goto("https://dev.new.expensify.com:8082/")
+def new_dot_login(page, email):
+    page.goto(NEWDOT_URL)  
+    
     page.locator('input[type="email"]').fill(email)
-    page.locator("button", has_text="Continue").click()
-    page.locator("button", has_text="Join").click()
+    page.keyboard.press('Enter')
 
+    # Magic code entry
+    page.wait_for_timeout(3000)
+    my_otp_code = "123456"
 
-def complete_onboarding(page: Page, first_name: str, last_name: str = ""):
-    page.locator("text='Track and budget expenses'").click()
-    page.locator('input[name="fname"]').fill(first_name)
-    page.locator('input[name="lname"]').fill(last_name)
-    page.get_by_role("button", name="Continue").last.click()
-
-
-def test(setup_playwright):
-    page = setup_playwright
-
-    email_user, name_user = generate_random_email(), "User A"
-    
-    login_user(page, email_user)
-    
-    complete_onboarding(page, name_user)
-
-    page.get_by_label("Back").last.click()
-    page.get_by_label("Start chat (Floating action)").click()
+    page.keyboard.type(my_otp_code)
     try:
-        page.get_by_label("Create expense").click(timeout=2000)
+        page.get_by_role("button", name="Sign in").click()
     except Exception:
-        page.get_by_label("Submit expense").click()
-        
-    page.get_by_label("Manual").click()
-    try:
-        page.get_by_role("button", name="<").click(timeout=2000)
-        raise AssertionError("Button with text '<' found!")
-    except PlaywrightTimeoutError:
         pass
+
+
+
+def test_view_subscription_page():
+    
+    with sync_playwright() as p:
+        browser = p.chromium.launch(channel="chrome", headless=False, 
+        proxy = {"server": "http://127.0.0.1:8080/"},args=[
+                            "--disable-web-security",
+                             "--disable-features=IsolateOrigins,site-per-process"
+        ])
+        context = browser.new_context(**p.devices['Galaxy S5'])
+        page = context.new_page()
+
+        email = 't2815719+2891@gmail.com'
+         # login user
+        new_dot_login(page, email)
+
+        #create new workspace and enable the feature
+        page.get_by_label("My settings").click()
+        page.get_by_test_id("InitialSettingsPage").get_by_label("Workspaces").click()
+        page.get_by_label("New workspace").click()
+        page.get_by_label("More features").click()
+        page.get_by_label("Set Per diem rates to control").click()
+        page.get_by_role("button", name="Upgrade").click()
+        page.get_by_role("link", name="View your subscription").click()
+        page.wait_for_timeout(3000)
+        
+        
+        #Check if view your subscription page is visible
+        expect(page.get_by_test_id("SubscriptionSettingsPage").get_by_text("Subscription", exact=True)).to_be_in_viewport()
+        
+
+        
+        browser.close()

@@ -1,152 +1,132 @@
-import os
+from playwright.sync_api import sync_playwright, expect
 import random
-import string
-
-import pytest
-from playwright.async_api import Browser, Page, TimeoutError, async_playwright
-
-WORKSPACE_NAME = "pyPtFh23"
-EMAIL_USERNAME = "xecuycismfsga"
-EMAIL_ALIAS = "kj56jrdw"
-USER_EMAIL = f"{EMAIL_USERNAME}+{EMAIL_ALIAS}@gmail.com"
-PASSWORD = "uwgb zzoc cofa kaaq"
-SLOW_MO: int | None = 500
-PROXY_URL = os.getenv("PROXY_URL")
+GMAIL_NAME = "nomandevtur"
+GMAIL_APP_PASSWORD = "tpye xlsj axyq nltq"
 
 
-def generate_random_string(length=6):
-    letters_and_digits = string.ascii_letters + string.digits
-    return "".join(random.choice(letters_and_digits) for _ in range(length))
+def get_test_user_info(seed = None, first_name = None, last_name = None):
+    if first_name is None:
+        first_name = GMAIL_NAME
+
+    if last_name is None:
+        last_name = ""
+
+    email = f"{GMAIL_NAME}+{seed}@gmail.com" if seed is not None else f"{GMAIL_NAME}@gmail.com"
+    
+    return {"email": email, "password": GMAIL_APP_PASSWORD, "first_name": first_name, "last_name": last_name} 
+    
 
 
-def generate_random_email(alias: str = generate_random_string()):
-    return f"{EMAIL_USERNAME}+{alias}@gmail.com"
+def login_user(page, user_info, activity_text="Track and budget expenses"):
+    # Clear cookies, local storage, and session storage
+    page.context.clear_cookies()
 
+    page.goto('https://dev.new.expensify.com:8082/', timeout=60000)
+    page.wait_for_load_state('load', timeout=60000)
+    
 
-async def get_magic_code(
-    _page: Page, _user_email: str = USER_EMAIL, _password: str = PASSWORD
-):
-    return "123456"
+    page.get_by_test_id("username").fill(user_info["email"])
+    page.get_by_role("button", name="Continue").click()
 
+    page.wait_for_timeout(5000)
+    join_button = page.get_by_role("button", name="Join")
+    join_button.click(timeout=3000)
+    
+    page.wait_for_timeout(5000)
 
-async def create_user(page: Page, firstname: str = "User", lastname: str = EMAIL_ALIAS):
-    await page.get_by_role("button", name="Join").click()
+    # Select activity in onboarding page and click Continue
+    page.get_by_label(activity_text).click()
 
-    # Update profile
-    await page.get_by_text("Track and budget expenses").click()
-    await page.get_by_role("textbox", name="First name").fill(firstname)
-    await page.get_by_role("textbox", name="Last name").fill(lastname)
-    await page.get_by_role("button", name="Continue").click()
+    # Enter first name, last name and click continue
+    page.get_by_role("textbox", name="First name").fill(user_info["first_name"])
+    page.get_by_role("textbox", name="Last name").fill(user_info["last_name"])
+    page.get_by_role("button", name="Continue").last.click()
 
-
-async def login(page: Page):
-    # get current timestamp
-    magic_code = await get_magic_code(page)
-
-    if magic_code is None:
-        raise ValueError("Failed to retrieve magic code")
-
-    await page.get_by_role("textbox").fill(magic_code)
-
-
-async def login_or_create_user(
-    page: Page,
-    last_name: str = EMAIL_ALIAS,
-    user_email: str = USER_EMAIL,
-):
-    await page.goto("https://dev.new.expensify.com:8082/")
-    await page.get_by_test_id("username").fill(user_email)
-    await page.get_by_role("button", name="Continue").click()
-
-    try:
-        await page.get_by_role("button", name="Join").wait_for(
-            state="visible", timeout=2000
-        )
-        await create_user(page, last_name)
-    except TimeoutError:
-        await login(page)
-
-    await page.get_by_label("Inbox").wait_for(state="visible", timeout=10000)
-
-
-async def create_workspace(page: Page, workspace_name: str = WORKSPACE_NAME):
-    """
-    Create a workspace if it does not already exist
-    """
-    await page.get_by_label("My Settings").click()
-    await page.get_by_test_id("InitialSettingsPage").get_by_label("Workspaces").click()
-
-    try:
-        await (
-            page.locator('button[aria-label="row"]')
-            .filter(has_text=workspace_name)
-            .last.click(timeout=3000)
-        )
-    except TimeoutError:
-        await page.get_by_label("New workspace").last.click()
-
-        await page.get_by_text("Name", exact=True).click()
-        name_input = page.get_by_role("textbox", name="Name")
-        await name_input.clear()
-        await name_input.type(workspace_name, delay=200)
-        await page.get_by_role("button", name="Save").click()
-
-
-async def setup_workspace(browser: Browser):
-    admin_context = await browser.new_context(
-        permissions=["clipboard-read", "clipboard-write"]
-    )
-    admin_page = await admin_context.new_page()
-
-    await login_or_create_user(admin_page)
-
-    await create_workspace(admin_page)
-
-    await admin_page.get_by_role("button", name="Share").click()
-    await admin_page.get_by_label("Copy URL").click()
-    await admin_page.wait_for_timeout(1000)  # wait for clipboard to be populated
-    workspace_url = await admin_page.evaluate("navigator.clipboard.readText()")
-    return workspace_url
-
-
-@pytest.mark.asyncio(scope="session")
-async def test_workspace_access():
-    async with async_playwright() as p:
-        browser = await p.chromium.launch(
-            proxy={"server": PROXY_URL} if PROXY_URL else None,
-            headless=False,
-            args=[
-                "--no-sandbox",
-                "--disable-dev-shm-usage",
-                "--ignore-certificate-errors",
-                "--disable-web-security",
-                "--disable-features=IsolateOrigins,site-per-process",
-            ],
-            slow_mo=SLOW_MO,
-            channel="chromium",
+def launch_app(pw, headless=False, device=None, geolocation=None):
+    browser = pw.chromium.launch(
+            proxy = {"server": "http://localhost:8080"}, 
+            headless = False, 
+            args = ["--no-sandbox", "--disable-dev-shm-usage", "--ignore-certificate-errors", "--disable-web-security", "--disable-features=IsolateOrigins,site-per-process"], 
+            slow_mo = 1500
         )
 
-        workspace_url = await setup_workspace(browser)
+    context_args = {"viewport": {"width": 1124, "height": 640}}
+    if device:
+        context_args.update(pw.devices[device])
+    if geolocation:
+        context_args["geolocation"] = geolocation
+        context_args["permissions"] = ["geolocation"]
+    context = browser.new_context(**context_args)
+    page = context.new_page()
+    return browser, context, page
+    
+def test_54775():
+    with sync_playwright() as p:
+        
+        # seed = "54775." + str(random.randint(0, 2**32 - 1)) 
+        seed = "54775.9328798723"
+        user_info = get_test_user_info(seed = seed, first_name="T", last_name="T")
 
-        context = await browser.new_context()
-        page = await context.new_page()
+        browser, context, page = launch_app(p)
+        login_user(page, user_info)
 
-        restricted_user_alias = generate_random_string()
-        restricted_user_email = generate_random_email(restricted_user_alias)
+        page.wait_for_timeout(3000)
+        
+        # Locate the div containing "Create expenses"
+        div_locator = page.locator("div:has-text('Create expenses')").first
 
-        await login_or_create_user(
-            page, user_email=restricted_user_email, last_name=restricted_user_alias
-        )
+        # Ensure the div is visible before checking styles
+        div_locator.wait_for(state="visible", timeout=5000)
 
-        await page.goto(workspace_url)
+        # Get the background color of the div
+        background_color = div_locator.evaluate("el => window.getComputedStyle(el).backgroundColor")
 
-        await (
-            page.locator('button[aria-label="row"]')
-            .filter(has_text=WORKSPACE_NAME)
-            .last.wait_for(state="visible", timeout=10000)
-        )
+        # Locate the SVG icon inside the div
+        icon_locator = div_locator.locator("svg")
 
-        # Close all tabs and browser
-        await page.close()
-        await context.close()
-        await browser.close()
+        # Get the icon color (fill attribute)
+        icon_color = icon_locator.evaluate("el => el.getAttribute('fill')")
+
+        # Locate the text inside the div
+        text_locator = div_locator.locator("span:has-text('Create expenses')")
+
+        # Get the text color
+        text_color = text_locator.evaluate("el => window.getComputedStyle(el).color")
+
+        # Locate the small triangle div (tooltip arrow) directly inside div_locator
+        triangle_div_locator = div_locator.locator("div[style*='border-top-color']")
+
+
+        # Get the border widths of the triangle div
+        border_left_width = triangle_div_locator.evaluate("el => window.getComputedStyle(el).getPropertyValue('border-left-width')")
+        border_right_width = triangle_div_locator.evaluate("el => window.getComputedStyle(el).getPropertyValue('border-right-width')")
+        border_top_width = triangle_div_locator.evaluate("el => window.getComputedStyle(el).getPropertyValue('border-top-width')")
+
+        # Print values for debugging
+        print("Extracted Background Color:", background_color)
+        print("Extracted Icon Color:", icon_color)
+        print("Extracted Text Color:", text_color)
+        print("Extracted Border Left Width:", border_left_width)
+        print("Extracted Border Right Width:", border_right_width)
+        print("Extracted Border Top Width:", border_top_width)
+
+        # Expected values
+        expected_background = "rgb(8, 82, 57)"
+        expected_icon_color = "#03D47C"
+        expected_text_color = "rgb(231, 236, 233)"
+        expected_border_width = "8px"
+
+        # Assertions to ensure extracted values match expectations
+        assert background_color == expected_background, f"Background color mismatch! Expected: {expected_background}, Got: {background_color}"
+        assert icon_color == expected_icon_color, f"Icon color mismatch! Expected: {expected_icon_color}, Got: {icon_color}"
+        assert text_color == expected_text_color, f"Text color mismatch! Expected: {expected_text_color}, Got: {text_color}"
+        assert border_left_width == expected_border_width, f"Border Left Width mismatch! Expected: {expected_border_width}, Got: {border_left_width}"
+        assert border_right_width == expected_border_width, f"Border Right Width mismatch! Expected: {expected_border_width}, Got: {border_right_width}"
+        assert border_top_width == expected_border_width, f"Border Top Width mismatch! Expected: {expected_border_width}, Got: {border_top_width}"
+
+
+        page.wait_for_timeout(3000)
+
+        
+        page.close()
+        browser.close()

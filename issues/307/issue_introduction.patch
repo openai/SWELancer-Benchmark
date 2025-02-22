@@ -1,0 +1,20 @@
+diff --git a/.npmrc b/.npmrc
+deleted file mode 100644
+index b6f27f13595..00000000000
+--- a/.npmrc
++++ /dev/null
+@@ -1 +0,0 @@
+-engine-strict=true
+diff --git a/src/styles/index.ts b/src/styles/index.ts
+index 46f4efd5eaa..99ddcabddec 100644
+--- a/src/styles/index.ts
++++ b/src/styles/index.ts
+@@ -1849,7 +1849,7 @@ const styles = (theme: ThemeColors) =>
+         },
+ 
+         sidebarLinkActive: {
+-            backgroundColor: theme.activeComponentBG,
++            backgroundColor: theme.buttonHoveredBG,
+             textDecorationLine: 'none',
+         },
+ 

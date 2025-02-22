@@ -3,121 +3,203 @@ import sys, os
 base_path = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
 sys.path.insert(0, base_path)
 
-import os
-import re
 import pytest
-from PIL import Image, ImageDraw, ImageFont
-from playwright.async_api import expect, async_playwright
-from utils.login import sign_up, complete_onboarding
-from utils.browser import close_browser
+from playwright.sync_api import sync_playwright, Page
+
+SITE_URL = "https://dev.new.expensify.com:8082/"
+
+EMAIL_SUBMITTER = "expensifyolddot+1733902498@gmail.com"
+NAME_SUBMITTER = "Sender"
+
+EMAIL_APPROVER_1 = "t56826807+13@gmail.com"
+NAME_APPROVER_1 = "Employee"
+
+EMAIL_APPROVER_2 = "expensifyolddot+1733902499@gmail.com"
+NAME_APPROVER_2 = "Approver 2"
 
 
+@pytest.fixture
+def setup_playwright():
+    playwright = sync_playwright().start()
 
-async def start_browser(headless=True, proxy=None, launch_args=["--ignore-certificate-errors"]):
-    playwright = await async_playwright().start()
-    browser = await playwright.chromium.launch(headless=headless, proxy=proxy, args=launch_args)
-    context = await browser.new_context(ignore_https_errors=True)
-    page = await context.new_page()
-    return context, page, playwright  # Return playwright to close later
+    browser_user1 = playwright.chromium.launch(
+        channel="chrome",
+        headless=True,
+        args=[
+            "--ignore-certificate-errors",
+            "--disable-web-security",
+            "--disable-features=IsolateOrigins,site-per-process"
+        ],
+        proxy={"server": "http://localhost:8080"},
+        slow_mo=500
+    )
+    context_args = {}
+    context_args["timezone_id"] = "Asia/Kathmandu"
+    context_user1 = browser_user1.new_context(**context_args)
+    page_user1 = context_user1.new_page()
+
+    browser_user2 = playwright.chromium.launch(
+        channel="chrome",
+        headless=True,
+        args=[
+            "--ignore-certificate-errors",
+            "--disable-web-security",
+            "--disable-features=IsolateOrigins,site-per-process"
+        ],
+        proxy={"server": "http://localhost:8080"},
+        slow_mo=500
+    )
+    context_user2 = browser_user2.new_context(**context_args)
+    page_user2 = context_user2.new_page()
+
+    yield page_user1, page_user2
 
 
-def generate_invoice_template(filename):
-
-    width, height = 750, 1000
-    image = Image.new('RGB', (width, height), 'white')
-    draw = ImageDraw.Draw(image)
+    browser_user1.close()
+    browser_user2.close()
+    playwright.stop()
 
 
+def login_user(page: Page, email: str):
+    page.goto(SITE_URL)
+    page.locator('input[type="email"]').fill(email)
+    page.locator('button[tabindex="0"]').click()
     try:
-        font = ImageFont.truetype("arial.ttf", 20)
-    except IOError:
-        font = ImageFont.load_default()
-
-
-    draw.text((20, 20), "Invoice Template", fill="black", font=font)
-    draw.text((20, 60), "Company Name: [Your Company]", fill="black", font=font)
-    draw.text((20, 100), "Date: [Invoice Date]", fill="black", font=font)
-    draw.text((20, 140), "Bill To: [Customer Name]", fill="black", font=font)
-    draw.text((20, 180), "Address: [Customer Address]", fill="black", font=font)
-
-
-    draw.text((20, 240), "Item Description", fill="black", font=font)
-    draw.text((400, 240), "Quantity", fill="black", font=font)
-    draw.text((520, 240), "Price", fill="black", font=font)
-    draw.text((620, 240), "Total", fill="black", font=font)
-
-
-    draw.line((20, 270, 730, 270), fill="black", width=2)  # Horizontal line below headers
-    y = 310
-    for i in range(5):  # Draw 5 rows for items
-        draw.line((20, y, 730, y), fill="black", width=1)
-        y += 40
-
-
-    image.save(filename)
-
-
-
-@pytest.mark.asyncio
-async def test_image():
-    derived_email = "testuserexpensify+15443388@gmail.com"
-
-
-    context, page, playwright = await start_browser(
-        proxy={'server': 'http://127.0.0.1:8080'},
-        launch_args=[
-        '--disable-web-security',
-        '--disable-features=IsolateOrigins,site-per-process'
-    ])
-
-
-    await sign_up(page, derived_email)
-
-
-    try:
-        await complete_onboarding(page)
+        page.locator("button", has_text="Join").click()
     except Exception:
         pass
 
 
-    await expect(page.get_by_label("Inbox")).to_be_visible()
+def complete_onboarding(page: Page, first_name: str, last_name: str = ""):
+    page.locator("text='Track and budget expenses'").click()
 
 
-    await page.get_by_label("Start chat (Floating action)").click()
-    await page.get_by_label("Submit expense").click()
-    await page.get_by_label("Manual").click()
-    await page.get_by_placeholder("0").fill("1")
-    await page.locator("#numPadContainerView").get_by_role("button", name="Next").click()
-    await page.get_by_test_id("selection-list-text-input").fill("a@e.com")
-    await page.get_by_label("a@e.com").click()
-    await page.get_by_label("More", exact=True).click()
-    await page.get_by_label("Add receipt").click()
+    page.locator('input[name="fname"]').fill(first_name)
+    page.locator('input[name="lname"]').fill(last_name)
+    page.get_by_role("button", name="Continue").last.click()
 
 
-    file_path = os.path.expanduser("./invoice-template-us-neat-750px.png")
-
-    generate_invoice_template(file_path)
-
-    if os.path.exists(file_path):
-        async with page.expect_file_chooser() as fc_info:
-            await page.get_by_label("Choose file").click()
-        file_chooser = await fc_info.value
-        await file_chooser.set_files(file_path)
-    else:
-        raise FileNotFoundError(f"File not found: {file_path}")
+def invite_workspace_member(page: Page, member_email: str, member_name: str):
+    page.locator('div[aria-label="Members"]').click()
+    page.locator("button", has_text="Invite member").click()
+    page.locator('input[aria-label="Name, email, or phone number"]').fill(member_email)
+    page.locator("button", has_text=member_name).last.click()
+    page.locator('button[data-listener="Enter"]', has_text="Next").click()
+    page.locator('button[data-listener="Enter"]', has_text="Invite").click()
 
 
-    await page.get_by_role("button", name=re.compile(r"^Submit")).click()
+def browse_to_workspace(page: Page, workspace_name: str):
+    page.locator('button[aria-label="Workspaces"]').click()
+    try:
+        page.locator(f'button[aria-label="{workspace_name}"]').click()
+    except Exception:
+        page.locator(f'button[aria-label="{workspace_name}"]').nth(1).click()
 
 
-
-    parent_locator = page.get_by_label("View details")
-    receipt_thumbnail = parent_locator.locator("div.css-view-175oi2r.r-flexBasis-1mlwlqe img.css-accessibilityImage-9pa8cd")
-
-    await expect(receipt_thumbnail).to_have_attribute("src", re.compile(r"blob:"), timeout=500)
-
-    if os.path.exists(file_path):
-        os.remove(file_path)
+def browse_to_chat(page: Page, chat_label: str):
+    page.locator('button[aria-label="Navigates to a chat"]', has_text=chat_label).nth(
+        0
+    ).click()
 
 
-    await close_browser(context, page, playwright)
+def submit_manual_expense(page: Page, amount: int, merchant: str):
+    page.locator('button[aria-label="Create"]').last.click()
+    page.locator('div[aria-label="Submit expense"]').click()
+    page.locator('button[aria-label="Manual"]').click()
+    page.locator('input[placeholder="0"]').fill(str(amount))
+    page.locator('button[data-listener="Enter"]', has_text="Next").first.click()
+    page.locator('div[role="menuitem"]', has_text="Merchant").click()
+    page.locator('input[aria-label="Merchant"]').fill(merchant)
+    page.locator('button[data-listener="Enter"]', has_text="Save").click()
+    page.locator('button[data-listener="Enter"]', has_text="Submit").click()
+
+
+def test(setup_playwright):
+    page_submitter, page_approver_2 = setup_playwright
+
+    email_submitter, name_submitter = EMAIL_SUBMITTER, NAME_SUBMITTER
+    email_approver_1, name_approver_1 = EMAIL_APPROVER_1, NAME_APPROVER_1
+    email_approver_2, name_approver_2 = EMAIL_APPROVER_2, NAME_APPROVER_2
+
+    login_user(page_submitter, email_submitter)
+    login_user(page_approver_2, email_approver_2)
+
+    complete_onboarding(page_submitter, name_submitter)
+    complete_onboarding(page_approver_2, name_approver_2)
+
+
+    workspace_name = f"{name_submitter}'s Workspace"
+    page_submitter.locator('button[aria-label="Workspaces"]').click()
+    (
+        page_submitter.get_by_test_id("WorkspaceSwitcherPage")
+        .get_by_role("button", name="New workspace")
+        .click()
+    )
+
+    invite_workspace_member(page_submitter, email_approver_1, name_approver_1)
+    invite_workspace_member(page_submitter, email_approver_2, name_approver_2)
+
+
+    page_submitter.locator('div[aria-label="More features"]').click()
+    workflows_toggle = page_submitter.locator('button[aria-label="Configure how spend is approved and paid."][role="switch"]')
+    if workflows_toggle.get_attribute('aria-checked') == "false":
+        workflows_toggle.click()
+
+
+    page_submitter.locator('div[aria-label="Workflows"]').click()
+    approval_toggle = page_submitter.locator('button[aria-label="Require additional approval before authorizing a payment."][role="switch"]')
+    if approval_toggle.get_attribute('aria-checked') == "false":
+        approval_toggle.click()
+
+
+    page_submitter.locator('button[aria-label="Add approvals"]').click()
+    page_submitter.locator(
+        'div[data-tag="pressable"]', has_text="Additional Approver"
+    ).click()
+
+
+    page_submitter.locator("button", has_text="Upgrade").click()
+    page_submitter.locator("button", has_text="Got it, thanks").click()
+
+
+    page_submitter.locator(
+        f'div[aria-label="{name_submitter}"]', has_text="Approver"
+    ).first.click()
+    page_submitter.locator(f'button[aria-label="{name_approver_1}"]').last.click()
+    page_submitter.locator(
+        'button[data-listener="Enter"]', has_text="Save"
+    ).last.click()
+
+    page_submitter.locator(
+        'div[data-tag="pressable"]', has_text="Additional Approver"
+    ).first.click()
+    page_submitter.locator(f'button[aria-label="{name_approver_2}"]').last.click()
+    page_submitter.locator(
+        'button[data-listener="Enter"]', has_text="Save"
+    ).last.click()
+
+    page_submitter.locator(
+        'button[data-listener="Enter"]', has_text="Save"
+    ).last.click()
+    page_submitter.locator('button[aria-label="Back"]').nth(0).click()
+    page_submitter.locator('button[aria-label="Back"]').nth(0).click()
+
+
+    browse_to_workspace(page_submitter, workspace_name)
+    browse_to_chat(page_submitter, workspace_name)
+    submit_manual_expense(page_submitter, 10, "abc")
+
+
+    
+
+    page_approver_2.wait_for_timeout(2000)
+    page_approver_2.goto("https://dev.new.expensify.com:8082/settings/workspaces")
+    page_approver_2.get_by_label("Inbox").click()
+
+    browse_to_workspace(page_approver_2, workspace_name)
+    browse_to_chat(page_approver_2, f"{workspace_name} owes")
+    expense_text = page_approver_2.locator(
+        'button[aria-label="View details"]'
+    ).last.inner_text()
+
+    assert "Submit" not in expense_text

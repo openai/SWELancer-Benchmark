@@ -1,154 +1,93 @@
-import sys, os
-
-base_path = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
-sys.path.insert(0, base_path)
-
-from time import time
-from playwright.sync_api import sync_playwright, expect
-from playwright._impl._page import Page
+from playwright.sync_api import sync_playwright
+from utils.trace_cleaner import trace_cleaner
 
 
-def generate_random_email():
-    timestamp = int(time())
+# Expensify app URL
+EXPENSIFY_URL = "https://dev.new.expensify.com:8082/"
 
-    return "bobexpensifytest+1733402509@gmail.com"
+# Email login credentials
+EMAIL_USERNAME = "naturesv057+51982_2@gmail.com"
 
-
-def login_user(page: Page, user_email: str, first_name="Milan", last_name="T") -> Page:
-
-    page.goto("https://dev.new.expensify.com:8082/")
-
-
-    page.locator('input[type="email"]').fill(user_email)
-    page.locator('button[tabindex="0"]').click()
-    page.wait_for_timeout(1000)
-
-
-    try:
-        page.locator('button[tabindex="0"]').click()
-    except Exception:
-        pass
-    expect(page.locator("text=What do you want to do today?")).to_be_visible()
-
-
-    page.locator("text='Track and budget expenses'").click()
-    page.get_by_role("button", name="Continue").click()
-
-
-    page.locator('input[name="fname"]').fill(first_name)
-    page.locator('input[name="lname"]').fill(last_name)
-    page.get_by_role("button", name="Continue").last.click()
-
-    return page
-
-
-def launch_app(p, headless=True, device=None, geolocation=None):
+def launch_browser(pw, device=None, geolocation=None):
     """
-    Launch the Expensify app.
+    Launch the browser.
     """
-    browser = p.chromium.launch(
-        channel="chrome",
-        headless=True,
+    browser = pw.chromium.launch(
+        headless=False,
+        proxy={"server": "http://127.0.0.1:8080/"},
         args=[
             "--ignore-certificate-errors",
             "--disable-web-security",
             "--disable-features=IsolateOrigins,site-per-process",
         ],
-        proxy={"server": "http://localhost:8080"},
-        slow_mo=1000,
+        slow_mo=500
     )
     context_args = {}
     if device:
-        context_args.update(p.devices[device])
+        context_args.update(pw.devices[device])
     if geolocation:
         context_args["geolocation"] = geolocation
         context_args["permissions"] = ["geolocation"]
-
-    context_args["timezone_id"] = "Asia/Karachi"
     context = browser.new_context(**context_args)
     page = context.new_page()
     return browser, context, page
 
 
-def test_mobile_get_assistance_page():
+def login_user(page):
+    """
+    Login to the Expensify app and complete the onboarding.
+    """
+    # Open the Expensify app
+    page.goto(EXPENSIFY_URL)
+
+    # Login user
+    page.get_by_role("textbox", name="Phone or email").fill(EMAIL_USERNAME)
+    page.locator("div", has_text="Continue").last.click()
+    page.wait_for_timeout(2000)
+    
+    # Get the OTP code from the email
+    otp = "123456"
+    
+    # Enter the OTP code
+    page.keyboard.type(otp)
+
+
+def test_51982():
     with sync_playwright() as p:
-        browser, context, page = launch_app(p, device="iPhone 12 Pro")
-        context.tracing.start(title="test_mobile_get_assistance_page", screenshots=True, snapshots=True)
+        browser, context, page = launch_browser(p)
+        # Start tracing with screenshots, snapshots and sources
+        context.tracing.start(screenshots=True, snapshots=True, sources=True)
         try:
-            user_email = generate_random_email()
-
-
-            page = login_user(page, user_email, first_name="Bob")
-
-            try:
-                page.locator('button[aria-label="Close"]').click(timeout=3000)
-            except Exception:
-                print("Did not find close!")
-                pass
-
-            plus_icon = page.locator('button[aria-label="Start chat (Floating action)"]')
-            expect(plus_icon).to_be_visible()
-            plus_icon.click()
-
-            new_workspace_button = page.locator('div[aria-label="New workspace"]')
-            expect(new_workspace_button).to_be_visible()
-            new_workspace_button.click()
-
-            more_features_button = page.locator(
-                'div[aria-label="More features"][role="menuitem"]'
-            )
-            expect(more_features_button).to_be_visible()
-            more_features_button.click()
-
-            workflow_switch = page.locator(
-                'button[aria-label="Configure how spend is approved and paid."][role="switch"]'
-            )
-            expect(workflow_switch).to_be_visible()
-            workflow_switch.click()
-
-            workflows_button = page.locator('div[aria-label="Workflows"][role="menuitem"]')
-            expect(workflows_button).to_be_visible()
-            workflows_button.click()
-
-            connect_bank_account = page.locator(
-                'div[aria-label="Connect bank account"][role="menuitem"]'
-            )
-            expect(connect_bank_account).to_be_visible()
-            connect_bank_account.click()
-
-            update_to_usd = page.locator(
-                'button[data-listener="Enter"]', has_text="Update to USD"
-            )
-            expect(update_to_usd).to_be_visible()
-            update_to_usd.click()
-
+            # Step 1: Login user
+            login_user(page)
             page.wait_for_timeout(2000)
 
-            get_assistant = page.locator(
-                'button[aria-label="Get assistance from our team"][role="button"]'
-            )
-            expect(get_assistant).to_be_visible()
-            get_assistant.click()
-
-            chat_with_concierge = page.locator(
-                'div[aria-label="Chat with Concierge"][role="menuitem"]'
-            )
-            expect(chat_with_concierge).to_be_visible()
-            chat_with_concierge.click()
-
-            back_arrow_button = page.locator('button[aria-label="Back"]').last
-            expect(back_arrow_button).to_be_visible()
-            back_arrow_button.click()
-
-            chat_with_concierge = page.locator(
-                'div[aria-label="Chat with Concierge"][role="menuitem"]'
-            )
-            expect(chat_with_concierge).to_be_visible()
-
-        except Exception as e:
-            raise e
+            # Step 2: Reintroduce scenario
+            page.get_by_label("My settings").click()
+            page.get_by_test_id("InitialSettingsPage").get_by_label("Workspaces").click()
+            page.get_by_label("New workspace").click()
+            page.get_by_label("More features").click()
+            page.get_by_label("Set up custom fields for").click()
+            page.get_by_role("button", name="Upgrade").click()
+            page.get_by_role("link", name="View your subscription").click()
+            page.go_back()
+            
+            # Step 3: Check if the issue is resolved
+            g_element = page.locator("svg g[clip-path]").last  # Locate the <g> element inside the SVG
+            
+            initial_box = g_element.bounding_box()  # Get the initial position
+            page.wait_for_timeout(1000)
+            
+            new_box = g_element.bounding_box()  # Get the position after 1 second
+            
+            assert initial_box != new_box, "SVG image is not animating! Position did not change."  # Assert that the <g> element has moved (is animating)
         finally:
-            context.tracing.stop(path="/app/expensify/user_tool/output_browser1.zip")
-            from utils.trace_cleaner import trace_cleaner
-            trace_cleaner("/app/expensify/user_tool/output_browser1.zip")
+            # Stop tracing and export trace
+            trace_path = "/app/expensify/user_tool/output_browser1.zip"
+            context.tracing.stop(path=trace_path)
+            trace_cleaner(trace_path)
             browser.close()
+
+
+if __name__ == '__main__':
+    test_51982()

@@ -1,54 +1,69 @@
-import sys, os
-
-base_path = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
-sys.path.insert(0, base_path)
-
+import time
 from playwright.sync_api import sync_playwright, expect
+from playwright.sync_api._context_manager import PlaywrightContextManager
+from playwright._impl._browser import Browser
+from playwright._impl._page import Page
+
+# Utility to generate a random email
+def generate_random_email():
+    return f"testerbro7077+45756976678@gmail.com"
+
+# Login as member and fill in personal details
+def login_member_a(p, membera_first_name: str, membera_last_name: str) -> tuple:
+    browser = p.chromium.launch(
+        proxy = {"server": "http://localhost:8080"}, headless = False, args = ["--ignore-certificate-errors", "--disable-web-security", "--disable-features=IsolateOrigins,site-per-process"], slow_mo = 500, channel = "chromium")
+
+    context = browser.new_context()
+    page = context.new_page()
 
 
-def check_focus(page):
-    page.get_by_test_id("username").fill("aquasaddam+28553@gmail.com") # we need to use an already present account
+    user_email2 = generate_random_email()
+
+    page.goto('https://dev.new.expensify.com:8082/')
+    page.locator('input[type="email"]').fill(user_email2)
     page.get_by_role("button", name="Continue").click()
-    
-    page.get_by_test_id("validateCode").press("ArrowRight")
-    page.get_by_test_id("validateCode").press("ArrowRight")
-    page.get_by_test_id("validateCode").press("ArrowRight")
-    
-    page.wait_for_timeout(5000)  # wait for 30 seconds, "Didn't receive a magic code?" appears after 30 seconds
-    
-    page.get_by_label("Didn't receive a magic code?").click()
-
-    page.wait_for_timeout(2000)
-    
-
-    element = page.locator('#root > div > div > div > div > div:nth-child(1) > div > div.css-view-175oi2r.r-flex-13awgt0 > div > div > div.css-view-175oi2r.r-flex-13awgt0 > div > div.css-view-175oi2r.r-bottom-1p0dtai.r-left-1d2f490.r-position-u8s1d.r-right-zchlnj.r-top-ipm5af.r-pointerEvents-12vffkv > div.css-view-175oi2r.r-flex-13awgt0.r-pointerEvents-12vffkv > div > div > div > div.css-view-175oi2r.r-flex-13awgt0 > div > div > div > div > div > div:nth-child(2) > div > div:nth-child(1) > div > div > div > div:nth-child(2) > form > div:nth-child(4) > div:nth-child(1) > div:nth-child(1) > div:nth-child(2) > div')
-
-
-    expect(element).to_have_css('border-color', 'rgb(3, 212, 124)')
     page.wait_for_timeout(1000)
 
+    try:
+        page.get_by_role("button", name="Join").click()
+        page.wait_for_timeout(1000)
+    except Exception:
+        pass
+    expect(page.locator("text=What do you want to do today?")).to_be_visible()
+    page.wait_for_timeout(1000)
+
+    page.get_by_text("Track and budget expenses").click()
+
+    page.locator('input[name="fname"]').fill(membera_first_name)
+    page.locator('input[name="lname"]').fill(membera_last_name)
+    page.get_by_role("button", name="Continue").last.click()
+    page.wait_for_timeout(1000)
+
+    return browser, page, user_email2
+
+def added_features_check(page):
+    page.get_by_label("My settings").click()
+    page.get_by_test_id("InitialSettingsPage").get_by_label("Workspaces").get_by_text("Workspaces").click()
+    page.get_by_label("New workspace").click()
+    assert page.get_by_test_id("WorkspaceInitialPage").get_by_text("Workspace profile").is_visible(), "profile is not chnged to Workspace profile in the LHN"
+    assert page.get_by_test_id("WorkspacePageWithSections").get_by_text("Workspace profile").is_visible(), "Profile is not changed to Workspace profile in title"
+    assert page.locator("#simple-illustration__building_svg__Layer_1 path").first.is_visible(), "Workspace profile is not changed in the illustration"
+    ws_name = page.get_by_test_id("WorkspacePageWithSections").get_by_text("Workspace name")
+    assert ws_name.is_visible(), "Name is not changed to Workspace name"
+    ws_name.click()
+    assert page.get_by_text("Workspace name").nth(2).is_visible(), "Name is not changed to Workspace name in name edit page"
 
 
-def test_run():
-    with sync_playwright() as playwright:
-        browser = playwright.chromium.launch(
-            headless=True, 
-            proxy={
-                    'server': 'http://127.0.0.1:8080',  
-                    },
-            args=[
-                '--disable-web-security',
-                '--disable-features=IsolateOrigins,site-per-process',
-                ],
-            )
-        context = browser.new_context()
-        page = context.new_page()
+def test_run(membera_first_name="Sai", membera_last_name="Yagna"):
+    with sync_playwright() as p:
+
+        browser_membera, page_membera, user_email2 = login_member_a(p, membera_first_name, membera_last_name)
+        added_features_check(page_membera)
+
+        
+
+        browser_membera.close()
 
 
-        page.goto('https://dev.new.expensify.com:8082/')
-
-        check_focus(page)
-
-
-        context.close()
-        browser.close()
+if __name__ == "__main__":
+    test_run()

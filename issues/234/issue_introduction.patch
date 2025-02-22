@@ -1,41 +1,13 @@
-diff --git a/src/libs/actions/Report.ts b/src/libs/actions/Report.ts
-index 3256b74de9d..8788c8db644 100644
---- a/src/libs/actions/Report.ts
-+++ b/src/libs/actions/Report.ts
-@@ -497,7 +497,7 @@ function addActions(reportID: string, text = '', file?: FileObject) {
- 
-     if (shouldUpdateNotificationPrefernece) {
-         optimisticReport.participants = {
--            [currentUserAccountID]: {notificationPreference: ReportUtils.getDefaultNotificationPreferenceForReport(report)},
-+            [currentUserAccountID]: {notificationPreference: CONST.REPORT.NOTIFICATION_PREFERENCE.ALWAYS},
-         };
-     }
- 
-@@ -553,6 +553,19 @@ function addActions(reportID: string, text = '', file?: FileObject) {
-         },
-     ];
- 
-+    if (shouldUpdateNotificationPrefernece) {
-+        successData.push({
-+            onyxMethod: Onyx.METHOD.MERGE,
-+            key: `${ONYXKEYS.COLLECTION.REPORT}${reportID}`,
-+            value: {
-+                participants: {
-+                    [currentUserAccountID]: {notificationPreference: CONST.REPORT.NOTIFICATION_PREFERENCE.ALWAYS},
-+                },
-+            },
-+        });
-+    }
-+
-     let failureReport: Partial<Report> = {
-         lastMessageTranslationKey: '',
-         lastMessageText: '',
-@@ -2761,7 +2774,7 @@ function joinRoom(report: OnyxEntry<Report>) {
-     updateNotificationPreference(
-         report.reportID,
-         ReportUtils.getReportNotificationPreference(report),
--        ReportUtils.getDefaultNotificationPreferenceForReport(report),
-+        CONST.REPORT.NOTIFICATION_PREFERENCE.ALWAYS,
-         report.parentReportID,
-         report.parentReportActionID,
-     );
+diff --git a/src/libs/TransactionUtils/index.ts b/src/libs/TransactionUtils/index.ts
+index f14703fabdc..3ad7e472ec7 100644
+--- a/src/libs/TransactionUtils/index.ts
++++ b/src/libs/TransactionUtils/index.ts
+@@ -163,7 +163,7 @@ function buildOptimisticTransaction(
+         created: created || DateUtils.getDBTime(),
+         pendingAction: CONST.RED_BRICK_ROAD_PENDING_ACTION.ADD,
+         receipt: receipt?.source ? {source: receipt.source, state: receipt.state ?? CONST.IOU.RECEIPT_STATE.SCANREADY} : {},
+-        filename: (receipt?.source ? receipt?.name ?? filename : filename).toString(),
++        filename: (receipt?.source ?? receipt?.name ?? filename).toString(),
+         category,
+         tag,
+         taxCode,

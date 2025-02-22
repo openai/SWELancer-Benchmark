@@ -1,0 +1,39 @@
+diff --git a/.npmrc b/.npmrc
+deleted file mode 100644
+index b6f27f13595..00000000000
+--- a/.npmrc
++++ /dev/null
+@@ -1 +0,0 @@
+-engine-strict=true
+diff --git a/src/components/ReportActionItem/MoneyRequestAction.tsx b/src/components/ReportActionItem/MoneyRequestAction.tsx
+index af54e2940d3..66239c84fe2 100644
+--- a/src/components/ReportActionItem/MoneyRequestAction.tsx
++++ b/src/components/ReportActionItem/MoneyRequestAction.tsx
+@@ -10,6 +10,7 @@ import * as IOUUtils from '@libs/IOUUtils';
+ import Navigation from '@libs/Navigation/Navigation';
+ import * as ReportActionsUtils from '@libs/ReportActionsUtils';
+ import type {ContextMenuAnchor} from '@pages/home/report/ContextMenu/ReportActionContextMenu';
++import * as Report from '@userActions/Report';
+ import CONST from '@src/CONST';
+ import type {TranslationPaths} from '@src/languages/types';
+ import ONYXKEYS from '@src/ONYXKEYS';
+@@ -94,6 +95,7 @@ function MoneyRequestAction({
+         }
+ 
+         const childReportID = action?.childReportID ?? '-1';
++        Report.openReport(childReportID);
+         Navigation.navigate(ROUTES.REPORT_WITH_ID.getRoute(childReportID));
+     };
+ 
+diff --git a/src/libs/actions/Report.ts b/src/libs/actions/Report.ts
+index 0fe2bfbf8d4..4c3de80b1f1 100644
+--- a/src/libs/actions/Report.ts
++++ b/src/libs/actions/Report.ts
+@@ -1075,6 +1075,7 @@ function navigateToAndOpenReportWithAccountIDs(participantAccountIDs: number[])
+  */
+ function navigateToAndOpenChildReport(childReportID = '-1', parentReportAction: Partial<ReportAction> = {}, parentReportID = '0') {
+     if (childReportID !== '-1' && childReportID !== '0') {
++        openReport(childReportID);
+         Navigation.navigate(ROUTES.REPORT_WITH_ID.getRoute(childReportID));
+     } else {
+         const participantAccountIDs = [...new Set([currentUserAccountID, Number(parentReportAction.actorAccountID)])];

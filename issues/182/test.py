@@ -1,92 +1,128 @@
-import sys, os
-
-base_path = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
-sys.path.insert(0, base_path)
-
-from locale import currency
 import time
-from playwright.sync_api import sync_playwright, expect
-from playwright.sync_api._context_manager import PlaywrightContextManager
-from playwright._impl._browser import Browser
-from playwright._impl._page import Page
-
-static_email = "testuserexpensify1+45@gmail.com"
-
-def login_user(p: PlaywrightContextManager, first_name="Milan", last_name="T") -> tuple[Browser, Page, str]:
-
-    browser = p.chromium.launch(headless=True, slow_mo=1000, args=["--disable-web-security", "--disable-features=IsolateOrigins,site-per-process"])
-    page = browser.new_page()
-    user_email = static_email
+from playwright.sync_api import Page, sync_playwright
 
 
-    page.goto('https://dev.new.expensify.com:8082/') 
+EXPENSIFY_URL = "https://dev.new.expensify.com:8082/"
+FIRST_NAME = "Asaad"
+LAST_NAME = "I"
+SLOW_MO = 500
+PROXY_SERVER = "http://localhost:8080"
 
 
-    page.locator('input[type="email"]').fill(user_email)
-    page.locator('button[tabindex="0"]').click()
-     
+def generate_random_email(username="expensify66", domain="gmail.com", seed=None):
+    if seed is None:
+        seed = int(time.time())
+    return f"{username}+{seed}@{domain}"
 
-    try: 
-        page.locator('button[tabindex="0"]').click() 
-        page.wait_for_timeout(1000)
-    except Exception:
+
+def login(page: Page):
+    # Step 1: Open expensify url
+    page.goto(EXPENSIFY_URL)
+
+    email = generate_random_email()
+
+    # Step 2: Enter email and click continue
+    page.get_by_test_id("username").fill(email)
+    page.get_by_role("button", name="Continue").click()
+
+    # Step 3: Click join button
+    page.get_by_role("button", name="Join").click()
+
+    # Step 4: Select 'Track and budget expenses' in onobarding page and click Continue
+    page.get_by_text("Track and budget expenses").click()
+    page.get_by_role("button", name="Continue").click()
+
+    # Step 5: Enter first name, last name and click continue
+    page.get_by_role("textbox", name="First name").fill(FIRST_NAME)
+    page.get_by_role("textbox", name="Last name").fill(LAST_NAME)
+    page.get_by_role("form").get_by_role("button", name="Continue").click()
+
+    # Step 6: Get ahead of welcome to expensify by clicking get started
+    try:
+        page.get_by_role("button", name="Get started").last.click(timeout=3000)
+    except:
+        # ignore the error  and proceed
         pass
-        
-
-    page.locator("text='Track and budget expenses'").click()
-    page.get_by_role("button", name="Continue").click() 
 
 
-    page.locator('input[name="fname"]').fill(first_name)
-    page.locator('input[name="lname"]').fill(last_name)
-    page.get_by_role("button", name="Continue").last.click()
-     
-    return browser, page, user_email
+def verify_search_LHN_items_height(page: Page):
+    # Step 1: Open Search page
+    page.get_by_test_id("CustomBottomTabNavigator").get_by_label("Search").click()
 
-def test_delay_submission_toggle():
+    # Step 2: Verify that the height of the LHN options in search is correct
+    LHN_options = page.get_by_test_id("SearchPageBottomTab").get_by_role("menuitem")
+    for i in range(LHN_options.count()):
+        option = LHN_options.nth(i)
+        assert (
+            option.bounding_box()["height"] == 52
+        ), f"Height of LHN items in search is not 52"
+
+
+def verify_settings_LHN_items_height(page: Page):
+    # Step 1: Open Settings page
+    page.get_by_test_id("CustomBottomTabNavigator").get_by_label("Settings").click()
+
+    # Step 2: Verify that the height of the LHN options in settings is correct
+    LHN_options = page.get_by_test_id("InitialSettingsPage").get_by_role("menuitem")
+    for i in range(LHN_options.count()):
+        option = LHN_options.nth(i)
+        assert (
+            option.bounding_box()["height"] == 52
+        ), f"Height of LHN items in settings is not 52"
+
+
+def verify_workspace_LHN_items_height(page: Page):
+    # Step 1: Open Workspace page
+    page.get_by_test_id("CustomBottomTabNavigator").get_by_label(
+        "Start chat (Floating action)"
+    ).click()
+
+    page.get_by_label("New workspace").click()
+
+    # Step 2: Verify that the height of the LHN options in workspace is correct
+    LHN_options = page.get_by_test_id("WorkspaceInitialPage").get_by_role("menuitem")
+    for i in range(LHN_options.count()):
+        option = LHN_options.nth(i)
+        assert (
+            option.bounding_box()["height"] == 52
+        ), f"Height of LHN items in workspace is not 52"
+
+
+def test_search_LHN_options_height():
+    """
+    This test verifies that the height of the LHN options is correct.
+    """
     with sync_playwright() as p:
-        
+        browser = p.chromium.launch(
+            headless=False,
+            slow_mo=SLOW_MO,
+            args=(
+                [
+                    "--ignore-certificate-errors",
+                    "--disable-web-security",
+                    "--disable-features=IsolateOrigins,site-per-process",
+                ]
+                if PROXY_SERVER
+                else None
+            ),
+            proxy={"server": PROXY_SERVER} if PROXY_SERVER else None,
+        )
+        context = browser.new_context()
+        page = context.new_page()
 
-        browser, page, user_email = login_user(p)
+        # Step 1: Login to expensify
+        login(page)
 
+        # Step 2: Verify that the height of the LHN options in search is correct
+        verify_search_LHN_items_height(page)
 
-        plus_icon = page.locator('button[aria-label="Start chat (Floating action)"]')
-        plus_icon.click()
-         
-        new_workspace_button = page.locator('div[aria-label="New workspace"]')
-        new_workspace_button.click()  
+        # Step 3: Verify that the height of the LHN options in settings is correct
+        verify_settings_LHN_items_height(page)
 
+        # Step 4: Verify that the height of the LHN options in workspace is correct
+        verify_workspace_LHN_items_height(page)
 
-        page_feature = page.locator('div[aria-label="More features"]')
-        page_feature.click()       
-        
-
-        workflows = page.locator('button[aria-label="Configure how spend is approved and paid."]')
-        workflows.click()
-               
-        workflow_setting = page.locator('div[aria-label="Workflows"]')
-        workflow_setting.click()
-               
-
-        delay_submission = page.locator('button[aria-label="Delay expense submissions based on a custom schedule, or keep this option disabled to maintain realtime spend visibility."]')
-        delay_submission.click()
-
-
-        submission_frequency = page.get_by_text("Weekly")
-        submission_frequency.click()
-        
-        change_manual_freq = page.locator('button[aria-label="Manually"]')
-        change_manual_freq.click()
-        
-        
-
-        is_delay_toggle_off = page.locator('button[aria-label="Delay expense submissions based on a custom schedule, or keep this option disabled to maintain realtime spend visibility."]')
-        aria_checked_value = is_delay_toggle_off.get_attribute('aria-checked')
-        
-        if aria_checked_value == "false":
-            assert False, "Delay submissions turns off if the Submission frequency is set to Manually"
-        else:
-            assert True, "Delay submissions does not turns off if the Submission frequency is set to Manually"
-        
-        page.wait_for_timeout(2000)        
+        # Step 5: Cleanup
+        page.close()
+        context.close()
         browser.close()

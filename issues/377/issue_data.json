@@ -1,0 +1,6 @@
+{
+    "price": 1000.0,
+    "title": "[HOLD for payment 2023-09-20] [$1000] Web - Profile - No back button on personal details offline mode",
+    "issue_repo_steps": "Action performed: 1. Open the app\r\n2. If logged in then logout\r\n3. Login and switch off internet connection\r\n4. Visit settings->profile->personal details and observe that page does not have back button while loading\n\nExpected result: App should display back button on personal details page while loading on offline mode\n\nActual result: None",
+    "_issue_id": "24642_386"
+}

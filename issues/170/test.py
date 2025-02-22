@@ -1,141 +1,166 @@
-import sys, os
-
-base_path = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
-sys.path.insert(0, base_path)
-
-"""
-Verify that the app correctly navigates back to workspaces list from Accounting page after changing xero organization.
-
-"""
-
 import os
-import pytest
-from playwright.async_api import Page, expect, async_playwright
-from utils.login import NEW_DOT_URL, check_if_logged_in, sign_in, logging
-from utils.browser import close_browser
 
-STATIC_PREFIX = 42924
-EXPENSIFY_USERNAME_FIRSTNAME = "osaidtest"
-EXPENSIFY_USERNAME_LASTNAME = "testaccount"
-EXPENSIFY_USERNAME = f"{EXPENSIFY_USERNAME_FIRSTNAME} {EXPENSIFY_USERNAME_LASTNAME}"
-EXPENSIFY_EMAIL_USERNAME = "osaidtest5"
-EXPENSIFY_EMAIL = f"osaidtest5+{STATIC_PREFIX}@gmail.com"
-EXPENSIFY_PASSWORD = "ntvd acej mmaa qqmd"
-DATA_DIR = "browser_context"
-WORKSPACE_NAME = "workspace_xero"
-SLOW_MO = 1000
-VIEW_PORT = {"width": 375, "height": 812}
+import re, time
+from datetime import datetime, timezone
+from email.header import decode_header
+from PIL import Image
+from io import BytesIO
+import imaplib
+import email
+import re
+from playwright.sync_api import  Page, TimeoutError, expect, sync_playwright
 
-TFA_CODE = 'VGap9xc0'
-NORMAL_RUN = False
-
-'''
-2 factor auth codes for this test account (In case you want to record the test):
-Unused: pQBlZL1Q, vHH1CiGX, iKe5CWSw, 3Eov8ScE, 6iAEtcxD
-Used: lXgvKcUU, 3m8meOGO,HgvaY9rE, Kb9KSs9Y
-'''
+USERNAME = "contributer0"
+APP_PASSWORD = "ughk jfyj dyee mgrs"
+USER_EMAIL = f"{USERNAME}+51355@gmail.com"
+NEW_DOT_URL = "https://dev.new.expensify.com:8082/"
 
 
-async def start_browser(
-    headless=True,
-    persistent=False,
-    data_dir=None,
-    slow_mo=500,
-    launch_args=["--ignore-certificate-errors"],
+def get_magic_code(user_email, password, since=None, retries=5, delay=10):
+    if since is None:
+        since = datetime.now(timezone.utc).replace(second=0, microsecond=0)
+
+    imap = imaplib.IMAP4_SSL("imap.gmail.com")
+    imap.login(user_email, password)
+
+    for _ in range(retries):
+        imap.select("inbox")
+        status, messages = imap.search(None, '(UNSEEN SUBJECT "Expensify magic sign-in code:")')
+
+        if status == "OK":
+            email_ids = messages[0].split()
+
+            if email_ids:
+                latest_email_id = email_ids[-1]
+                status, msg_data = imap.fetch(latest_email_id, "(RFC822)")
+
+                for response_part in msg_data:
+                    if isinstance(response_part, tuple):
+                        msg = email.message_from_bytes(response_part[1])
+                        subject, encoding = decode_header(msg["Subject"])[0]
+                        if isinstance(subject, bytes):
+                            subject = subject.decode(encoding or "utf-8")
+
+                        match = re.search(r"Expensify magic sign-in code: (\d+)", subject)
+                        email_date = email.utils.parsedate_to_datetime(msg["Date"])
+                        if match and email_date >= since:
+                            code = match.group(1)
+                            imap.logout()
+                            return code
+                print("Email doesn't match conditions.  Retrying...")
+            else:
+                print("No unread emails found with the subject. Retrying...")
+        else:
+            print("Failed to retrieve emails. Retrying...")
+        time.sleep(delay)
+
+    imap.logout()
+    print("Max retries reached. Email not found.")
+    return None
+
+
+def create_user(page: Page, firstname: str = "User", lastname: str = "Test"):
+    page.get_by_role("button", name="Join").click()
+
+    # Update profile
+    page.get_by_text("Track and budget expenses").click()
+    page.get_by_role("button", name="Continue").last.click()
+    page.get_by_role("textbox", name="First name").fill(firstname)
+    page.get_by_role("textbox", name="Last name").fill(lastname)
+
+    try:
+        page.get_by_role("button", name="Continue").click(timeout=2000)
+    except TimeoutError:
+        pass
+
+    try:
+        page.get_by_role("button", name="Get Started").click(timeout=200)
+    except TimeoutError:
+        pass
+
+
+
+def login(page: Page):
+    # get current timestamp
+    page.wait_for_timeout(2000)
+    magic_code = "123456" 
+
+    if magic_code is None:
+        raise ValueError("Failed to retrieve magic code")
+    page.get_by_role("textbox").fill(magic_code)
+
+def login_or_create_user(
+    page: Page, user_email: str = USER_EMAIL, lastname: str = "Test"
 ):
-    """
-    Start a browser instance with the given parameters.
+    page.get_by_role("textbox", name="Phone or email").fill(user_email)
+    page.get_by_role("button", name="Continue").click()
 
-    :param headless: Boolean to specify if the browser should run in headless mode.
-    :param persistent: Boolean to specify if the browser context should be persistent.
-    :param data_dir: Directory to store browser data for persistent context.
-    :return: A tuple of (context, page, playwright).
-    """
+    try:
+        page.get_by_role("button", name="Join").wait_for(state="visible", timeout=2000)
+        create_user(page, lastname)
+    except TimeoutError:
+        login(page)
+
+    page.get_by_label("Inbox").first.wait_for(state="visible")
 
 
-    playwright = await async_playwright().start()
-    context, page = None, None
-    if persistent:
-        if data_dir is None:
-            data_dir = "browser_context"
-        if not os.path.exists(data_dir):
-            os.makedirs(data_dir)
+def create_sample_jpg():
+    # Generates an image in memory and returns the bytes
+    image = Image.new("RGB", (100, 100), color="blue")
+    img_byte_arr = BytesIO()
+    image.save(img_byte_arr, format="JPEG")
+    img_byte_arr.seek(0)
+    return img_byte_arr.getvalue()
 
-        context = await playwright.chromium.launch_persistent_context(
-            data_dir,
-            headless=headless,
-            args=launch_args,
-            slow_mo=slow_mo,
-            timezone_id="Asia/Karachi",
-            viewport=VIEW_PORT
+def test_51355():
+    with sync_playwright() as p:
+
+        # Launch chromium and open new page
+        browser = p.chromium.launch(
+            channel="chrome",
+            headless=False,
+            args=[
+                "--ignore-certificate-errors",
+                "--disable-web-security",
+                "--disable-features=IsolateOrigins,site-per-process"
+            ],
+            proxy={"server": "http://localhost:8080"},
+            slow_mo=500
         )
-        page = context.pages[0]
-    else:
-        browser = await playwright.chromium.launch(
-            headless=headless, args=launch_args, slow_mo=slow_mo
-        )
-        context = await browser.new_context(
-            ignore_https_errors=True, timezone_id="Asia/Karachi", viewport=VIEW_PORT
-        )
-        page = await context.new_page()
+        context = browser.new_context()
+        page = context.new_page()
 
-    return context, page, playwright  # Return playwright to close later
+        # Login Expensify
+        page.goto(NEW_DOT_URL)
+        login_or_create_user(page)
 
-async def sign_in_recorded(page: Page, email: str):
-    await page.get_by_test_id("username").fill(email)
-    await page.get_by_role("button", name="Continue").click()
-    await page.get_by_test_id("validateCode").fill("123456")
-    
+        # go to Settings
+        page.get_by_label("My settings").click()
 
-async def enter_2fa_code(page: Page, code: str):
-    await page.get_by_role("button", name="Use recovery code").click()
-    await page.get_by_role("textbox").fill(code)
-    await page.get_by_role("Button", name="Sign in").click()
-    await page.get_by_text("Please enter your recovery code").wait_for(state="hidden")
-    logging.info("2fa code entered successfully.")
+        # go to profile
+        page.get_by_role("menuitem", name="Profile").click()
+        
+        regular_button = page.get_by_label("Share code").locator("svg")
+        regular_button_width = regular_button.get_attribute("width")
+        regular_button_hight = regular_button.get_attribute("height")
 
+        # click on edit photo
+        with page.expect_file_chooser() as fc_info:
+            page.get_by_label("Edit photo").click()
 
-@pytest.mark.asyncio
-async def test_42924():
-    context, page, playwright = await start_browser(
-        persistent=False,
-        data_dir=DATA_DIR,
-        headless=True,
-        slow_mo=1000,
-        launch_args=[
-            "--ignore-certificate-errors",
-            "--disable-web-security",
-            "--disable-features=IsolateOrigins,site-per-process",
-        ],
-    )
+        file_chooser = fc_info.value
+        file_chooser.set_files({
+            "name": "input.jpg",
+            "mimeType": "image/jpeg",
+            "buffer": create_sample_jpg()
+
+        })
+
+        rotate_button = page.get_by_test_id("AvatarCropModal").get_by_role("button").nth(1)
+        icon_element = rotate_button.locator("svg")
 
 
-    if NORMAL_RUN:
-
-        await sign_in(page, EXPENSIFY_EMAIL, password=EXPENSIFY_PASSWORD)
-        await enter_2fa_code(page, TFA_CODE)
-    else:
-
-        await page.goto(NEW_DOT_URL)
-        await sign_in_recorded(page=page, email=EXPENSIFY_EMAIL)
-        await enter_2fa_code(page, "lXgvKcUU")
-
-
-    await page.get_by_role('button', name='My settings').click()
-    await page.get_by_role('menuitem', name='Workspaces').click()
-    await page.get_by_test_id("WorkspacesListPage").get_by_role("button", name="row").filter(has=page.get_by_text("workspace_xero")).click()
-
-
-    await page.get_by_test_id("WorkspaceInitialPage").get_by_role("menuitem", name="Accounting").click()
-    await page.get_by_test_id("PolicyAccountingPage").get_by_role("menuitem", name="test").click()
-    await page.get_by_test_id("selection-list").get_by_role("button", name="anotherOrg").click()
-
-
-    await page.get_by_test_id("PolicyAccountingPage").get_by_role("button", name="Back").click()
-    await page.get_by_test_id("WorkspaceInitialPage").get_by_role("button", name="Back").click()
-
-
-    await expect(page.get_by_test_id("WorkspacesListPage").get_by_text("Workspaces")).to_be_visible()
-
-
-    await close_browser(context, page, playwright)
+        # check that the Icon is the same size as regular button
+        assert icon_element.get_attribute("width") == regular_button_width
+        assert icon_element.get_attribute("height") == regular_button_hight
+        

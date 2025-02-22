@@ -3,94 +3,72 @@ import sys, os
 base_path = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
 sys.path.insert(0, base_path)
 
-"""
-Test to verify that GL codes are saved for dependent tags
-"""
-
-import pytest
-import pytest_asyncio
-from playwright.async_api import async_playwright, expect, Page
-from utils.email_handler import EmailHandler
-
-NEW_DOT_URL = "https://dev.new.expensify.com:8082"
-
-EXPENSIFY_EMAIL = "testingq186+45771_1@gmail.com"
-EXPENSIFY_PASSWORD = "kkfr hqiv yuxq rbso"
-
-TESTING_FLOW = True
-
-@pytest_asyncio.fixture
-async def page():
-    pw = await async_playwright().start()
-    browser = await pw.chromium.launch(
-        channel="chrome",
-        headless=True,
-        args=["--ignore-certificate-errors", "--disable-web-security", "--disable-features=IsolateOrigins,site-per-process"],
-        proxy={"server": "http://localhost:8080"},
-        slow_mo=500
-    )
-    page = await browser.new_page()
-
-    yield page
-
-    await page.close()
-    await browser.close()
-    await pw.stop()
-
-async def sign_in_new_dot(page: Page, email: str, password: str):
-    with EmailHandler(email, password) as email_handler:
-        if not TESTING_FLOW:
-            email_handler.clean_inbox()
-
-        await page.get_by_test_id("username").fill(email)
-        await page.get_by_role("button", name="Continue").click()
-        await expect(page.get_by_test_id("validateCode")).to_be_visible()
-        otp = email_handler.read_otp_code() if not TESTING_FLOW else "123456"
-        await page.get_by_test_id("validateCode").fill(otp)
-
-@pytest.mark.asyncio
-async def test_saving_GL_code_for_dependent_tags(page: Page):
-    trace_path = "/app/expensify/user_tool/output_browser1.zip"
+from utils.trace_cleaner import trace_cleaner
+from playwright.sync_api import Playwright, sync_playwright, expect
 
 
-    await page.context.tracing.start(screenshots=True, snapshots=True, sources=True)
+def generate_random_email():
+    return f"bobexpensifytest+49993o@gmail.com"
+
+
+def test_track_expense_rate(playwright: Playwright) -> None:
+    email = generate_random_email()
+    first_name = 's'
+    last_name = 's'
+
+    browser = playwright.chromium.launch(channel="chrome", headless=True, slow_mo=1000, args=[
+        "--disable-web-security",
+        "--disable-features=IsolateOrigins,site-per-process"
+    ])
+    context = browser.new_context(viewport={"width": 1000, "height": 550})
+    context.tracing.start(screenshots=True, snapshots=True, sources=True)
+    page = context.new_page()
+
     try:
-        await page.goto(NEW_DOT_URL)
-        await page.wait_for_load_state("load")
+        page.goto("https://dev.new.expensify.com:8082/")
 
-        await sign_in_new_dot(page, EXPENSIFY_EMAIL, EXPENSIFY_PASSWORD)
+        page.locator('input[type="email"]').fill(email)
+        page.locator('button[tabindex="0"]').click()
+        page.wait_for_timeout(1000)
 
-        await page.get_by_label("My settings").click()
-        await page.get_by_test_id("InitialSettingsPage").get_by_label("Workspaces").get_by_text("Workspaces").click()
-        await page.get_by_label("row").get_by_text(EXPENSIFY_EMAIL.split("@")[0], exact=True).click()
+        page.get_by_role("button", name="Join").click()
 
-        try:
-            await expect(page.get_by_label("Tags")).to_be_visible()
-        except:
-            await page.get_by_label("More features").click()
-            await page.get_by_label("Classify costs and track").click()
+        page.locator("text='Track and budget expenses'").click()
+        page.get_by_role("button", name="Continue").click()
+        page.wait_for_timeout(1000)
 
-        await page.get_by_label("Tags").click()
+        page.locator('input[name="fname"]').fill(first_name)
+        page.locator('input[name="lname"]').fill(last_name)
+        page.get_by_role("button", name="Continue").last.click()
 
-        await page.get_by_label("State").click()
-        await page.locator("#California").click()
+        page.wait_for_timeout(1000)
+        page.wait_for_timeout(500)
+        page.locator('button[aria-label="My settings"]').click()
+        page.wait_for_timeout(500)  # Short delay
+        
+        page.get_by_test_id("InitialSettingsPage").get_by_label("Workspaces").get_by_text("Workspaces").click()
+        page.get_by_label("New workspace").first.click()
+        page.wait_for_timeout(500)  # Short delay
+        page.get_by_label("Back").click()
+        page.locator('button[aria-label="Inbox"]').click()
+        page.locator('button[aria-label="Create"]').click()
 
-        await page.get_by_role("menuitem", name="GL code").click()
-        await page.get_by_role("textbox", name="GL code").clear()
-        await page.get_by_role("textbox", name="GL code").fill("This GL code should be visible")
-        await page.get_by_role("button", name="Save").click()
-
-
-        await expect(page.get_by_test_id("TagSettingsPage").get_by_text("This GL code should be visible")).to_be_visible()
-
-
-        await page.get_by_role("menuitem", name="GL code").click()
-        await page.get_by_role("textbox", name="GL code").clear()
-        await page.get_by_role("button", name="Save").click()
+        page.get_by_text("Submit expense", exact=True).click()
+        page.get_by_label("Manual").click()
+        page.get_by_placeholder("0").fill("100")
+        page.locator("#numPadContainerView").get_by_role("button", name="Next").click()
+        page.get_by_text("Description").click()
+        page.get_by_role("textbox", name="What's it for?").fill("descrip")
+        page.get_by_role("button", name="Save").click()
+        page.get_by_text("Merchant").click()
+        page.get_by_role("textbox", name="Merchant").fill("ABC")
+        page.get_by_role("button", name="Save").click()
+        page.locator('button[data-listener="Enter"]', has_text="Submit").click()
+        check_text = page.locator('div[aria-label="Last chat message preview"]').nth(2).text_content()
+        assert "ABC" in check_text, "The merchant 'ABC' is not in the check text."
 
     finally:
-
-        await page.context.tracing.stop(path=trace_path)
-
-        from utils.trace_cleaner import trace_cleaner
+        trace_path = "/app/expensify/user_tool/output_browser1.zip"
+        context.tracing.stop(path=trace_path)
         trace_cleaner(trace_path)
+        browser.close()

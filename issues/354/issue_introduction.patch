@@ -1,0 +1,61 @@
+diff --git a/src/libs/actions/Report.ts b/src/libs/actions/Report.ts
+index 0fe2bfbf8d4..fcc8fafa8f6 100644
+--- a/src/libs/actions/Report.ts
++++ b/src/libs/actions/Report.ts
+@@ -2886,11 +2886,15 @@ function leaveRoom(reportID: string, isWorkspaceMemberLeavingWorkspaceRoom = fal
+ 
+     // If this is the leave action from a workspace room, simply dismiss the modal, i.e., allow the user to view the room and join again immediately.
+     // If this is the leave action from a chat thread (even if the chat thread is in a room), do not allow the user to stay in the thread after leaving.
+-    if (isWorkspaceMemberLeavingWorkspaceRoom && !isChatThread) {
++    Navigation.dismissModal();
++    if (Navigation.getTopmostReportId() === reportID) {
++        Navigation.goBack(ROUTES.HOME);
++    }
++    if (report.parentReportID) {
++        Navigation.navigate(ROUTES.REPORT_WITH_ID.getRoute(report.parentReportID), CONST.NAVIGATION.TYPE.UP);
+         return;
+     }
+-    // In other cases, the report is deleted and we should move the user to another report.
+-    navigateToMostRecentReport(report);
++    navigateToConciergeChat();
+ }
+ 
+ /** Invites people to a room */
+diff --git a/src/pages/home/ReportScreen.tsx b/src/pages/home/ReportScreen.tsx
+index 69c4402e959..a389e51dd97 100644
+--- a/src/pages/home/ReportScreen.tsx
++++ b/src/pages/home/ReportScreen.tsx
+@@ -552,24 +552,7 @@ function ReportScreen({route, currentReportID = '', navigation}: ReportScreenPro
+             isClosedTopLevelPolicyRoom ||
+             (prevIsDeletedParentAction && !isDeletedParentAction)
+         ) {
+-            // Early return if the report we're passing isn't in a focused state. We only want to navigate to Concierge if the user leaves the room from another device or gets removed from the room while the report is in a focused state.
+-            // Prevent auto navigation for report in RHP
+-            if (!isFocused || isInNarrowPaneModal) {
+-                return;
+-            }
+-            Navigation.dismissModal();
+-            if (Navigation.getTopmostReportId() === prevOnyxReportID) {
+-                Navigation.setShouldPopAllStateOnUP(true);
+-                Navigation.goBack(undefined, false, true);
+-            }
+-            if (prevReport?.parentReportID) {
+-                // Prevent navigation to the IOU/Expense Report if it is pending deletion.
+-                if (ReportUtils.isMoneyRequestReportPendingDeletion(prevReport.parentReportID)) {
+-                    return;
+-                }
+-                Navigation.navigate(ROUTES.REPORT_WITH_ID.getRoute(prevReport.parentReportID));
+-                return;
+-            }
++            Navigation.goBack();
+ 
+             Report.navigateToConciergeChat();
+             return;
+@@ -595,7 +578,6 @@ function ReportScreen({route, currentReportID = '', navigation}: ReportScreenPro
+         prevUserLeavingStatus,
+         userLeavingStatus,
+         prevReport?.statusNum,
+-        prevReport?.parentReportID,
+         prevReport?.chatType,
+         prevReport,
+         reportIDFromRoute,

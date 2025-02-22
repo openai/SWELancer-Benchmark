@@ -1,245 +1,154 @@
-import os
-import random
-import re
-import string
+import sys, os
 
+base_path = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
+sys.path.insert(0, base_path)
+
+from playwright.async_api import (
+    async_playwright,
+    expect,
+    Page,
+    Browser,
+    PlaywrightContextManager,
+)
+import re
 import pytest
-from playwright.async_api import Page, TimeoutError, async_playwright
+
 from utils.trace_cleaner import trace_cleaner
 
-EMAIL_USERNAME = "xecuycismfsga"
-EMAIL_ALIAS = "6nvqaqhy"
-USER_EMAIL = f"{EMAIL_USERNAME}+{EMAIL_ALIAS}@gmail.com"
-PASSWORD = "uwgb zzoc cofa kaaq"
-SLOW_MO: int | None = 500
-PROXY_URL = os.getenv("PROXY_URL")
+EMAIL = "expensify66+543209565435065432247@gmail.com"
+FIRST_NAME = "Milan"
+LAST_NAME = "Tonborn"
 
 
-async def get_magic_code(
-    page: Page, user_email: str = USER_EMAIL, password: str = PASSWORD
-):
-    return "123456"
+async def simulate_netsuite_fail(page: Page, workspace_id: str):
+
+    js_code = """
+    async (workspace_id) => {
+        const net_suite = {
+            lastSync: {
+            errorDate: "2024-12-9T10:26:57+0000",
+            errorMessage: "Unable to validate NetSuite tokens",
+            isAuthenticationError: true,
+            isConnected: false,
+            isSuccessful: false,
+            source: "NEWEXPENSIFY",
+            successfulDate: "",
+            },
+            verified: false,
+        };
+
+        await Onyx.merge(`policy_${workspace_id}`, {
+            connections: {
+            netsuite: net_suite,
+            },
+        });
+    };
+    """
+
+    await page.evaluate(js_code, workspace_id)
 
 
-async def create_user(page: Page, firstname: str = "User", lastname: str = EMAIL_ALIAS):
+async def login_user(
+    p: PlaywrightContextManager, first_name="Milan", last_name="T"
+) -> tuple[Browser, Page, object]:
+
+    browser = await p.chromium.launch(
+        headless=True,
+        args=[
+            "--ignore-certificate-errors",
+            "--disable-web-security",
+            "--disable-features=IsolateOrigins,site-per-process",
+        ],
+        proxy={"server": "http://127.0.0.1:8080"},
+        slow_mo=500,
+    )
+
+    context = await browser.new_context()
+    await context.tracing.start(screenshots=True, snapshots=True, sources=True)
+
+    page: Page = await context.new_page()
+
+
+    await page.goto("https://dev.new.expensify.com:8082/")
+
+
+    await page.get_by_test_id("username").fill(EMAIL)
+    await page.get_by_role("button", name="Continue").click()
+
+
     await page.get_by_role("button", name="Join").click()
 
-    # Update profile
-    await page.get_by_text("Track and budget expenses").click()
-    await page.get_by_role("textbox", name="First name").fill(firstname)
-    await page.get_by_role("textbox", name="Last name").fill(lastname)
+
+    await page.locator("text=What do you want to do today?").wait_for(timeout=5000)
+
+    await page.locator("text='Track and budget expenses'").click()
     await page.get_by_role("button", name="Continue").click()
 
 
-async def login(page: Page):
-    # get current timestamp
-    magic_code = await get_magic_code(page)
+    await page.locator('input[name="fname"]').fill(first_name)
+    await page.locator('input[name="lname"]').fill(last_name)
+    await page.get_by_role("button", name="Continue").last.click()
+    await page.get_by_text("Get Started").click(timeout=3000)
 
-    if magic_code is None:
-        raise ValueError("Failed to retrieve magic code")
-
-    await page.get_by_role("textbox").fill(magic_code)
+    return browser, page, context
 
 
-async def login_or_create_user(
-    page: Page,
-    firstname: str = "User",
-    lastname: str = EMAIL_ALIAS,
-    user_email: str = USER_EMAIL,
-):
-    await page.goto("https://dev.new.expensify.com:8082/")
-    await page.get_by_test_id("username").fill(user_email)
-    await page.get_by_role("button", name="Continue").click()
-
-    try:
-        await page.get_by_role("button", name="Join").wait_for(
-            state="visible", timeout=2000
-        )
-        await create_user(page, firstname=firstname, lastname=lastname)
-    except TimeoutError:
-        await login(page)
-
-    await page.get_by_label("Inbox").wait_for(state="visible", timeout=10000)
-
-
-async def create_workspace(page: Page, workspace_name: str):
+async def create_workspace_and_enable_netsuite(page: Page) -> str:
     """
-    Create a workspace if it does not already exist
+    Create a new workspace and enable netsuite
     """
-    try:
-        await (
-            page.locator('button[aria-label="row"]')
-            .filter(has_text=workspace_name)
-            .last.click(timeout=3000)
-        )
-    except TimeoutError:
-        await page.get_by_label("New workspace").last.click()
-
-        await (
-            page.get_by_test_id("WorkspacePageWithSections")
-            .get_by_text("Workspace name", exact=True)
-            .click()
-        )
-        name_input = page.get_by_role("textbox", name="Name")
-        await name_input.clear()
-        await name_input.type(workspace_name, delay=200)
-        await page.get_by_role("button", name="Save").click()
 
 
-def generate_random_string(length: int = 8) -> str:
-    return "".join(random.choices(string.ascii_letters + string.digits, k=length))
-
-
-def generate_random_number(minimum=1, maximum=1000):
-    return random.randint(minimum, maximum)
-
-
-async def submit_expense(page: Page, workspace_name: str):
-    workspace_chat = (
-        page.get_by_text("Submit expenses using your workspace chat below:")
-        .locator("xpath=following-sibling::div[1]")
-        .get_by_label(workspace_name)
-    )
-    await workspace_chat.click()
-
-    await page.get_by_label("Create").last.click()
-    await page.get_by_text("Submit expense", exact=True).click()
-    await page.get_by_label("Manual").click()
-    await page.get_by_placeholder("0").fill(str(generate_random_number()))
-    await (
-        page.locator("#numPadContainerView").get_by_role("button", name="Next").click()
-    )
-    await page.get_by_text("Merchant").click()
-    await page.get_by_role("textbox", name="Merchant").last.fill(
-        generate_random_string()
-    )
-    await page.get_by_role("button", name="Save").click()
-    await page.get_by_role("button", name="Submit").click()
-
-
-async def close_button_if_present(page: Page):
-    """
-    Occasionally, there is a close button that prevents any clicks on the page as
-    it covers most of the screen. This button cannot be seen visually.
-    """
-    close_button = page.locator('button[aria-label="Close"]')
-    if await close_button.is_visible():
-        await close_button.click()
-
-
-async def delete_workspaces(page: Page):
     await page.get_by_label("My settings").click()
-    await page.get_by_role("menuitem", name="Workspaces").click()
-    # Loop until no more rows are found
-    while True:
-        row = (
-            page.get_by_test_id("WorkspacesListPage")
-            .locator('button[aria-label="row"]')
-            .filter(has=page.locator('button[aria-label="More"]'))
-        )
-
-        if await row.count() == 0:
-            break  # Exit loop when no more rows with "More" button are found
-
-        await row.last.get_by_label("More").click()
-
-        await page.get_by_label("Delete workspace").click()
-        await page.get_by_role("button", name="Delete").click()
+    await page.get_by_text("Workspaces").last.click()
+    await page.get_by_text("New workspace").first.click()
 
 
-async def pay_elsewhere(page: Page, workspace_name: str):
-    expense_preview = page.get_by_role("button", name="View details").filter(
-        has_text=f"{workspace_name} owes:"
-    )
-    await expense_preview.click()
-
-    try:
-        await page.get_by_role("button", name="Got it").click(timeout=2000)
-    except TimeoutError:
-        pass
-
-    await (
-        page.get_by_role("button", name="Pay")
-        .locator("xpath=../following-sibling::*[1]")
-        .click()
-    )
-    await page.get_by_role("menuitem", name="elsewhere").click()
-    await page.get_by_role("button", name=re.compile(r".* elsewhere")).click()
-
-    try:
-        await page.get_by_role("button", name="Pay").last.click(timeout=2000)
-    except TimeoutError:
-        pass
+    await page.get_by_test_id("WorkspaceInitialPage").get_by_text(
+        "More features"
+    ).click()
+    workspace_id = re.search(r"settings/workspaces/([^/]+)/", page.url).group(1)
+    await page.get_by_label("Sync your chart of accounts").click()
+    await page.get_by_test_id("WorkspaceInitialPage").get_by_text(
+        "Accounting"
+    ).click()
 
 
-async def cancel_payment(page: Page, workspace_name: str):
-    payment_details = page.locator(
-        f'div[data-testid="DisplayNamesWithTooltip"]:has-text("{workspace_name} paid")'
-    ).last
-    await payment_details.click()
+    await page.get_by_label("NetSuite").get_by_role(
+        "button", name="Connect"
+    ).click()
+    await page.get_by_role("button", name="Upgrade").click(timeout=3000)
+    await page.get_by_role("button", name="Got it, thanks").click()
+    await page.get_by_test_id("NetSuiteTokenInputPage").get_by_label("Back").click()
 
-    await page.get_by_role("menuitem", name="Cancel payment").click()
-    await page.get_by_role("button", name="Cancel payment").click()
-
-
-async def assert_scroll_to_comments(page: Page):
-    messages = page.get_by_label("List of chat messages").last
-    scroll_top = await messages.evaluate("el => el.scrollTop")
-    assert scroll_top == 0, "Last message is not visible; didn't scroll"
+    return workspace_id
 
 
-async def send_messages(page: Page):
-    for message in [f"Message {i}" for i in range(7)]:
-        await page.get_by_placeholder("Write something...").last.fill(message)
-        await page.get_by_role("button", name="Send").click()
+@pytest.mark.asyncio
+async def test_first_issue_error_message() -> None:
+    trace_path = "/app/expensify/user_tool/output_browser1.zip"
 
-    messages = page.get_by_label("List of chat messages").last
-    await messages.evaluate(
-        "el => el.scrollTop = 1000;"  # scroll to the top of the container
-    )
-
-
-@pytest.mark.asyncio(scope='session')
-async def test_scroll_to_comments():
     async with async_playwright() as p:
-        browser = await p.chromium.launch(
-            proxy={"server": "http://localhost:8080"},
-            headless=False,
-            args=["--no-sandbox", "--disable-dev-shm-usage", "--ignore-certificate-errors", "--disable-web-security", "--disable-features=IsolateOrigins,site-per-process"],
-            slow_mo=SLOW_MO,
-            channel="chromium"
-        )
-
-        context = await browser.new_context()
-        await context.tracing.start(screenshots=True, snapshots=True, sources=True)
-        page = await context.new_page()
-        trace_path = "/app/expensify/user_tool/output_browser1.zip"
-
+        browser, page, context = await login_user(p, FIRST_NAME, LAST_NAME)
         try:
-            # admin login
-            await login_or_create_user(page)
-            await close_button_if_present(page)
 
-            await delete_workspaces(page)
-            workspace_name = "SdiPDTAc"  # replay workspace_name is hardcoded
-            # workspace_name = generate_random_string()
-            await create_workspace(page, workspace_name)
+            workspace_id = await create_workspace_and_enable_netsuite(page)
 
-            await submit_expense(page, workspace_name)
-            await pay_elsewhere(page, workspace_name)
 
-            await send_messages(page)
+            await simulate_netsuite_fail(page, workspace_id)
 
-            await cancel_payment(page, workspace_name)
 
-            await page.wait_for_timeout(5000)  # wait for notification event to propagate
+            await expect(
+                page.get_by_test_id("PolicyAccountingPage").get_by_text(
+                    "Can't connect to NetSuite"
+                ),
+                "Error message is not visible",
+            ).to_be_visible(timeout=10000)
+        except Exception as e:
 
-            await assert_scroll_to_comments(page)
-
-            # Close page and context if everything went well
-            await page.close()
-            await context.close()
+            raise e
         finally:
+
             await context.tracing.stop(path=trace_path)
             trace_cleaner(trace_path)
             await browser.close()

@@ -1,40 +1,90 @@
-import sys, os
-
-base_path = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
-sys.path.insert(0, base_path)
-
-import re
-import time
-from playwright.sync_api import Playwright, sync_playwright, expect
+from playwright.sync_api import sync_playwright
 
 
+# Expensify app URL
+EXPENSIFY_URL = "https://dev.new.expensify.com:8082/"
+
+# Email login credentials
+EMAIL_USERNAME = "naturesv057+54587_2@gmail.com"
+
+def launch_browser(pw, device=None, geolocation=None):
+    """
+    Launch the browser.
+    """
+    browser = pw.chromium.launch(
+        headless=False,
+        proxy = {"server": "http://127.0.0.1:8080/"},
+        args=[
+            "--ignore-certificate-errors",
+            "--disable-web-security",
+            "--disable-features=IsolateOrigins,site-per-process",
+        ],
+        slow_mo=500
+    )
+    context_args = {}
+    if device:
+        context_args.update(pw.devices[device])
+    if geolocation:
+        context_args["geolocation"] = geolocation
+        context_args["permissions"] = ["geolocation"]
+    context = browser.new_context(**context_args)
+    page = context.new_page()
+    return browser, context, page
 
 
-def test_console_error():
-    with sync_playwright() as playwright:
-        browser = playwright.chromium.launch(headless=True, args=["--ignore-certificate-errors", "--disable-web-security", "--disable-features=IsolateOrigins,site-per-process"])
-        context = browser.new_context()
+def login_user(page):
+    """
+    Login to the Expensify app and complete the onboarding.
+    """
+    # Open the Expensify app
+    page.goto(EXPENSIFY_URL)
+
+    # Login user
+    page.get_by_role("textbox", name="Phone or email").fill(EMAIL_USERNAME)
+    page.locator("div", has_text="Continue").last.click()
+    
+    # Get the OTP code from the email
+    otp = "123456"
+    
+    # Enter the OTP code
+    page.keyboard.type(otp)
 
 
-        page = context.new_page()
-        page.goto("https://dev.new.expensify.com:8082/")
+def create_new_workspace(page):
+    try:
+        page.get_by_label("Close").click(timeout=1000)
+    except:
+        pass
+    page.get_by_label("My settings").click()
+    try:
+        page.get_by_label("Close").click(timeout=1000)
+    except:
+        pass
+    page.get_by_test_id("InitialSettingsPage").get_by_label("Workspaces").click()
+    page.get_by_label("New workspace").click()
+    return page
 
-        page1 = context.new_page()
-        page1.goto("https://dev.new.expensify.com:8082/")
 
+def test_54587():
+    with sync_playwright() as p:
+        # Step 1: Login user
+        browser, context, page = launch_browser(p)
+        login_user(page)
+        page.wait_for_timeout(2000)
 
-        phone_or_email_input = page1.locator('input[type="email"]')
-        expect(phone_or_email_input).to_be_visible()
+        # Step 2: Reintroduce scenario
+        page = create_new_workspace(page)
 
-        phone_or_email_input.fill("jellystarfish99@gmail.com")
-        page1.get_by_role("button", name="Continue").click()
+        page.get_by_label("Categories").click()
+        element = page.locator("text=Benefits").first
+        before_bbox =  element.bounding_box()
 
-        page1.wait_for_timeout(1000)
+        page.locator("#Advertising").click()
+        # Press "ArrowDown" key 5 times
+        for _ in range(5):
+            page.locator("body").press("ArrowDown")
 
-        expect(page.get_by_text("You've opened the login page")).to_be_visible()
-        expect(page.get_by_text("Another login page is open.")).to_be_visible()
+        after_bbox = element.bounding_box()
 
-        page1.wait_for_timeout(1000)
-
-        context.close()
-        browser.close()
+        # Step 3: Check if the issue is resolved
+        assert before_bbox == after_bbox, "'Benefits' element moved after pressing ArrowDown!" # Assert that the bounding box position has changed

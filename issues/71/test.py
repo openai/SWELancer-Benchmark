@@ -1,189 +1,149 @@
 import os
-
+import time
+import pytest
+from playwright.sync_api import sync_playwright, expect
+from playwright.sync_api._context_manager import PlaywrightContextManager
+from playwright._impl._browser import Browser
+from playwright._impl._page import Page
+from playwright.sync_api import sync_playwright, expect
 import re, time
-from datetime import datetime, timezone
-from email.header import decode_header
-from PIL import Image
-from io import BytesIO
+import os
 import imaplib
 import email
 import re
-from playwright.sync_api import  Page, TimeoutError, expect, sync_playwright
-
-USERNAME = "contributer0"
-APP_PASSWORD = "ughk jfyj dyee mgrs"
-USER_EMAIL = f"{USERNAME}+51388_1@gmail.com"
-NEW_DOT_URL = "https://dev.new.expensify.com:8082/"
+import random
+import numpy as np
+import platform
 
 
-def get_magic_code(user_email, password, since=None, retries=5, delay=10):
-    if since is None:
-        since = datetime.now(timezone.utc).replace(second=0, microsecond=0)
+NEWDOT_URL = "https://dev.new.expensify.com:8082/"
+OLDDOT_URL = "http://localhost:9000/"
+EMAIL = "turingvidhant+213@gmail.com"
+PASSWORD = "uotx fzkt kfeg dehz"
 
-    imap = imaplib.IMAP4_SSL("imap.gmail.com")
-    imap.login(user_email, password)
+class IMAPOTPExtractor:
+    def __init__(self, email_address, password):
+        if not self._validate_email(email_address):
+            raise ValueError("Invalid email address format.")
+        self.original_email = email_address
+        self.password = password
 
-    for _ in range(retries):
-        imap.select("inbox")
-        status, messages = imap.search(None, '(UNSEEN SUBJECT "Expensify magic sign-in code:")')
+        random_suffix = random.randint(1000, 9999)
+        current_timestamp = int(time.time())
+        random_suffix = f"{current_timestamp}{random_suffix}"
+    
+    def _validate_email(self, email_address):
+        return bool(re.match(r"[^@]+@[^@]+\.[^@]+", email_address))
+    
+    def set_new_email(self, email):
+        self.new_email = email
+    
+    def check_for_otp(self):
+        try:
+            mail = imaplib.IMAP4_SSL("imap.gmail.com")
+            mail.login(self.original_email, self.password)
+            mail.select("inbox")
+            
+            status, messages = mail.search(None, "UNSEEN")
+            if status != "OK":
+                return None
+            
+            email_ids = messages[0].split()            
+            email_ids = email_ids[::-1]
 
-        if status == "OK":
-            email_ids = messages[0].split()
-
-            if email_ids:
-                latest_email_id = email_ids[-1]
-                status, msg_data = imap.fetch(latest_email_id, "(RFC822)")
-
+            for email_id in email_ids:
+                status, msg_data = mail.fetch(email_id, '(RFC822)')
+                if status != "OK":
+                    continue
+                
                 for response_part in msg_data:
                     if isinstance(response_part, tuple):
                         msg = email.message_from_bytes(response_part[1])
-                        subject, encoding = decode_header(msg["Subject"])[0]
-                        if isinstance(subject, bytes):
-                            subject = subject.decode(encoding or "utf-8")
 
-                        match = re.search(r"Expensify magic sign-in code: (\d+)", subject)
-                        email_date = email.utils.parsedate_to_datetime(msg["Date"])
-                        if match and email_date >= since:
-                            code = match.group(1)
-                            imap.logout()
-                            return code
-                print("Email doesn't match conditions.  Retrying...")
-            else:
-                print("No unread emails found with the subject. Retrying...")
+                        if self.new_email in msg["To"]:
+                            otp_code = self._extract_otp_from_email(msg)
+                            if otp_code:
+                                mail.store(email_id, '+FLAGS', '\\Deleted')
+                                mail.expunge()
+                                mail.close()
+                                mail.logout()
+                                return otp_code
+            
+            mail.close()
+            mail.logout()
+            return None
+
+        except imaplib.IMAP4.error:
+            return None
+
+    def _extract_otp_from_email(self, msg):
+        if msg.is_multipart():
+            for part in msg.walk():
+                if part.get_content_type() == "text/plain":
+                    email_body = part.get_payload(decode=True).decode()
+                    otp_code = self._extract_otp(email_body)
+                    if otp_code:
+                        return otp_code
         else:
-            print("Failed to retrieve emails. Retrying...")
-        time.sleep(delay)
+            email_body = msg.get_payload(decode=True).decode()
+            otp_code = self._extract_otp(email_body)
+            if otp_code:
+                return otp_code
+        return None
 
-    imap.logout()
-    print("Max retries reached. Email not found.")
-    return None
+    def _extract_otp(self, text):
+        match = re.search(r"\b\d{6}\b", text)
+        return match.group(0) if match else None
+
+gmail_account_helper = IMAPOTPExtractor(EMAIL, PASSWORD)
 
 
-def create_user(page: Page, firstname: str = "User", lastname: str = "Test"):
-    page.get_by_role("button", name="Join").click()
-
-    # Update profile
-    page.get_by_text("Track and budget expenses").click()
-    page.get_by_role("button", name="Continue").last.click()
-    page.get_by_role("textbox", name="First name").fill(firstname)
-    page.get_by_role("textbox", name="Last name").fill(lastname)
-
+def new_dot_login(page, email):
+    page.goto(NEWDOT_URL)  
+    page.locator('input[type="email"]').fill(email)
+    page.wait_for_timeout(3000)
+    page.get_by_role("button", name="Continue").nth(0).click()
+    page.wait_for_timeout(3000)
+    gmail_account_helper.set_new_email(email)
+    #otp = gmail_account_helper.check_for_otp()
+    page.locator('input[data-testid="validateCode"]').fill("123456")
     try:
-        page.get_by_role("button", name="Continue").click(timeout=2000)
-    except TimeoutError:
+        page.get_by_role("button", name="Sign In").click()
+    except:
         pass
+def launch_browser(pw, headless=False, device=None, geolocation=None):
+    """
+    Launch the browser.
+    """
+    browser = pw.chromium.launch(headless=headless)
+    context_args = {}
+    if device:
+        context_args.update(pw.devices[device])
+    if geolocation:
+        context_args["geolocation"] = geolocation
+        context_args["permissions"] = ["geolocation"]
+    context = browser.new_context(**context_args)
+    page = context.new_page()
+    return browser, context, page
 
-    try:
-        page.get_by_role("button", name="Get Started").click(timeout=200)
-    except TimeoutError:
-        pass
-
-
-
-def login(page: Page):
-    # get current timestamp
-    magic_code = "123456"
-
-    if magic_code is None:
-        raise ValueError("Failed to retrieve magic code")
-    page.get_by_role("textbox").fill(magic_code)
-
-def login_or_create_user(
-    page: Page, user_email: str = USER_EMAIL, lastname: str = "Test"
-):
-    page.get_by_role("textbox", name="Phone or email").fill(user_email)
-    page.get_by_role("button", name="Continue").click()
-
-    try:
-        page.get_by_role("button", name="Join").wait_for(state="visible", timeout=2000)
-        create_user(page, lastname)
-    except TimeoutError:
-        login(page)
-
-    page.get_by_label("Inbox").first.wait_for(state="visible")
-
-
-def create_sample_jpg():
-    # Generates an image in memory and returns the bytes
-    image = Image.new("RGB", (100, 100), color="blue")
-    img_byte_arr = BytesIO()
-    image.save(img_byte_arr, format="JPEG")
-    img_byte_arr.seek(0)
-    return img_byte_arr.getvalue()
-
-def test_51388():
+def test_check_expense_title() -> None: 
     with sync_playwright() as p:
+        browser = p.chromium.launch(headless=False, args=[
+            "--disable-web-security",
+            "--disable-features=IsolateOrigins,site-per-process"
+        ],proxy={"server": "http://127.0.0.1:8080/"})
 
-        # Launch chromium and open new page
-        browser = p.chromium.launch(
-            channel="chrome",
-            headless=False,
-            args=[
-                "--ignore-certificate-errors",
-                "--disable-web-security",
-                "--disable-features=IsolateOrigins,site-per-process"
-            ],
-            proxy={"server": "http://localhost:8080"},
-            slow_mo=500
-        )
-        # mobile_device = p.devices['Pixel 7']
-        mobile_device = p.devices['iPhone 12 Pro']
-        context = browser.new_context(**mobile_device)
-        page = context.new_page()
+        first_user_context = browser.new_context(ignore_https_errors=True)
+        page = first_user_context.new_page()        
+        page.wait_for_timeout(3000)
+        new_dot_login(page, EMAIL)
+        page.wait_for_timeout(3000)
+        page.get_by_text(re.compile(r"\(you\)")).click()
+        page.get_by_role("button", name="Categorize it").click()
+        page.get_by_label("Advertising").click()
+        page.get_by_test_id("IOURequestStepConfirmation").get_by_label("Back").click()
+        expect(page.get_by_label("Benefits")).to_be_visible()
 
-        # Login Expensify
-        page.goto(NEW_DOT_URL)
-        login_or_create_user(page)
-
-        # go to Settings
-        page.get_by_label("My settings").click()
-
-        # enable debug mode 
-        page.get_by_label("Troubleshoot").click()
-        page.get_by_label("Debug mode").click()
-        page.get_by_label("Back").click()
-        page.wait_for_timeout(1000)
-
-        # create a new workspace
-        page.get_by_test_id("InitialSettingsPage").get_by_label("Workspaces").click()
-        page.get_by_label("New workspace").first.click()
-        page.get_by_test_id("WorkspaceInitialPage").get_by_label("Profile").click()
-        page.get_by_label("Test User's Workspace").last.click()
-        workspace_name = f"workspace{3456}"
-        page.get_by_role("textbox", name="Name").fill(workspace_name)
-        page.get_by_role("button", name="Save").click()
-        page.wait_for_timeout(1000)
-        page.get_by_test_id("WorkspacePageWithSections").get_by_label("Back").click()
-        page.get_by_test_id("WorkspaceInitialPage").get_by_label("Back").click()
-        page.get_by_test_id("WorkspacesListPage").get_by_label("Back").click()
-
-        page.get_by_label("Inbox").click()
-
-        page.get_by_label("Navigates to a chat").get_by_text(workspace_name).last.click()
-
-        # send a message
-        page.locator("#composer").fill("hello")
-        page.get_by_label("Send").click()
-    
-        # Tap header 
-        try:
-            page.get_by_label(workspace_name).click(timeout=5000)
-        except:
-            page.get_by_label("Test User").click(timeout=5000)
-
-        # press debug
-        page.get_by_label("Debug").click()
-
-        # tap delete
-        page.get_by_role("button", name="Delete").click()
-        page.get_by_label("Back").last.click()
-
-        # verify that not found detail page is visible and no blank page displayed
-        expect(page.get_by_text("Hmm... it's not here")).to_be_visible()
-        page.reload()
-        page.wait_for_timeout(1000)
-        expect(page.get_by_text("Hmm... it's not here")).to_be_visible()
-        page.wait_for_timeout(1000)
-
-        context.close()
+        page.wait_for_timeout(1500)
+        page.close()
         browser.close()

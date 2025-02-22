@@ -1,131 +1,67 @@
-import sys, os
+from playwright.sync_api import sync_playwright, expect
 
-base_path = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
-sys.path.insert(0, base_path)
-
-"""
-Tests for the issue: https://github.com/Expensify/App/issues/33740
-"""
-
-import logging
-import sys
-import time
-
-from playwright.sync_api import expect, sync_playwright
+def generate_random_email():
+    return f"nitish.expensify+345687645@gmail.com"
 
 
-EXPENSIFY_URL = "https://dev.new.expensify.com:8082/"
-
-
-logging.basicConfig(level=logging.INFO, stream=sys.stdout, format="%(message)s")
-LOGGER = logging.getLogger(__name__)
-
-
-EMAILS = [
-    'testuser+1733646285@gmail.com',
-    'testuser+1733646291@gmail.com',
-    'testuser+1733646296@gmail.com',
-    'testuser+1733646302@gmail.com',
-    'testuser+1733646308@gmail.com'
-]
-
-def launch_app(pw, headless=True, device=None, geolocation=None):
-    """
-    Launch the Expensify app.
-    """
-    browser = pw.chromium.launch(channel="chrome", headless=True, args=["--disable-web-security",
-    "--disable-features=IsolateOrigins,site-per-process"
-    ],slow_mo=1000)
+def login_user(pw):
+    browser = pw.chromium.launch(proxy = {"server": "http://localhost:8080"}, headless = False, args = ["--no-sandbox", "--disable-dev-shm-usage", "--ignore-certificate-errors", "--disable-web-security", "--disable-features=IsolateOrigins,site-per-process"], slow_mo = 30, channel = "chromium")
     context_args = {}
-    if device:
-        context_args.update(pw.devices[device])
-    if geolocation:
-        context_args["geolocation"] = geolocation
-        context_args["permissions"] = ["geolocation"]
+    context_args["timezone_id"] = "Asia/Calcutta"
     context = browser.new_context(**context_args)
     page = context.new_page()
-    page.goto(EXPENSIFY_URL)
-    return browser, context, page
+    user_email = generate_random_email()
 
+    page.goto('https://dev.new.expensify.com:8082/', timeout=3000000)
 
-def login_user(page, email, first_name="John", last_name="Doe"):
-    """
-    Login to the Expensify app and complete the onboarding.
-    """
-
-    page.get_by_test_id("username").fill(email)
-    page.get_by_role("button", name="Continue").click()
-    page.get_by_role("button", name="Join").click()
-
-    page.get_by_label("Track and budget expenses").click()
-    page.get_by_role("textbox", name="First name").fill(first_name)
-    page.get_by_role("textbox", name="Last name").fill(last_name)
+    page.locator('input[type="email"]').fill(user_email)
     page.get_by_role("button", name="Continue").click()
 
+    try:
+        expect(page.get_by_role("button", name="Sign in")
+               ).to_be_visible(timeout=3000)
+        page.get_by_test_id("validateCode").fill("123456")
+    except Exception:
+        page.get_by_role("button", name="Join").click()
 
-def test_split_expense_tooltip_shows_users_display_name():
-    """
-    Verify that the Split expense tooltip shows the display name of the users instead of their emails.
-
-    Note: The test is quite resource intensive as it requires simultaneously logging in 5 users. The test might fail
-    if enough resources (particularly RAM) are not available.
-    """
-    with sync_playwright() as pw:
-
-        users = []
-        for i, email in enumerate(EMAILS, start=1):
-            fname = f"Fname {i}"
-            lname = f"Lname {i}"
-
-            headless = i != 1
-            browser, context, page = launch_app(pw, headless=headless)
-            login_user(page, email, first_name=fname, last_name=lname)
-            name = f"{fname} {lname}"
-            user_info = {
-                "email": email,
-                "name": name,
-                "browser": browser,
-                "context": context,
-                "page": page,
-            }
-            users.append(user_info)
-            LOGGER.info("User logged in - Name: %s, Email: %s", name, email)
+    return page, browser
 
 
-        page = users[0]["page"]
+def test_the_issue():
+    with sync_playwright() as p:
+        page, browser = login_user(p)
+        page.get_by_test_id("CustomBottomTabNavigator").get_by_label(
+            "Search").click(timeout=30000)
+        page.wait_for_timeout(10000)
+        flicker_detected = False
+        try:
+            is_flicker_detected = page.wait_for_function("""
+                () => {
+                    return new Promise(resolve => {
+                        const allButtons = document.querySelectorAll('button');
 
+                        for (const btn of allButtons) {
+                            if (btn.innerText.trim() === "From") {
+                                btn.closest('button').click();
+                                break;
+                            }
+                        }
+                        const checkText = () => {
+                            const element = document.querySelector('div[data-testid="selection-list"] > div > div:nth-child(2)');
+                            if (element && element.innerText.includes("zxc")) {
+                                resolve(true);
+                            } else {
+                                requestAnimationFrame(checkText);
+                            }
+                        };
+                        checkText();
+                    });
+                }
+            """, timeout=20000)
+            flicker_detected = is_flicker_detected
+        except Exception:
+            pass
 
-        page.get_by_label("Start chat (Floating action)").click()
-        page.get_by_text("Start chat").click()
+        assert not flicker_detected, "The expenses change positions briefly after changing sorting order"
 
-
-        for user in users[1:]:
-            page.get_by_test_id("selection-list-text-input").fill(user["email"])
-            page.get_by_label(user["name"]).get_by_role("button", name="Add to group").click()
-
-
-        page.get_by_role("button", name="Next").click()
-        page.get_by_role("button", name="Start group").click()
-
-
-        page.get_by_role("button", name="Create").click()
-        page.get_by_text("Split expense").click()
-        page.get_by_role("button", name="Manual").click()
-        page.locator("input[class='css-textinput-11aywtz r-placeholderTextColor-6taxm2']").fill(str(len(users) * 10))
-        page.get_by_role("button", name="Next").click()
-        page.get_by_role("button").get_by_text("Split").click()
-
-
-        page.locator("div[class='css-text-146c3p1']").get_by_text("+").hover()
-
-        page.wait_for_timeout(2000)
-
-        expected_tooltip_text = ", ".join(user["name"] for user in users[3:])
-        LOGGER.info("Expected tooltip text: %s", expected_tooltip_text)
-        assert_message = f"The tooltip should show '{expected_tooltip_text}'"
-        expect(page.get_by_text(expected_tooltip_text), assert_message).to_be_visible(timeout=3)
-
-
-        for user in users:
-            user["context"].close()
-            user["browser"].close()
+        browser.close()

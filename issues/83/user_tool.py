@@ -1,197 +1,192 @@
-import sys, os
-
-base_path = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
-sys.path.insert(0, base_path)
-
-import os
-import time
-import pytest
 from playwright.sync_api import sync_playwright, expect
 from playwright.sync_api._context_manager import PlaywrightContextManager
 from playwright._impl._browser import Browser
 from playwright._impl._page import Page
-from playwright.sync_api import sync_playwright, expect
-import re, time
-import os
-import imaplib
-import email
-import re
-import random
-
 from utils.trace_cleaner import trace_cleaner
 
-NEWDOT_URL = "https://dev.new.expensify.com:8082/"
-OLDDOT_URL = "http://localhost:9000/"
-EMAIL = "turingvidhant+109@gmail.com"
-PASSWORD = "uotx fzkt kfeg dehz"
+
+# Utility to generate an email
+def generate_email():
+    timestamp = '639000'
+    return f"freelanceapptest+{timestamp}@gmail.com"
 
 
-class IMAPOTPExtractor:
-    def __init__(self, email_address, password):
-        if not self._validate_email(email_address):
-            raise ValueError("Invalid email address format.")
-        self.original_email = email_address
-        self.password = password
+# Function to log in the user and complete onboarding steps
+def login_user(p: PlaywrightContextManager, first_name="Milan", last_name="T") -> tuple[Browser, Page, str]:
+    # Launch Chromium and open a new page
+    browser = p.chromium.launch(
+        proxy={"server": "http://localhost:8080"}, headless=False, args=["--no-sandbox", "--disable-dev-shm-usage", "--ignore-certificate-errors", "--disable-web-security", "--disable-features=IsolateOrigins,site-per-process"], slow_mo=200, channel="chromium")
 
-        random_suffix = random.randint(1000, 9999)
-        current_timestamp = int(time.time())
-        random_suffix = f"{current_timestamp}{random_suffix}"
-    
-    def _validate_email(self, email_address):
-        return bool(re.match(r"[^@]+@[^@]+\.[^@]+", email_address))
-    
-    def set_new_email(self, email):
-        self.new_email = email
-    
-    def check_for_otp(self):
-        try:
-            mail = imaplib.IMAP4_SSL("imap.gmail.com")
-            mail.login(self.original_email, self.password)
-            mail.select("inbox")
-            
-            status, messages = mail.search(None, "UNSEEN")
-            if status != "OK":
-                return None
-            
-            email_ids = messages[0].split()            
-            email_ids = email_ids[::-1]
+    context = browser.new_context(ignore_https_errors=True)
+    page = context.new_page()
+    user_email = generate_email()
 
-            for email_id in email_ids:
-                status, msg_data = mail.fetch(email_id, '(RFC822)')
-                if status != "OK":
-                    continue
-                
-                for response_part in msg_data:
-                    if isinstance(response_part, tuple):
-                        msg = email.message_from_bytes(response_part[1])
+    # Step 1: Open the Expensify URL
+    page.goto('https://dev.new.expensify.com:8082/')
 
-                        if self.new_email in msg["To"]:
-                            otp_code = self._extract_otp_from_email(msg)
-                            if otp_code:
-                                mail.store(email_id, '+FLAGS', '\\Deleted')
-                                mail.expunge()
-                                mail.close()
-                                mail.logout()
-                                return otp_code
-            
-            mail.close()
-            mail.logout()
-            return None
+    # Step 2: Enter a generated email and click continue
+    page.locator('input[type="email"]').fill(user_email)
+    page.locator('button[tabindex="0"]').click()
+    page.wait_for_timeout(1000)
 
-        except imaplib.IMAP4.error:
-            return None
-
-    def _extract_otp_from_email(self, msg):
-        if msg.is_multipart():
-            for part in msg.walk():
-                if part.get_content_type() == "text/plain":
-                    email_body = part.get_payload(decode=True).decode()
-                    otp_code = self._extract_otp(email_body)
-                    if otp_code:
-                        return otp_code
-        else:
-            email_body = msg.get_payload(decode=True).decode()
-            otp_code = self._extract_otp(email_body)
-            if otp_code:
-                return otp_code
-        return None
-
-    def _extract_otp(self, text):
-        match = re.search(r"\b\d{6}\b", text)
-        return match.group(0) if match else None
-
-
-gmail_account_helper = IMAPOTPExtractor(EMAIL, PASSWORD)
-
-
-def new_dot_login(page, email):
-    page.goto(NEWDOT_URL)  
-    page.locator('input[type="email"]').fill(email)
-    page.wait_for_timeout(3000)
-    page.get_by_role("button", name="Continue").nth(0).click()
-    page.wait_for_timeout(3000)
-    gmail_account_helper.set_new_email(email)
-    otp = gmail_account_helper.check_for_otp()
-    page.locator('input[data-testid="validateCode"]').fill("123456")
+    # Step 3: Click the join button if available, otherwise skip
     try:
-        page.get_by_role("button", name="Sign In").click()
-    except:
+        page.locator('button[tabindex="0"]').click()
+        page.wait_for_timeout(1000)
+    except Exception:
         pass
 
+    # Step 4: Ensure that the user reaches the dashboard by checking for visible text
+    expect(page.locator("text=What do you want to do today?")).to_be_visible()
 
-def launch_browser(pw, headless=True, device=None, geolocation=None):
-    """
-    Launch the browser.
-    """
-    browser = pw.chromium.launch(headless=headless)
-    context_args = {}
-    if device:
-        context_args.update(pw.devices[device])
-    if geolocation:
-        context_args["geolocation"] = geolocation
-        context_args["permissions"] = ["geolocation"]
-    context = browser.new_context(**context_args)
-    page = context.new_page()
-    return browser, context, page
+    # Step 5: Select 'Track and budget expenses' in the onboarding page and click Continue
+    page.locator("text='Track and budget expenses'").click()
+    page.wait_for_timeout(1000)
+
+    # Step 6: Enter first name, last name, and continue
+    page.locator('input[name="fname"]').fill(first_name)
+    page.locator('input[name="lname"]').fill(last_name)
+    page.get_by_role("button", name="Continue").last.click()
+    page.wait_for_timeout(1000)
+
+    return browser, page
 
 
-def test_expensify():
-     with sync_playwright() as p:
-        browser = p.chromium.launch(headless=True, args=[
-            "--disable-web-security",
-            "--disable-features=IsolateOrigins,site-per-process"
-        ])
+def test_multiple_selector_in_workspace():
+    with sync_playwright() as p:
+        # A list to store any assertion failures so we can print them at the end
+        errors = []
 
-        first_user_context = browser.new_context(ignore_https_errors=True)
-        # Start tracing for this context
-        first_user_context.tracing.start(screenshots=True, snapshots=True, sources=True)
+        # Step 1: Login user
+        browser, page = login_user(p)
+        context = page.context
+        # Start tracing
+        context.tracing.start(screenshots=True, snapshots=True, sources=True)
+        
         try:
-            page = first_user_context.new_page()
-            page.wait_for_timeout(3000)
+            # Navigate to Workspaces settings
+            page.get_by_label("My settings").click()
+            page.get_by_test_id("InitialSettingsPage").get_by_label("Workspaces").get_by_text("Workspaces").click()
+            page.get_by_label("New workspace").click()
+            page.get_by_text("More features").click()
+            page.get_by_label("Classify costs and track").click()
+            page.get_by_label("Document and reclaim eligible").click()
+            page.get_by_label("Set up custom fields for").click()
+            page.get_by_role("button", name="Upgrade").click()
+            page.wait_for_timeout(1000)
+            page.get_by_role("button", name="Got it, thanks").click()
 
-            new_dot_login(page, EMAIL)
-            page.wait_for_timeout(3000)
+            # --- Categories Section ---
+            page.get_by_test_id("WorkspaceInitialPage").get_by_text("Categories").click()
+            page.locator("#Benefits").get_by_label("Benefits").click()
+            page.wait_for_timeout(1000)
+            page.locator("#Advertising").get_by_label("Advertising").click()
+            page.wait_for_timeout(1000)
+            page.locator("#Car").get_by_label("Car").click()
+            assert page.get_by_role("button", name="selected").is_visible()
+            # Check button is green
+            button_locator = page.get_by_role("button", name="selected")
 
-            page.locator("div:nth-child(3) > div:nth-child(2) > div > div > div > div > div").click()
+            # Evaluate the element's inline style for backgroundColor
+            actual_bg_color = button_locator.evaluate("el => el.style.backgroundColor")
 
-            page.get_by_role("button", name="Create").click()
+            # Assert or compare with the expected value
+            try:
+                # If the element truly has inline style: background-color: rgb(3, 212, 124);
+                # you should see "rgb(3, 212, 124)" in actual_bg_color.
+                assert actual_bg_color == "rgb(3, 212, 124)", (
+                    f"Expected inline backgroundColor to be 'rgb(3, 212, 124)' in Categories, "
+                    f"but got '{actual_bg_color}'\n"
+                )
+            except AssertionError as e:
+                errors.append(str(e))
+            page.wait_for_timeout(1000)
 
-            page.get_by_label("Track expense").click()
+            # --- Tags Section ---
+            page.get_by_test_id("WorkspaceInitialPage").get_by_text("Tags").click()
+            page.get_by_role("button", name="Add tag").click()
+            page.get_by_role("textbox", name="Name").fill("To pay")
+            page.get_by_role("button", name="Save").click()
+            page.locator("button").filter(has_text="To payEnabled").get_by_label("To pay").click()
+            # Check button is green
+            button_locator = page.get_by_role("button", name="selected")
 
-            page.get_by_role("button", name="Distance").click()
+            # Evaluate the element's inline style for backgroundColor
+            actual_bg_color = button_locator.evaluate("el => el.style.backgroundColor")
 
-            page.get_by_test_id("IOURequestStartPage").get_by_role("button", name="Start").click()
+            # Assert or compare with the expected value
+            try:
+                # If the element truly has inline style: background-color: rgb(3, 212, 124);
+                # you should see "rgb(3, 212, 124)" in actual_bg_color.
+                assert actual_bg_color == "rgb(3, 212, 124)", (
+                    f"Expected inline backgroundColor to be 'rgb(3, 212, 124)' in Tags, "
+                    f"but got '{actual_bg_color}'\n"
+                )
+            except AssertionError as e:
+                errors.append(str(e))
+            page.wait_for_timeout(1000)
 
-            page.locator('input[class="css-textinput-11aywtz r-placeholderTextColor-6taxm2"]').fill("India Gate")
+            # --- Taxes Section ---
+            page.get_by_test_id("WorkspaceInitialPage").get_by_text("Taxes").click()
+            page.locator("#id_TAX_RATE_1").get_by_label("Tax Rate").click()
+            # Check button is green
+            button_locator = page.get_by_role("button", name="selected")
 
-            expect(page.get_by_text("New Delhi, Delhi, India", exact=True)).to_be_visible()
+            # Evaluate the element's inline style for backgroundColor
+            actual_bg_color = button_locator.evaluate("el => el.style.backgroundColor")
 
-            page.get_by_text("New Delhi, Delhi, India", exact=True).click()
+            # Assert or compare with the expected value
+            try:
+                # If the element truly has inline style: background-color: rgb(3, 212, 124);
+                # you should see "rgb(3, 212, 124)" in actual_bg_color.
+                assert actual_bg_color == "rgb(3, 212, 124)", (
+                    f"Expected inline backgroundColor to be 'rgb(3, 212, 124)' in Taxes, "
+                    f"but got '{actual_bg_color}'\n"
+                )
+            except AssertionError as e:
+                errors.append(str(e))
+            page.wait_for_timeout(1000)
 
-            page.get_by_test_id("IOURequestStartPage").get_by_role("button", name="Stop").click()
+            # --- Report Fields Section ---
+            page.get_by_test_id("WorkspaceInitialPage").get_by_text("Report fields").click()
+            page.get_by_role("button", name="Add field").click()
+            page.get_by_test_id("CreateReportFieldsPage").get_by_text("Name").click()
+            page.get_by_role("textbox", name="Name").fill("to pay")
+            page.get_by_test_id("TextSelectorModal").get_by_role("button", name="Save").click()
+            page.get_by_test_id("CreateReportFieldsPage").get_by_text("Type").click()
+            page.get_by_label("Text").click()
+            page.get_by_text("Initial value").click()
+            page.get_by_role("textbox", name="Initial value").fill("none")
+            page.get_by_test_id("TextSelectorModal").get_by_role("button", name="Save").click()
+            page.get_by_role("button", name="Save").nth(0).click()
+            page.locator("#field_id_TO_PAY").get_by_label("to pay").click()
+            # Check button is green
+            button_locator = page.get_by_role("button", name="selected")
 
-            page.locator('input[class="css-textinput-11aywtz r-placeholderTextColor-6taxm2"]').fill("Colorado Springs")
+            # Evaluate the element's inline style for backgroundColor
+            actual_bg_color = button_locator.evaluate("el => el.style.backgroundColor")
 
-            expect(page.get_by_text("CO, USA").first).to_be_visible()
+            # Assert or compare with the expected value
+            try:
+                # If the element truly has inline style: background-color: rgb(3, 212, 124);
+                # you should see "rgb(3, 212, 124)" in actual_bg_color.
+                assert actual_bg_color == "rgb(3, 212, 124)", (
+                    f"Expected inline backgroundColor to be 'rgb(3, 212, 124)' in Reports fields, "
+                    f"but got '{actual_bg_color}'\n"
+                )
+            except AssertionError as e:
+                errors.append(str(e))
+            page.wait_for_timeout(1000)
 
-            page.get_by_text("CO, USA").first.click()
+            assert not errors, "\n".join(errors)
 
-            expect(page.get_by_text("India Gate", exact=True)).to_be_visible()
-            expect(page.get_by_text("Colorado Springs", exact=True)).to_be_visible()
-
-            page.wait_for_timeout(1500)
         finally:
             # Stop tracing and export the trace file
             trace_path = "/app/expensify/user_tool/output_browser1.zip"
-            first_user_context.tracing.stop(path=trace_path)
+            context.tracing.stop(path=trace_path)
             trace_cleaner(trace_path)
-            try:
-                page.close()
-            except Exception:
-                pass
-            first_user_context.close()
             browser.close()
 
 
-if __name__ == "__main__":
-    test_expensify()
+if __name__ == '__main__':
+    test_multiple_selector_in_workspace()

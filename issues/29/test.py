@@ -1,83 +1,133 @@
-import sys, os
-
-base_path = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
-sys.path.insert(0, base_path)
-
+import imaplib
+import email
+import re
+from email.header import decode_header
 from playwright.sync_api import sync_playwright, expect
-from playwright.sync_api._context_manager import PlaywrightContextManager
+
+GMAIL_NAME = "nomandevtur+54582.2"
+GMAIL_APP_PASSWORD = "tpye xlsj axyq nltq"
 
 
-def get_user_email():
-    return f"nitish.expensify+{9}@gmail.com"
+def get_test_user_info(seed = None, first_name = None, last_name = None):
+    if first_name is None:
+        first_name = GMAIL_NAME
+
+    if last_name is None:
+        last_name = ""
+
+    email = f"{GMAIL_NAME}+{seed}@gmail.com" if seed is not None else f"{GMAIL_NAME}@gmail.com"
+    
+    return {"email": email, "password": GMAIL_APP_PASSWORD, "first_name": first_name, "last_name": last_name}
 
 
-def get_magic_code():
-    return "123456"
+def select_activity(page, first_name, last_name, activity_text):
+    
+    # Select activity in onboarding page and click Continue
+    page.get_by_label(activity_text).click()
+
+    # Enter first name, last name and click continue
+    page.get_by_role("textbox", name="First name").fill(first_name)
+    page.get_by_role("textbox", name="Last name").fill(last_name)
+    page.get_by_role("button", name="Continue").last.click()
 
 
-def login_user(p: PlaywrightContextManager):
-    browser = p.chromium.launch(headless=True, args=[
-        "--ignore-certificate-errors", "--disable-web-security", "--disable-features=IsolateOrigins,site-per-process"],
-        slow_mo=1000)
+def login_user(page, user_info, activity_text="Track and budget expenses"):
+    # Clear cookies, local storage, and session storage
+    page.context.clear_cookies()
 
-    page = browser.new_page()
-    user_email = get_user_email()
-    first_name = 'John'
-    last_name = 'Doe'
+    page.goto('https://dev.new.expensify.com:8082/', timeout=60000)  # 60 seconds
+    page.wait_for_load_state('load', timeout=60000)
 
+    page.get_by_test_id("username").fill(user_info["email"])
+    page.get_by_role("button", name="Continue").click()
 
-    page.goto('https://dev.new.expensify.com:8082/')
+    join_button = page.get_by_role("button", name="Join")
+    validate_code_input = page.locator('input[data-testid="validateCode"]')
 
+    if (join_button.is_visible()):
+        join_button.click(timeout=3000)
+    else:
+        magic_code = "123456"
+        print(f"Magic code: {magic_code}")
+        validate_code_input.fill(magic_code)
 
-    page.locator('input[type="email"]').fill(user_email)
-    page.locator('button[tabindex="0"]').click()
+    page.wait_for_timeout(3000)
 
-    try:
-        expect(page.get_by_role("button", name="Sign in")).to_be_visible()
-        page.get_by_test_id("validateCode").fill(get_magic_code())
-    except Exception:
-        page.get_by_role("button", name="Join").click()
-
-    try:
-        expect(page.locator('div[aria-label="Track and budget expenses"]').nth(
-            0)).to_be_visible()
-
-
-        page.locator(
-            'div[aria-label="Track and budget expenses"]').nth(0).click()
+    select_activity_dialog = page.get_by_text("What do you want to do today?")
+    if select_activity_dialog.count() > 0:
+        select_activity(page, user_info["first_name"], user_info["last_name"], activity_text)
 
 
-        page.locator('input[name="fname"]').nth(0).fill(first_name)
-        page.locator('input[name="lname"]').nth(0).fill(last_name)
-        page.get_by_role("button", name="Continue").nth(0).click()
-    except Exception:
-        pass
+def launch_app(pw, headless=False, device=None, geolocation=None):
+    browser = pw.chromium.launch(proxy = {"server": "http://localhost:8080"}, headless = False, args = ["--no-sandbox", "--disable-dev-shm-usage", "--ignore-certificate-errors", "--disable-web-security", "--disable-features=IsolateOrigins,site-per-process"], slow_mo = 1500, channel = "chromium")
 
-    try:
-        get_started_here = page.locator(
-            'div', has_text="Get started here!").nth(-1)
-        expect(get_started_here).to_be_visible()
-        page.get_by_label("Close").nth(-1).click()
-    except Exception:
-        pass
-
-    return browser, page
+    context_args = {"viewport": {"width": 1324, "height": 740}}
+    if device:
+        context_args.update(pw.devices[device])
+    if geolocation:
+        context_args["geolocation"] = geolocation
+        context_args["permissions"] = ["geolocation"]
+    context = browser.new_context(**context_args)
+    page = context.new_page()
+    return browser, context, page
 
 
-def test_26228():
+def test_54582():
     with sync_playwright() as p:
-        browser, page = login_user(p)
+        
+        user_info = get_test_user_info()
 
-        plus_icon = page.locator(
-            'button[aria-label="Start chat (Floating action)"]')
-        expect(plus_icon).to_be_visible()
-        plus_icon.click()
+        browser, context, page = launch_app(p)
+        login_user(page, user_info)
 
-        start_chat_button = page.locator('div[aria-label="Start chat"]')
-        expect(start_chat_button).to_be_visible()
-        start_chat_button.press("Enter")
+        page.wait_for_timeout(3000)
 
-        inputBox = page.get_by_test_id("selection-list-text-input")
-        expect(inputBox).to_be_visible()
+        page.get_by_label("My settings").click()
+        page.get_by_test_id("InitialSettingsPage").get_by_label("Workspaces").click()
+        page.wait_for_timeout(3000)
+        page.get_by_label("New workspace").click()
+        page.get_by_text("Default currency").click()
+        page.get_by_test_id("selection-list-text-input").fill("usd")
+        page.get_by_label("USD - $").last.click()
 
+        try:
+            page.get_by_role("button", name="Confirm").wait_for(state="visible", timeout=2000)
+            page.get_by_role("button", name="Confirm").click()
+        except:
+            pass
+
+        page.get_by_text("More features").click()
+        page.get_by_label("Configure how spend is").click()
+        page.wait_for_timeout(3000)
+        page.get_by_label("Workflows").first.click()
+        page.get_by_text("Connect bank account").click()
+        page.wait_for_timeout(3000)
+        connect_bank_account_url = page.url
+
+        page.locator("#overLayBottomButton").click()
+        page.get_by_test_id("WorkspaceInitialPage").get_by_label("Back").click()
+
+        page.get_by_test_id("InitialSettingsPage").get_by_label("Workspaces").click()
+        page.locator("body").press("ControlOrMeta+d")
+        page.get_by_label("Force offline").click()
+        page.locator("body").press("ControlOrMeta+d")
+
+        page.get_by_role("button", name="More").last.click()
+        page.get_by_test_id("PopoverMenuItem-Delete workspace").click()
+        page.get_by_label("Delete").click()
+        page.get_by_label("Inbox").click()
+
+        page.get_by_text("T (you)").click()
+        page.get_by_role("textbox").click()
+        page.get_by_role("textbox").fill(connect_bank_account_url)
+        
+        page.get_by_role("button", name="Send").click()
+
+        page.get_by_role("link", name=connect_bank_account_url, exact=True).nth(1).click()
+
+        text_locator = page.locator("div:has-text(\"Hmm... it's not here\")").first
+        expect(text_locator).to_be_visible()
+
+        page.wait_for_timeout(3000)
+        page.close()
         browser.close()

@@ -1,60 +1,58 @@
-import sys, os
-
-base_path = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
-sys.path.insert(0, base_path)
-
-import time
 from playwright.sync_api import sync_playwright, expect
-import re
-
 from utils.trace_cleaner import trace_cleaner
 
 
-static_email = "testuserexpensify1+35@gmail.com"
+user_email = "totherandomuser+50963@gmail.com"
+password = "umei djwi bfmp jntm"
 
-def test_open_page_and_validate_row_hover():
-    site_url = 'https://dev.new.expensify.com:8082/concierge'
-    timestamp = int(time.time())
-    trace_path = "/app/expensify/user_tool/output_browser1.zip"
 
+def login(p, context):
+    page = context.new_page()
+    page.goto('https://dev.new.expensify.com:8082')
+
+    # Step 1: Enter username and continue
+    page.get_by_test_id("username").click()
+    page.get_by_test_id("username").fill(user_email)
+    page.get_by_role("button", name="Continue").click()
+
+    # Step 2: Mark Inbox read and then get magic code from email
+    magic_code = "123456"
+
+    # Step 3: Fill in the magic code
+    validate_code_input = page.locator('input[name="validateCode"]')
+    expect(validate_code_input).to_be_visible()
+    validate_code_input.fill(magic_code)
+    page.wait_for_timeout(1000)
+
+    return page
+
+
+def test():
     with sync_playwright() as p:
-        browser = p.chromium.launch(headless=True, slow_mo=1000, args=["--disable-web-security", "--disable-features=IsolateOrigins,site-per-process"])
+        # Step 1: Main Browser Login
+        browser = p.chromium.launch(headless=False, args=[
+            "--disable-web-security",
+            "--disable-features=IsolateOrigins,site-per-process"
+        ], slow_mo=500)
         context = browser.new_context()
+
+        # Start tracing with screenshots, snapshots and sources
         context.tracing.start(screenshots=True, snapshots=True, sources=True)
-        page = context.new_page()
 
         try:
-            page.goto(site_url)
+            page = login(p, context)
 
-            phone_or_email_input = page.locator('input[type="email"]')
-            phone_or_email_input.fill(static_email)
+            page.get_by_test_id("CustomBottomTabNavigator").get_by_label("Search").click()
+            page.get_by_role("button", name="Feb 14 M1 Randa Singh Randa").click()
+            page.wait_for_timeout(3000)
 
-            continue_button = page.locator('button[tabindex="0"]')
-            continue_button.click()
-
-            join_button = page.get_by_role("button", name="Join")
-            join_button.click()
-
-
-            page.locator("div").filter(has_text=re.compile(r"^Something else$")).first.click()
-            page.locator("body").press("Enter")
-
-
-            page.locator('input[name="fname"]').fill("Account")
-            page.locator('input[name="lname"]').fill(f"{timestamp}")
-            page.get_by_role("button", name="Continue").last.click()
-            page.get_by_role("button", name="Get Started").click()
-
-
-            page.goto(site_url)
-
-            concierge_button = page.locator('button[aria-label="concierge@expensify.com"]', has_text="Concierge").first
-            concierge_button.wait_for(state="visible")
-            expect(concierge_button).to_be_visible()
-        except Exception as e:
-            print("Test encountered an exception:", e)
-            raise e
+            expect(page.get_by_test_id("report-screen-4704693588482012").get_by_label("Search")).not_to_be_visible()
         finally:
-            context.tracing.stop(path=trace_path)
-            trace_cleaner(trace_path)
+            trace_output = "/app/expensify/user_tool/output_browser1.zip"
+            context.tracing.stop(path=trace_output)
+            trace_cleaner(trace_output)
             browser.close()
+
+
+if __name__ == "__main__":
+    test()

@@ -1,90 +1,73 @@
-diff --git a/src/pages/EditReportFieldDropdown.tsx b/src/pages/EditReportFieldDropdown.tsx
-index ba6828eca78..bc0e67a1d94 100644
---- a/src/pages/EditReportFieldDropdown.tsx
-+++ b/src/pages/EditReportFieldDropdown.tsx
-@@ -9,7 +9,6 @@ import type {ListItem} from '@components/SelectionList/types';
- import useDebouncedState from '@hooks/useDebouncedState';
- import useLocalize from '@hooks/useLocalize';
- import useTheme from '@hooks/useTheme';
--import localeCompare from '@libs/LocaleCompare';
- import * as OptionsListUtils from '@libs/OptionsListUtils';
- import CONST from '@src/CONST';
- import ONYXKEYS from '@src/ONYXKEYS';
-@@ -43,7 +42,7 @@ function EditReportFieldDropdownPage({onSubmit, fieldKey, fieldValue, fieldOptio
-     const [searchValue, debouncedSearchValue, setSearchValue] = useDebouncedState('');
-     const theme = useTheme();
-     const {translate} = useLocalize();
--    const recentlyUsedOptions = useMemo(() => recentlyUsedReportFields?.[fieldKey]?.sort(localeCompare) ?? [], [recentlyUsedReportFields, fieldKey]);
-+    const recentlyUsedOptions = useMemo(() => recentlyUsedReportFields?.[fieldKey]?? [], [recentlyUsedReportFields, fieldKey]);
- 
-     const itemRightSideComponent = useCallback(
-         (item: ListItem) => {
-@@ -62,7 +61,7 @@ function EditReportFieldDropdownPage({onSubmit, fieldKey, fieldValue, fieldOptio
-     );
- 
-     const [sections, headerMessage] = useMemo(() => {
--        const validFieldOptions = fieldOptions?.filter((option) => !!option)?.sort(localeCompare);
-+        const validFieldOptions = fieldOptions?.filter((option) => !!option);
- 
-         const {policyReportFieldOptions} = OptionsListUtils.getFilteredOptions(
-             [],
-diff --git a/src/pages/workspace/reportFields/InitialListValueSelector/ReportFieldsInitialListValuePicker.tsx b/src/pages/workspace/reportFields/InitialListValueSelector/ReportFieldsInitialListValuePicker.tsx
-index 4e6328bbc36..18f9f9d6525 100644
---- a/src/pages/workspace/reportFields/InitialListValueSelector/ReportFieldsInitialListValuePicker.tsx
-+++ b/src/pages/workspace/reportFields/InitialListValueSelector/ReportFieldsInitialListValuePicker.tsx
-@@ -1,7 +1,6 @@
- import React, {useMemo} from 'react';
- import SelectionList from '@components/SelectionList';
- import RadioListItem from '@components/SelectionList/RadioListItem';
--import localeCompare from '@libs/LocaleCompare';
- 
- type ReportFieldsInitialListValuePickerProps = {
-     /** Options to select from if field is of type list */
-@@ -23,7 +22,6 @@ function ReportFieldsInitialListValuePicker({listValues, disabledOptions, value,
-             {
-                 data: Object.values(listValues ?? {})
-                     .filter((listValue, index) => !disabledOptions[index])
--                    .sort(localeCompare)
-                     .map((listValue) => ({
-                         keyForList: listValue,
-                         value: listValue,
-diff --git a/src/pages/workspace/reportFields/ReportFieldsListValuesPage.tsx b/src/pages/workspace/reportFields/ReportFieldsListValuesPage.tsx
-index 6cc1da84a06..d7c19b1ae05 100644
---- a/src/pages/workspace/reportFields/ReportFieldsListValuesPage.tsx
-+++ b/src/pages/workspace/reportFields/ReportFieldsListValuesPage.tsx
-@@ -24,7 +24,6 @@ import useThemeStyles from '@hooks/useThemeStyles';
- import {turnOffMobileSelectionMode} from '@libs/actions/MobileSelectionMode';
- import * as ReportField from '@libs/actions/Policy/ReportField';
- import * as DeviceCapabilities from '@libs/DeviceCapabilities';
--import localeCompare from '@libs/LocaleCompare';
+diff --git a/src/pages/EditReportFieldPage.tsx b/src/pages/EditReportFieldPage.tsx
+index d7d359d289f..3157a65ff76 100644
+--- a/src/pages/EditReportFieldPage.tsx
++++ b/src/pages/EditReportFieldPage.tsx
+@@ -1,7 +1,8 @@
+ import type {StackScreenProps} from '@react-navigation/stack';
+ import {Str} from 'expensify-common';
+ import React, {useState} from 'react';
+-import {useOnyx} from 'react-native-onyx';
++import {withOnyx} from 'react-native-onyx';
++import type {OnyxEntry} from 'react-native-onyx';
+ import FullPageNotFoundView from '@components/BlockingViews/FullPageNotFoundView';
+ import ConfirmModal from '@components/ConfirmModal';
+ import type {FormOnyxValues} from '@components/Form/types';
+@@ -16,24 +17,30 @@ import isSearchTopmostCentralPane from '@libs/Navigation/isSearchTopmostCentralP
  import Navigation from '@libs/Navigation/Navigation';
- import * as PolicyUtils from '@libs/PolicyUtils';
+ import type {EditRequestNavigatorParamList} from '@libs/Navigation/types';
  import * as ReportUtils from '@libs/ReportUtils';
-@@ -104,7 +103,6 @@ function ReportFieldsListValuesPage({
-                     />
-                 ),
-             }))
--            .sort((a, b) => localeCompare(a.value, b.value));
-         return [{data, isDisabled: false}];
-     }, [canSelectMultiple, disabledListValues, listValues, selectedValues, translate]);
+-import CONST from '@src/CONST';
+ import * as ReportActions from '@src/libs/actions/Report';
+ import ONYXKEYS from '@src/ONYXKEYS';
+ import ROUTES from '@src/ROUTES';
+ import type SCREENS from '@src/SCREENS';
++import type {Policy, Report} from '@src/types/onyx';
+ import EditReportFieldDate from './EditReportFieldDate';
+ import EditReportFieldDropdown from './EditReportFieldDropdown';
+ import EditReportFieldText from './EditReportFieldText';
  
-diff --git a/src/pages/workspace/reportFields/WorkspaceReportFieldsPage.tsx b/src/pages/workspace/reportFields/WorkspaceReportFieldsPage.tsx
-index 01465a9b8a3..312d40c6877 100644
---- a/src/pages/workspace/reportFields/WorkspaceReportFieldsPage.tsx
-+++ b/src/pages/workspace/reportFields/WorkspaceReportFieldsPage.tsx
-@@ -31,7 +31,6 @@ import useTheme from '@hooks/useTheme';
- import useThemeStyles from '@hooks/useThemeStyles';
- import {turnOffMobileSelectionMode} from '@libs/actions/MobileSelectionMode';
- import * as DeviceCapabilities from '@libs/DeviceCapabilities';
--import localeCompare from '@libs/LocaleCompare';
- import Navigation from '@libs/Navigation/Navigation';
- import type {FullScreenNavigatorParamList} from '@libs/Navigation/types';
- import * as PolicyUtils from '@libs/PolicyUtils';
-@@ -106,7 +105,6 @@ function WorkspaceReportFieldsPage({
-         return [
-             {
-                 data: Object.values(filteredPolicyFieldList)
--                    .sort((a, b) => localeCompare(a.name, b.name))
-                     .map((reportField) => ({
-                         value: reportField.name,
-                         fieldID: reportField.fieldID,
+-type EditReportFieldPageProps = StackScreenProps<EditRequestNavigatorParamList, typeof SCREENS.EDIT_REQUEST.REPORT_FIELD>;
++type EditReportFieldPageOnyxProps = {
++    /** The report object for the expense report */
++    report: OnyxEntry<Report>;
+ 
+-function EditReportFieldPage({route}: EditReportFieldPageProps) {
++    /** Policy to which the report belongs to */
++    policy: OnyxEntry<Policy>;
++};
++
++type EditReportFieldPageProps = EditReportFieldPageOnyxProps & StackScreenProps<EditRequestNavigatorParamList, typeof SCREENS.EDIT_REQUEST.REPORT_FIELD>;
++
++function EditReportFieldPage({route, policy, report}: EditReportFieldPageProps) {
+     const {windowWidth} = useWindowDimensions();
+     const styles = useThemeStyles();
+-    const {backTo, reportID, policyID} = route.params;
++    const backTo = route.params.backTo;
+     const fieldKey = ReportUtils.getReportFieldKey(route.params.fieldID);
+-    const [report] = useOnyx(`${ONYXKEYS.COLLECTION.REPORT}${reportID}`);
+-    const [policy] = useOnyx(`${ONYXKEYS.COLLECTION.POLICY}${policyID}`);
+     const reportField = report?.fieldList?.[fieldKey] ?? policy?.fieldList?.[fieldKey];
+     const policyField = policy?.fieldList?.[fieldKey] ?? reportField;
+     const isDisabled = ReportUtils.isReportFieldDisabled(report, reportField, policy);
+@@ -83,7 +90,7 @@ function EditReportFieldPage({route}: EditReportFieldPageProps) {
+ 
+     const menuItems: PopoverMenuItem[] = [];
+ 
+-    const isReportFieldDeletable = reportField.deletable && reportField?.fieldID !== CONST.REPORT_FIELD_TITLE_FIELD_ID;
++    const isReportFieldDeletable = reportField.deletable && !isReportFieldTitle;
+ 
+     if (isReportFieldDeletable) {
+         menuItems.push({icon: Expensicons.Trashcan, text: translate('common.delete'), onSelected: () => setIsDeleteModalVisible(true), shouldCallAfterModalHide: true});
+@@ -152,4 +159,11 @@ function EditReportFieldPage({route}: EditReportFieldPageProps) {
+ 
+ EditReportFieldPage.displayName = 'EditReportFieldPage';
+ 
+-export default EditReportFieldPage;
++export default withOnyx<EditReportFieldPageProps, EditReportFieldPageOnyxProps>({
++    report: {
++        key: ({route}) => `${ONYXKEYS.COLLECTION.REPORT}${route.params.reportID}`,
++    },
++    policy: {
++        key: ({route}) => `${ONYXKEYS.COLLECTION.POLICY}${route.params.policyID}`,
++    },
++})(EditReportFieldPage);

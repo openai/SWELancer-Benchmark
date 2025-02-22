@@ -3,163 +3,111 @@ import sys, os
 base_path = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
 sys.path.insert(0, base_path)
 
+import time
 import pytest
-
-from playwright.async_api import (
-    async_playwright,
-    expect,
-    Browser,
-    BrowserContext,
-    Page,
-    PlaywrightContextManager,
-)
-
-EXPENSIFY = "https://dev.new.expensify.com:8082/"
-
-EMAIL = "doorsqueaky+9652421543554321425655453@gmail.com"
-
-USER_FNAME = "Manisha"
-USER_LNAME = "Reddy"
+import random
+from playwright.sync_api import sync_playwright, Page
 
 
-async def launch_browser(
-    p: PlaywrightContextManager,
-) -> tuple[Browser, BrowserContext, Page]:
-    """
-    Launches a new browser and opens a new page
-    """
-    browser = await p.chromium.launch(
-        headless=True,
-        args=[
-            "--ignore-certificate-errors",
-            "--disable-web-security",
-            "--disable-features=IsolateOrigins,site-per-process",
-        ],
+
+def generate_random_email():
+    timestamp = int(time.time())
+    return f"kenworktestemail+993@gmail.com"
+
+
+
+def generate_random_name():
+    first_names = ["John", "Jane", "Alex", "Emily", "Chris", "Sam", "Max", "Taylor"]
+    last_names = [
+        "Smith",
+        "Doe",
+        "Johnson",
+        "Williams",
+        "Brown",
+        "Davis",
+        "Miller",
+        "Wilson",
+    ]
+    return random.choice(first_names), random.choice(last_names)
+
+
+@pytest.fixture
+def setup_playwright():
+
+    playwright = sync_playwright().start()
+
+    browser = playwright.chromium.launch(
+        headless=True, args=["--ignore-certificate-errors", "--disable-web-security",
+        "--disable-features=IsolateOrigins, site-per-process"]
     )
-    context = await browser.new_context()
-    page = await context.new_page()
+    page = browser.new_page()
+    yield page
 
-    return browser, context, page
-
-
-async def duplicate_tab(context: BrowserContext, page_a: Page):
-    """
-    Duplicates a given tab (page)
-    """
-    storage_state = await context.storage_state()
-
-    page_b = await context.new_page()
-    await context.add_cookies(storage_state["cookies"])
-    await page_b.goto(page_a.url)
-
-    return page_b
+    browser.close()
+    playwright.stop()
 
 
-async def login_newdot(page: Page, user_email: str, first_name: str, last_name: str):
-    """
-    Creates a new account for a user in NewDot
-    """
 
-    await page.goto(EXPENSIFY)
+def login_user(page: Page, email: str, first_name: str, last_name: str):
+    page.goto("https://dev.new.expensify.com:8082/")
+    page.locator('input[type="email"]').fill(email)
+    page.locator('button[tabindex="0"]').click()
+    page.wait_for_timeout(1000)
 
-    await page.get_by_test_id("username").fill(user_email)
-    await page.get_by_role("button", name="Continue").click()
+    try:
+        page.locator('button[tabindex="0"]').click()
+        page_wait_for_timeout(1000)
+    except Exception:
+        pass
+    if page.get_by_text("Track and budget expenses").is_visible():
+        page.locator("text='Track and budget expenses'").click()
+        page.get_by_role("button", name="Continue").click()
+        page.wait_for_timeout(1000)
 
-    await page.get_by_role("button", name="Join").click()
-
-
-    await page.get_by_text("Track and budget expenses").click()
-    await page.get_by_role("button", name="Continue").click()
-
-
-    await page.locator('input[name="fname"]').fill(first_name)
-    await page.locator('input[name="lname"]').fill(last_name)
-    await page.get_by_role("button", name="Continue").last.click()
-
-    await page.get_by_label("guided-setup-track-personal-").wait_for()
-
-
-async def create_new_workspace(page: Page):
-    """
-    Creates a new workspace
-    """
-
-    await page.get_by_label("My settings").click()
+        page.locator('input[name="fname"]').fill(first_name)
+        page.locator('input[name="lname"]').fill(last_name)
+        page.get_by_role("button", name="Continue").last.click()
+        page.wait_for_timeout(1000)
 
 
-    await page.locator('div[aria-label="Workspaces"][role="menuitem"]').click()
-    await page.locator('button[aria-label="New workspace"]').first.click()
 
-
-async def tax_feature_toggle(page: Page, toggle_value: bool):
-    """
-    Enables/Disables Tax feature for the workspace
-    """
-
-    await page.get_by_test_id("WorkspaceInitialPage").get_by_label(
-        "More features"
+def create_workspace(page: Page):
+    page.locator('button[aria-label="Workspaces"]').click()
+    page.wait_for_timeout(1000)
+    page.get_by_test_id("WorkspaceSwitcherPage").get_by_role(
+        "button", name="New workspace"
     ).click()
-    tax_toggle_button = page.get_by_label("Document and reclaim eligible taxes.")
-    checked = await tax_toggle_button.get_attribute("aria-checked")
-    if (checked == "true" and toggle_value == False) or (
-        checked == "false" and toggle_value == True
-    ):
-        await tax_toggle_button.click()
+    page.locator('button[aria-label="Back"]').click()
+    page.wait_for_timeout(1000)
+    page.locator('button[aria-label="Back"]').click()
+    page.wait_for_timeout(1000)
 
 
-async def check_back_button_navigation(page: Page):
-    """
-    Check if the back button on not found page navigates to WS editor/details page
-    """
+@pytest.mark.usefixtures("setup_playwright")
+def test_lhn_workspace(setup_playwright):
+    page = setup_playwright
+    email = generate_random_email()
+    first_name, last_name = generate_random_name()
+    workspace_name = f"{email}'s Workspace"
 
-    not_found_message = page.locator("span", has_text="Oops, this page cannot be found")
-    await expect(not_found_message).to_be_visible()
+    login_user(page, email, first_name, last_name)
+    create_workspace(page)
 
+    page.wait_for_timeout(2000)
+    try:
+        lhn_workspace_text = page.locator(
+            'button[aria-label="Navigates to a chat"]', has_text=workspace_name
+        ).inner_text()
+    except Exception:
+        lhn_workspace_text = (
+            page.locator(
+                'button[aria-label="Navigates to a chat"]', has_text=workspace_name
+            )
+            .nth(0)
+            .inner_text()
+        )
 
-    await page.get_by_test_id("NotFoundPage").get_by_label("Back").click()
+    assert (
+        "No activity yet" not in lhn_workspace_text
+    ), "'No activity yet' is shown for workspace in LHN!"
 
-
-    await expect(
-        page.get_by_test_id("WorkspaceInitialPage").get_by_label("Profile")
-    ).to_be_visible()
-    await expect(
-        page.get_by_test_id("WorkspaceInitialPage").get_by_label("Members")
-    ).to_be_visible()
-    await expect(
-        page.get_by_test_id("WorkspaceInitialPage").get_by_label("Categories")
-    ).to_be_visible()
-    await expect(
-        page.get_by_test_id("WorkspaceInitialPage").get_by_label("More features")
-    ).to_be_visible()
-
-
-@pytest.mark.asyncio
-async def test_back_button_navigation():
-    """
-    Tests if back button press navigates to WS
-    editor/details page
-    """
-    async with async_playwright() as pw:
-
-        browser, context, page_a = await launch_browser(pw)
-
-
-        await login_newdot(page_a, EMAIL, USER_FNAME, USER_LNAME)
-
-
-        await create_new_workspace(page_a)
-
-        await tax_feature_toggle(page_a, True)
-        await page_a.get_by_test_id("WorkspaceInitialPage").get_by_label(
-            "Taxes"
-        ).click()
-
-
-        page_b = await duplicate_tab(context, page_a)
-        await tax_feature_toggle(page_b, False)
-
-
-        await page_a.bring_to_front()
-        await check_back_button_navigation(page_a)
-
-        await browser.close()

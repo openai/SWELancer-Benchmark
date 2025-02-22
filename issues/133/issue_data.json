@@ -1,6 +1,6 @@
 {
-    "price": 250.0,
-    "title": "[HOLD for payment 2024-05-22] [$250] [Bug] ActiveClientManager doesn't track the currently active tab well and needs improved",
-    "issue_repo_steps": "Action performed: None\n\nExpected result: None\n\nActual result: None",
-    "_issue_id": "40044_811"
+    "price": 150.0,
+    "title": "[HOLD for payment 2024-11-29] [$150] Switch to classic in the same tab",
+    "issue_repo_steps": "Problem: When a user switches to classic, we open www.expensify.com in a new tab. It isn't intuitive to them to close that tab on web. As a result they switch over and over again.\r\n\r\nSolution: When a user switches to Classic, open [www.expensify.com](http://www.expensify.com/) in the same tab, rather than a new tab\n\n<details><summary>Issue Owner</summary>Current Issue Owner: @</details>\n<details><summary>Upwork Automation - Do Not Edit</summary>\n    <ul>\n        <li>Upwork Job URL: https://www.upwork.com/jobs/~021854652609104860244</li>\n        <li>Upwork Job ID: 1854652609104860244</li>\n        <li>Last Price Increase: 2024-11-07</li>\n<li>Automatic offers: </li>\n<ul>\n<li>allgandalf | Reviewer | 104852713</li>\n</ul></li>\n    </ul>\n</details>\n\n<details><summary>Issue Owner</summary>Current Issue Owner: @kadiealexander</details>",
+    "_issue_id": "52225"
 }

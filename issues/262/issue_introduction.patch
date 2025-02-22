@@ -1,99 +1,79 @@
-diff --git a/src/libs/actions/IOU.ts b/src/libs/actions/IOU.ts
-index 7ce9b9dfb27..c7fed229c52 100644
---- a/src/libs/actions/IOU.ts
-+++ b/src/libs/actions/IOU.ts
-@@ -643,6 +643,18 @@ function buildOnyxDataForMoneyRequest(
-         });
-     }
+diff --git a/.npmrc b/.npmrc
+deleted file mode 100644
+index b6f27f13595..00000000000
+--- a/.npmrc
++++ /dev/null
+@@ -1 +0,0 @@
+-engine-strict=true
+diff --git a/package-lock.json b/package-lock.json
+index 04c2d075d6f..7dbd6dab8d3 100644
+--- a/package-lock.json
++++ b/package-lock.json
+@@ -1,12 +1,12 @@
+ {
+   "name": "new.expensify",
+-  "version": "9.0.1-10",
++  "version": "9.0.41-1",
+   "lockfileVersion": 3,
+   "requires": true,
+   "packages": {
+     "": {
+       "name": "new.expensify",
+-      "version": "9.0.1-10",
++      "version": "9.0.41-1",
+       "hasInstallScript": true,
+       "license": "MIT",
+       "dependencies": {
+diff --git a/package.json b/package.json
+index 41cbca6cf18..1e014be1441 100644
+--- a/package.json
++++ b/package.json
+@@ -1,6 +1,6 @@
+ {
+   "name": "new.expensify",
+-  "version": "9.0.1-10",
++  "version": "9.0.41-1",
+   "author": "Expensify, Inc.",
+   "homepage": "https://new.expensify.com",
+   "description": "New Expensify is the next generation of Expensify: a reimagination of payments based atop a foundation of chat.",
+diff --git a/src/pages/TransactionDuplicate/Review.tsx b/src/pages/TransactionDuplicate/Review.tsx
+index 481f7fdcc0b..652905c1e71 100644
+--- a/src/pages/TransactionDuplicate/Review.tsx
++++ b/src/pages/TransactionDuplicate/Review.tsx
+@@ -3,7 +3,6 @@ import {useRoute} from '@react-navigation/native';
+ import React, {useMemo} from 'react';
+ import {View} from 'react-native';
+ import {useOnyx} from 'react-native-onyx';
+-import FullPageNotFoundView from '@components/BlockingViews/FullPageNotFoundView';
+ import Button from '@components/Button';
+ import HeaderWithBackButton from '@components/HeaderWithBackButton';
+ import ScreenWrapper from '@components/ScreenWrapper';
+@@ -43,18 +42,16 @@ function TransactionDuplicateReview() {
+     };
  
-+    if (!isOneOnOneSplit) {
-+        optimisticData.push({
-+            onyxMethod: Onyx.METHOD.SET,
-+            key: ONYXKEYS.NVP_QUICK_ACTION_GLOBAL_CREATE,
-+            value: {
-+                action: newQuickAction,
-+                chatReportID: chatReport?.reportID,
-+                isFirstQuickAction: isEmptyObject(quickAction),
-+            },
-+        });
-+    }
-+
-     if (optimisticPolicyRecentlyUsedCategories.length) {
-         optimisticData.push({
-             onyxMethod: Onyx.METHOD.SET,
-@@ -873,23 +885,6 @@ function buildOnyxDataForMoneyRequest(
-         },
-     ];
+     return (
+-        <FullPageNotFoundView shouldShow={transactionID === '-1'}>
+-            <ScreenWrapper testID={TransactionDuplicateReview.displayName}>
+-                <HeaderWithBackButton title={translate('iou.reviewDuplicates')} />
+-                <View style={[styles.justifyContentCenter, styles.ph5, styles.pb3, styles.borderBottom]}>
+-                    <Button
+-                        text={translate('iou.keepAll')}
+-                        onPress={keepAll}
+-                    />
+-                </View>
+-                <DuplicateTransactionsList transactions={transactions} />
+-            </ScreenWrapper>
+-        </FullPageNotFoundView>
++        <ScreenWrapper testID={TransactionDuplicateReview.displayName}>
++            <HeaderWithBackButton title={translate('iou.reviewDuplicates')} />
++            <View style={[styles.justifyContentCenter, styles.ph5, styles.pb3, styles.borderBottom]}>
++                <Button
++                    text={translate('iou.keepAll')}
++                    onPress={keepAll}
++                />
++            </View>
++            <DuplicateTransactionsList transactions={transactions} />
++        </ScreenWrapper>
+     );
+ }
  
--    if (!isOneOnOneSplit) {
--        optimisticData.push({
--            onyxMethod: Onyx.METHOD.SET,
--            key: ONYXKEYS.NVP_QUICK_ACTION_GLOBAL_CREATE,
--            value: {
--                action: newQuickAction,
--                chatReportID: chatReport?.reportID,
--                isFirstQuickAction: isEmptyObject(quickAction),
--            },
--        });
--        failureData.push({
--            onyxMethod: Onyx.METHOD.SET,
--            key: ONYXKEYS.NVP_QUICK_ACTION_GLOBAL_CREATE,
--            value: quickAction ?? null,
--        });
--    }
--
-     if (!isEmptyObject(transactionThreadCreatedReportAction)) {
-         failureData.push({
-             onyxMethod: Onyx.METHOD.MERGE,
-@@ -4167,11 +4162,6 @@ function createSplitsAndOnyxData(
-                 pendingFields: null,
-             },
-         },
--        {
--            onyxMethod: Onyx.METHOD.SET,
--            key: ONYXKEYS.NVP_QUICK_ACTION_GLOBAL_CREATE,
--            value: quickAction ?? null,
--        },
-     ];
- 
-     if (existingSplitChatReport) {
-@@ -4744,11 +4734,6 @@ function startSplitBill({
-                 errors: ErrorUtils.getMicroSecondOnyxErrorWithTranslationKey('iou.error.genericCreateFailureMessage'),
-             },
-         },
--        {
--            onyxMethod: Onyx.METHOD.SET,
--            key: ONYXKEYS.NVP_QUICK_ACTION_GLOBAL_CREATE,
--            value: quickAction ?? null,
--        },
-     ];
- 
-     if (existingSplitChatReport) {
-@@ -6434,11 +6419,6 @@ function getSendMoneyParams(
-                 },
-             },
-         },
--        {
--            onyxMethod: Onyx.METHOD.SET,
--            key: ONYXKEYS.NVP_QUICK_ACTION_GLOBAL_CREATE,
--            value: quickAction ?? null,
--        },
-     ];
- 
-     // Now, let's add the data we need just when we are creating a new chat report
-diff --git a/src/libs/actions/Task.ts b/src/libs/actions/Task.ts
-index c5a2442048f..a2d5fa3d632 100644
---- a/src/libs/actions/Task.ts
-+++ b/src/libs/actions/Task.ts
-@@ -256,11 +256,6 @@ function createTaskAndNavigate(
-             targetAccountID: assigneeAccountID,
-         },
-     });
--    failureData.push({
--        onyxMethod: Onyx.METHOD.SET,
--        key: ONYXKEYS.NVP_QUICK_ACTION_GLOBAL_CREATE,
--        value: quickAction ?? null,
--    });
- 
-     // If needed, update optimistic data for parent report action of the parent report.
-     const optimisticParentReportData = ReportUtils.getOptimisticDataForParentReportAction(parentReportID, currentTime, CONST.RED_BRICK_ROAD_PENDING_ACTION.ADD);

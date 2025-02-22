@@ -1,53 +1,14 @@
-diff --git a/src/components/SettlementButton/AnimatedSettlementButton.tsx b/src/components/SettlementButton/AnimatedSettlementButton.tsx
-index 5de528d741a..648c1dad36c 100644
---- a/src/components/SettlementButton/AnimatedSettlementButton.tsx
-+++ b/src/components/SettlementButton/AnimatedSettlementButton.tsx
-@@ -1,7 +1,6 @@
- import React, {useCallback, useEffect} from 'react';
- import Animated, {runOnJS, useAnimatedStyle, useSharedValue, withDelay, withTiming} from 'react-native-reanimated';
- import Text from '@components/Text';
--import useLocalize from '@hooks/useLocalize';
- import useThemeStyles from '@hooks/useThemeStyles';
- import variables from '@styles/variables';
- import CONST from '@src/CONST';
-@@ -15,7 +14,6 @@ type AnimatedSettlementButtonProps = SettlementButtonProps & {
- 
- function AnimatedSettlementButton({isPaidAnimationRunning, onAnimationFinish, isDisabled, ...settlementButtonProps}: AnimatedSettlementButtonProps) {
-     const styles = useThemeStyles();
--    const {translate} = useLocalize();
-     const buttonScale = useSharedValue(1);
-     const buttonOpacity = useSharedValue(1);
-     const paymentCompleteTextScale = useSharedValue(0);
-@@ -79,7 +77,7 @@ function AnimatedSettlementButton({isPaidAnimationRunning, onAnimationFinish, is
-         <Animated.View style={containerStyles}>
-             {isPaidAnimationRunning && (
-                 <Animated.View style={paymentCompleteTextStyles}>
--                    <Text style={[styles.buttonMediumText]}>{translate('iou.paymentComplete')}</Text>
-+                    <Text style={[styles.buttonMediumText]}>Payment complete</Text>
-                 </Animated.View>
-             )}
-             <Animated.View style={buttonStyles}>
-diff --git a/src/languages/en.ts b/src/languages/en.ts
-index 34b315882d3..85d1a99c9d3 100755
---- a/src/languages/en.ts
-+++ b/src/languages/en.ts
-@@ -1033,7 +1033,6 @@ const translations = {
-         bookingArchived: 'This booking is archived',
-         bookingArchivedDescription: 'This booking is archived because the trip date has passed. Add an expense for the final amount if needed.',
-         attendees: 'Attendees',
--        paymentComplete: 'Payment complete',
-         justTrackIt: 'Just track it (don’t submit it)',
-     },
-     notificationPreferencesPage: {
-diff --git a/src/languages/es.ts b/src/languages/es.ts
-index c27714b1231..e45a6d67d8f 100644
---- a/src/languages/es.ts
-+++ b/src/languages/es.ts
-@@ -1030,7 +1030,6 @@ const translations = {
-         bookingArchived: 'Esta reserva está archivada',
-         bookingArchivedDescription: 'Esta reserva está archivada porque la fecha del viaje ha pasado. Agregue un gasto por el monto final si es necesario.',
-         attendees: 'Asistentes',
--        paymentComplete: 'Pago completo',
-         justTrackIt: 'Solo guardarlo (no enviarlo)',
-     },
-     notificationPreferencesPage: {
+ diff --git a/src/libs/EmojiUtils.ts b/src/libs/EmojiUtils.ts
+index a8958295bb9..951f56274ea 100644
+--- a/src/libs/EmojiUtils.ts
++++ b/src/libs/EmojiUtils.ts
+@@ -41,9 +41,6 @@ Onyx.connect({
+                         emoji = {...emoji, ...findEmojiByCode(item.code)};
+                     }
+                     const emojiWithSkinTones = Emojis.emojiCodeTableWithSkinTones[emoji.code];
+-                    if (!emojiWithSkinTones) {
+-                        return null;
+-                    }
+                     return {...emojiWithSkinTones, count: item.count, lastUpdatedAt: item.lastUpdatedAt};
+                 })
+                 .filter((emoji): emoji is FrequentlyUsedEmoji => !!emoji) ?? [];

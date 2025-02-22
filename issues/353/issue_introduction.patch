@@ -1,0 +1,12 @@
+diff --git a/src/pages/signin/ValidateCodeForm/BaseValidateCodeForm.tsx b/src/pages/signin/ValidateCodeForm/BaseValidateCodeForm.tsx
+index f73c0a1602f..a78f1232327 100755
+--- a/src/pages/signin/ValidateCodeForm/BaseValidateCodeForm.tsx
++++ b/src/pages/signin/ValidateCodeForm/BaseValidateCodeForm.tsx
+@@ -305,7 +305,6 @@ function BaseValidateCodeForm({autoComplete, isUsingRecoveryCode, setIsUsingReco
+                             label={translate('recoveryCodeForm.recoveryCode')}
+                             errorText={formError?.recoveryCode ? translate(formError?.recoveryCode) : ''}
+                             hasError={hasError}
+-                            onSubmitEditing={validateAndSubmitForm}
+                             autoFocus
+                         />
+                     ) : (

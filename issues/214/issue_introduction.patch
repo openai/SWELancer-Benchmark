@@ -1,22 +1,73 @@
-diff --git a/src/libs/actions/Policy/Tag.ts b/src/libs/actions/Policy/Tag.ts
-index 9628b6ceda7..49c98375df1 100644
---- a/src/libs/actions/Policy/Tag.ts
-+++ b/src/libs/actions/Policy/Tag.ts
-@@ -398,7 +398,7 @@ function deletePolicyTags(policyID: string, tagsToDelete: string[]) {
+
+diff --git a/src/libs/ReportUtils.ts b/src/libs/ReportUtils.ts
+index 223e94e0bdd..d641487cc7f 100644
+--- a/src/libs/ReportUtils.ts
++++ b/src/libs/ReportUtils.ts
+@@ -3389,7 +3389,7 @@ function getTransactionReportName(reportAction: OnyxEntry<ReportAction | Optimis
+     const report = getReportOrDraftReport(transaction?.reportID);
+     const amount = TransactionUtils.getAmount(transaction, !isEmptyObject(report) && isExpenseReport(report)) ?? 0;
+     const formattedAmount = CurrencyUtils.convertToDisplayString(amount, TransactionUtils.getCurrency(transaction)) ?? '';
+-    const comment = TransactionUtils.getMerchantOrDescription(transaction);
++    const comment = (!TransactionUtils.isMerchantMissing(transaction) ? TransactionUtils.getMerchant(transaction) : TransactionUtils.getDescription(transaction)) ?? '';
+     if (ReportActionsUtils.isTrackExpenseAction(reportAction)) {
+         return Localize.translateLocal('iou.threadTrackReportName', {formattedAmount, comment});
+     }
+@@ -3440,7 +3440,7 @@ function getReportPreviewMessage(
+ 
+             const amount = TransactionUtils.getAmount(linkedTransaction, !isEmptyObject(report) && isExpenseReport(report)) ?? 0;
+             const formattedAmount = CurrencyUtils.convertToDisplayString(amount, TransactionUtils.getCurrency(linkedTransaction)) ?? '';
+-            return Localize.translateLocal('iou.didSplitAmount', {formattedAmount, comment: TransactionUtils.getMerchantOrDescription(linkedTransaction)});
++            return Localize.translateLocal('iou.didSplitAmount', {formattedAmount, comment: TransactionUtils.getDescription(linkedTransaction) ?? ''});
+         }
+     }
+ 
+@@ -3462,7 +3462,7 @@ function getReportPreviewMessage(
+ 
+             const amount = TransactionUtils.getAmount(linkedTransaction, !isEmptyObject(report) && isExpenseReport(report)) ?? 0;
+             const formattedAmount = CurrencyUtils.convertToDisplayString(amount, TransactionUtils.getCurrency(linkedTransaction)) ?? '';
+-            return Localize.translateLocal('iou.trackedAmount', {formattedAmount, comment: TransactionUtils.getMerchantOrDescription(linkedTransaction)});
++            return Localize.translateLocal('iou.trackedAmount', {formattedAmount, comment: TransactionUtils.getDescription(linkedTransaction) ?? ''});
+         }
+     }
+ 
+@@ -3538,7 +3538,7 @@ function getReportPreviewMessage(
+         linkedTransaction = getLinkedTransaction(iouReportAction);
+     }
+ 
+-    let comment = !isEmptyObject(linkedTransaction) ? TransactionUtils.getMerchantOrDescription(linkedTransaction) : undefined;
++    let comment = !isEmptyObject(linkedTransaction) ? TransactionUtils.getDescription(linkedTransaction) : undefined;
+     if (!isEmptyObject(originalReportAction) && ReportActionsUtils.isReportPreviewAction(originalReportAction) && ReportActionsUtils.getNumberOfMoneyRequests(originalReportAction) !== 1) {
+         comment = undefined;
+     }
+@@ -7486,7 +7486,7 @@ function getIOUReportActionDisplayMessage(reportAction: OnyxEntry<ReportAction>,
+     }
+     return Localize.translateLocal(translationKey, {
+         formattedAmount,
+-        comment: TransactionUtils.getMerchantOrDescription(transaction),
++        comment: TransactionUtils.getDescription(transaction) ?? '',
+     });
  }
  
- function clearPolicyTagErrors(policyID: string, tagName: string, tagListIndex: number) {
--    const tagListName = PolicyUtils.getTagListName(allPolicyTags?.[`${ONYXKEYS.COLLECTION.POLICY_TAGS}${policyID}`], tagListIndex);
-+    const tagListName = Object.keys(allPolicyTags?.[`${ONYXKEYS.COLLECTION.POLICY_TAGS}${policyID}`] ?? {})[tagListIndex];
-     const tag = allPolicyTags?.[`${ONYXKEYS.COLLECTION.POLICY_TAGS}${policyID}`]?.[tagListName].tags?.[tagName];
-     if (!tag) {
-         return;
-@@ -851,7 +851,7 @@ function setPolicyTagsRequired(policyID: string, requiresTag: boolean, tagListIn
+diff --git a/src/libs/TransactionUtils/index.ts b/src/libs/TransactionUtils/index.ts
+index bf5073aba27..96396b398e9 100644
+--- a/src/libs/TransactionUtils/index.ts
++++ b/src/libs/TransactionUtils/index.ts
+@@ -452,10 +452,6 @@ function getMerchant(transaction: OnyxInputOrEntry<Transaction>): string {
+     return transaction?.modifiedMerchant ? transaction.modifiedMerchant : transaction?.merchant ?? '';
  }
  
- function setPolicyTagGLCode(policyID: string, tagName: string, tagListIndex: number, glCode: string) {
--    const tagListName = PolicyUtils.getTagListName(allPolicyTags?.[`${ONYXKEYS.COLLECTION.POLICY_TAGS}${policyID}`], tagListIndex);
-+    const tagListName = Object.keys(allPolicyTags?.[`${ONYXKEYS.COLLECTION.POLICY_TAGS}${policyID}`] ?? {})[tagListIndex];
-     const policyTagToUpdate = allPolicyTags?.[`${ONYXKEYS.COLLECTION.POLICY_TAGS}${policyID}`]?.[tagListName]?.tags?.[tagName] ?? {};
-     const onyxData: OnyxData = {
-         optimisticData: [
+-function getMerchantOrDescription(transaction: OnyxEntry<Transaction>) {
+-    return !isMerchantMissing(transaction) ? getMerchant(transaction) : getDescription(transaction);
+-}
+-
+ /**
+  * Return the list of modified attendees if present otherwise list of attendees
+  */
+@@ -1182,7 +1178,6 @@ export {
+     getOriginalAmount,
+     getFormattedAttendees,
+     getMerchant,
+-    getMerchantOrDescription,
+     getMCCGroup,
+     getCreated,
+     getFormattedCreated,

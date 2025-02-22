@@ -3,153 +3,263 @@ import sys, os
 base_path = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
 sys.path.insert(0, base_path)
 
+import email
+import imaplib
+import os
+import re
 import time
+from email.header import decode_header
 
-from playwright.sync_api import TimeoutError, expect, sync_playwright
+import pytest
+from playwright.async_api import (
+    Page,
+    Playwright,
+    TimeoutError,
+    async_playwright,
+    expect,
+)
+
+NOW = int(time.time())
+USER_EMAIL = "xecuycismfsga+k7gse6h@gmail.com"
+PARTICIPANT_EMAILS = [
+    "xecuycismfsga+eawdvh@gmail.com",
+    "xecuycismfsga+nzfgxzu@gmail.com",
+]
+PASSWORD = "uwgb zzoc cofa kaaq"
+SLOW_MO = 1000
+CACHED: bool = True
+PROXY_URL = os.getenv("PROXY_URL")
 
 
-EXPENSIFY_URL = "https://dev.new.expensify.com:8082/"
-EMAIL = "t1533148@gmail.com" # for example test+1234@gmail.com
-PASSWORD = "logb hzkg pkfk kskg" # it will be something like "sdib pxop ovyl uawy"
+def get_magic_code(
+    user_email: str,
+    password: str,
+    current_timestamp: int,
+    retries=5,
+    delay=3,
+    slow_mo: int | None = None,  # Add slow_mo parameter,
+    cached: bool = False,
+):
+    if cached:
+        return "123456"
+    imap = imaplib.IMAP4_SSL("imap.gmail.com")
+    imap.login(user_email, password)
+
+    additional_delay = (slow_mo / 1000) if slow_mo else 0
+    total_delay = delay + additional_delay
+
+    for _attempt in range(retries):
+        print(f"Attempt {_attempt}")
 
 
+        if _attempt > 0:
+            print(f"Waiting {total_delay} seconds before next attempt...")
+            time.sleep(total_delay)
 
-def generate_random_email():
-    timestamp = int(time.time())
-    return "t1533148+173350934@gmail.com"
+        imap.select("inbox")
+        status, messages = imap.search(
+            None, '(UNSEEN SUBJECT "Expensify magic sign-in code:")'
+        )
+
+        if status == "OK":
+            email_ids = messages[0].split()
+
+            if email_ids:
+                latest_email_id = email_ids[-1]
+                status, msg_data = imap.fetch(latest_email_id, "(RFC822)")
+
+                for response_part in msg_data:
+                    if isinstance(response_part, tuple):
+                        msg = email.message_from_bytes(response_part[1])
 
 
-def login_user(page, email, first_name="John", last_name="Doe"):
-    """
-    Log into the Expensify app.
-    """
+                        email_date = msg.get("Date")
+                        email_timestamp = email.utils.mktime_tz(
+                            email.utils.parsedate_tz(email_date)
+                        )
 
-    page.goto(EXPENSIFY_URL)
 
-    page.get_by_test_id("username").fill(email)
-    page.get_by_role("button", name="Continue").click()
+                        current_utc = time.time()
+
+
+                        imap.store(latest_email_id, "+FLAGS", "\\Seen")
+
+                        print(
+                            f"Email time: {email_timestamp}, Current time: {current_utc}"
+                        )
+
+
+                        if email_timestamp < current_timestamp:
+                            print(
+                                f"Found old email from {email_date}, waiting for new one..."
+                            )
+                            break  # Break the response_part loop
+
+                        subject, encoding = decode_header(msg["Subject"])[0]
+                        if isinstance(subject, bytes):
+                            subject = subject.decode(encoding or "utf-8")
+
+                        match = re.search(
+                            r"Expensify magic sign-in code: (\d+)", subject
+                        )
+                        if match:
+                            code = match.group(1)
+                            imap.logout()
+                            return code
+
+    imap.logout()
+    print("Max retries reached. Email not found.")
+    return None
+
+
+async def create_user(page: Page, firstname: str, lastname: str):
+    await page.get_by_role("button", name="Join").click()
 
     try:
-        expect(page.get_by_test_id("SignInPage").get_by_test_id("validateCode")).to_be_visible(timeout=5000)
-    except AssertionError:
 
-        page.get_by_test_id("SignInPage").get_by_role("button", name="Join").click()
-    else:
+        onboarding = page.get_by_text("Track and budget expenses")
+        await onboarding.wait_for(state="visible", timeout=2000)
 
-        otp_code = '123456'
-        page.get_by_test_id("SignInPage").get_by_test_id("validateCode").fill(otp_code)
-        page.get_by_test_id("SignInPage").get_by_role("button", name="Sign in").click()
-
-    try:
-        expect(page.get_by_text("What do you want to do today?")).to_be_visible(timeout=5000)
-    except AssertionError:
+        await onboarding.click()
+        await page.get_by_role("textbox", name="First name").fill(firstname)
+        await page.get_by_role("textbox", name="Last name").fill(lastname)
+        await page.get_by_role("button", name="Continue").click()
+    except TimeoutError:
         pass
-    else:
 
-        page.get_by_label("Track and budget expenses").click()
-        page.get_by_role("textbox", name="First name").fill(first_name)
-        page.get_by_role("textbox", name="Last name").fill(last_name)
-        page.get_by_role("button", name="Continue").click()
 
-        try:
-            page.get_by_role("button", name="Back").first.click(timeout=3000)
-        except (AssertionError, TimeoutError):
-            pass
+async def login(
+    page: Page,
+    user_email: str,
+    password: str,
+    slow_mo: int | None = None,
+    cached: bool = False,
+):
+
+    magic_code = get_magic_code(
+        user_email, password, NOW, retries=3, delay=5, slow_mo=slow_mo, cached=cached
+    )
+
+    if magic_code is None:
+        raise ValueError("Failed to retrieve magic code")
+    await page.get_by_role("textbox").fill(magic_code)
+
+
+async def login_or_create_user(
+    page: Page,
+    first_name: str = "John",
+    last_name: str = "Doe",
+    user_email: str = USER_EMAIL,
+    password: str = PASSWORD,
+    slow_mo: int | None = None,
+    cached: bool = False,
+):
+    await page.get_by_test_id("username").fill(user_email)
+    await page.get_by_role("button", name="Continue").click()
 
     try:
-        page.get_by_role("button", name="Close").click(timeout=3000)
-    except (AssertionError, TimeoutError):
+        await page.get_by_role("button", name="Join").wait_for(
+            state="visible", timeout=2000
+        )
+        await create_user(page, first_name, last_name)
+    except TimeoutError:
+        await login(page, user_email, password, slow_mo, cached=cached)
+
+
+async def run(playwright: Playwright) -> None:
+    browser = await playwright.chromium.launch(
+        headless=True,
+        slow_mo=SLOW_MO,
+        proxy={"server": PROXY_URL} if PROXY_URL else None,
+        args=[
+            "--disable-web-security",
+            "--disable-features=IsolateOrigins,site-per-process",
+        ],
+    )
+    context = await browser.new_context()
+    page = await context.new_page()
+
+
+    await page.goto("https://dev.new.expensify.com:8082/")
+    await login_or_create_user(page, slow_mo=SLOW_MO, cached=CACHED)
+
+    has_text = (
+        f':has-text("{PARTICIPANT_EMAILS[0]}"):has-text("{PARTICIPANT_EMAILS[1]}")'
+    )
+    group_chat = (
+        page.get_by_test_id("BaseSidebarScreen")
+        .locator(f'button[aria-label="Navigates to a chat"]{has_text}')
+        .first
+    )
+    group_details = page.locator(
+        f'div[data-testid="DisplayNamesWithTooltip"]{has_text}'
+    ).last
+
+    try:
+
+        await group_chat.wait_for(state="visible", timeout=3000)
+        await group_chat.click()
+
+
+        await group_details.click()
+        await page.get_by_label("Leave").click()
+        await page.get_by_label("Back").last.click()  # Go back home
+    except TimeoutError:
         pass
 
-    page.wait_for_timeout(5000)
+
+    await page.get_by_label("Start chat (Floating action)").click()
+    await page.get_by_text("Start chat").click()
+
+    for user_email in PARTICIPANT_EMAILS:
+        await page.get_by_test_id("selection-list-text-input").fill(user_email)
+        await (
+            page.get_by_label(user_email)
+            .get_by_role("button", name="Add to group")
+            .click()
+        )
+
+    await page.locator("button").filter(has_text="Next").click()
+    await page.get_by_role("button", name="Start group").click()
 
 
-def test_user_current_location_is_not_shown_under_recent_destinations_for_distance_expense_request():
-    """
-    Verify that user's current location is not shown under recent destinations while creating a distance expense request.
-    """
-    with sync_playwright() as p:
-
-        browser = p.chromium.launch(headless=True, slow_mo = 500,
-            proxy = {"server": "http://127.0.0.1:8080/"},
-            args=[
-            "--ignore-certificate-errors",
-            "--disable-web-security", 
-            "--disable-features=IsolateOrigins,site-per-process"
-        ])
-        geolocation = {"longitude": 41.890221, "latitude": 12.492348}
-        context_args = {}
-        context_args["geolocation"] = geolocation
-        context_args["permissions"] = ["geolocation"]
-        context_args["ignore_https_errors"] = True
-        context = browser.new_context(**context_args)
-        page = context.new_page()
-        page.wait_for_timeout(1000)
-        email = generate_random_email()
-        first_name = "Fname"
-        last_name = "Lname"
-        login_user(page, email, first_name=first_name, last_name=last_name)
+    await group_details.click()
+    await page.get_by_text("Members").click()
+    await page.reload()
 
 
-        page.get_by_role("button", name="My settings").click()
-        page.get_by_test_id("InitialSettingsPage").get_by_role("menuitem", name="Workspaces", exact=True).click()
-        page.get_by_test_id("WorkspacesListPage").get_by_role("button", name="New workspace").first.click()
+    await (
+        page.get_by_test_id("selection-list")
+        .get_by_label(PARTICIPANT_EMAILS[1])
+        .first.click()
+    )
+    await page.get_by_role("button", name="Remove from group").click()
+    await page.get_by_role("button", name="Remove", exact=True).click()
 
 
-        texts = page.get_by_test_id("WorkspacePageWithSections").get_by_role("menuitem").all_inner_texts()
-        workspace_name = texts[0].split("\n")[-1]
+    await page.get_by_test_id("ReportParticipantsPage").get_by_label("Back").click()
+    await page.get_by_test_id("ReportDetailsPage").get_by_label("Back").click()
 
 
-        page.get_by_test_id("WorkspaceInitialPage").get_by_role("button", name="Back").click()
-        page.get_by_role("button", name="Inbox", exact=True).click()
-        page.get_by_test_id("BaseSidebarScreen").get_by_text(workspace_name, exact=True).click()
+    welcome_message = (
+        page.get_by_test_id("report-actions-list")
+        .locator('div:has-text("This chat is with")')
+        .last
+    )
+    await expect(welcome_message).not_to_have_text(PARTICIPANT_EMAILS[1])
 
 
-        page.get_by_test_id("report-actions-view-wrapper").get_by_role("button", name="Create", exact=True).click()
-        page.get_by_role("menuitem", name="Submit expense", exact=True).click()
-        page.get_by_test_id("IOURequestStartPage").get_by_role("button", name="Distance", exact=True).click()
-        page.get_by_test_id("IOURequestStartPage").get_by_role("menuitem", name="Start", exact=True).click()
-        page.wait_for_timeout(1000)
-        page.get_by_test_id("IOURequestStepWaypoint").get_by_label("Use current location", exact=True).click()
-        page.wait_for_timeout(10000)
-        page.get_by_test_id("IOURequestStartPage").get_by_role("menuitem", name="Stop", exact=True).click()
-        page.wait_for_timeout(1000)
-        page.get_by_test_id("IOURequestStepWaypoint").get_by_role("textbox").fill("Germany")
-        page.wait_for_timeout(1000)
-        page.get_by_test_id("IOURequestStepWaypoint").get_by_text("Germany", exact=True).nth(1).click()
-        page.wait_for_timeout(15000)
-        page.get_by_test_id("IOURequestStartPage").get_by_role("button", name="Next", exact=True).last.click()
-        page.get_by_test_id("IOURequestStepConfirmation").get_by_role("button", name="Submit", exact=False).click()
+    group_details = page.locator(
+        f'div[data-testid="DisplayNamesWithTooltip"]:has-text("{PARTICIPANT_EMAILS[0]}")'
+    ).last
+    await group_details.last.click()
+    await page.get_by_label("Leave").click()
+
+    await context.close()
+    await browser.close()
 
 
-
-        page.reload()
-        page.wait_for_load_state("domcontentloaded")
-        page.wait_for_timeout(3000)
-
-
-        page.get_by_test_id("report-actions-view-wrapper").get_by_role("button", name="Create", exact=True).click()
-        page.get_by_role("menuitem", name="Submit expense", exact=True).click()
-        page.get_by_test_id("IOURequestStartPage").get_by_role("button", name="Distance", exact=True).click()
-        page.get_by_test_id("IOURequestStartPage").get_by_role("menuitem", name="Start", exact=True).click()
-
-
-        expect(
-            page.get_by_test_id("IOURequestStepWaypoint").get_by_text("Recent destinations", exact=True)
-        ).to_be_visible(timeout=5000)
-
-
-        page.wait_for_timeout(3000)
-    
-
-
-        current_location = f"Lat: {geolocation['latitude']} Lng: {geolocation['longitude']}"
-        assert_message = "The user current location must not be shown under recent destinations"
-        expect(
-            page.get_by_test_id("IOURequestStepWaypoint").get_by_text(current_location, exact=True),
-            assert_message,
-        ).not_to_be_visible()
-
-
-        context.close()
-        browser.close()
+@pytest.mark.asyncio
+async def test_welcome_group_message():
+    async with async_playwright() as playwright:
+        await run(playwright)

@@ -1,31 +1,32 @@
-diff --git a/.npmrc b/.npmrc
-deleted file mode 100644
-index b6f27f13595..00000000000
---- a/.npmrc
-+++ /dev/null
-@@ -1 +0,0 @@
--engine-strict=true
-diff --git a/src/components/SettlementButton/index.tsx b/src/components/SettlementButton/index.tsx
-index 53b09bfcbf3..92ccee1b092 100644
---- a/src/components/SettlementButton/index.tsx
-+++ b/src/components/SettlementButton/index.tsx
-@@ -65,7 +65,6 @@ function SettlementButton({
-     const {isOffline} = useNetwork();
-     // The app would crash due to subscribing to the entire report collection if chatReportID is an empty string. So we should have a fallback ID here.
-     const [chatReport] = useOnyx(`${ONYXKEYS.COLLECTION.REPORT}${chatReportID || -1}`);
--    const [isUserValidated] = useOnyx(ONYXKEYS.USER, {selector: (user) => !!user?.validated});
-     const [lastPaymentMethod = '-1', lastPaymentMethodResult] = useOnyx(ONYXKEYS.NVP_LAST_PAYMENT_METHOD, {selector: (paymentMethod) => paymentMethod?.[policyID]});
-     const isLoadingLastPaymentMethod = isLoadingOnyxValue(lastPaymentMethodResult);
-     const [policy] = useOnyx(`${ONYXKEYS.COLLECTION.POLICY}${policyID}`);
-@@ -190,10 +189,6 @@ function SettlementButton({
-         }
- 
-         if (iouPaymentType === CONST.IOU.PAYMENT_TYPE.EXPENSIFY || iouPaymentType === CONST.IOU.PAYMENT_TYPE.VBBA) {
--            if (!isUserValidated) {
--                Navigation.navigate(ROUTES.SETTINGS_WALLET_VERIFY_ACCOUNT.route);
--                return;
--            }
-             triggerKYCFlow(event, iouPaymentType);
-             BankAccounts.setPersonalBankAccountContinueKYCOnSuccess(ROUTES.ENABLE_PAYMENTS);
-             return;
-
+diff --git a/src/pages/iou/request/step/IOURequestStepWaypoint.tsx b/src/pages/iou/request/step/IOURequestStepWaypoint.tsx
+index 4fad55e8fc4..93371e4c7cd 100644
+--- a/src/pages/iou/request/step/IOURequestStepWaypoint.tsx
++++ b/src/pages/iou/request/step/IOURequestStepWaypoint.tsx
+@@ -259,18 +259,16 @@ export default withWritableReportOrNotFound(
+                 // Only grab the most recent 20 waypoints because that's all that is shown in the UI. This also puts them into the format of data
+                 // that the google autocomplete component expects for it's "predefined places" feature.
+                 selector: (waypoints) =>
+-                    (waypoints ? waypoints.slice(0, CONST.RECENT_WAYPOINTS_NUMBER as number) : [])
+-                        .filter((waypoint) => waypoint.keyForList?.includes(CONST.YOUR_LOCATION_TEXT) !== true)
+-                        .map((waypoint) => ({
+-                            name: waypoint.name,
+-                            description: waypoint.address ?? '',
+-                            geometry: {
+-                                location: {
+-                                    lat: waypoint.lat ?? 0,
+-                                    lng: waypoint.lng ?? 0,
+-                                },
++                    (waypoints ? waypoints.slice(0, CONST.RECENT_WAYPOINTS_NUMBER as number) : []).map((waypoint) => ({
++                        name: waypoint.name,
++                        description: waypoint.address ?? '',
++                        geometry: {
++                            location: {
++                                lat: waypoint.lat ?? 0,
++                                lng: waypoint.lng ?? 0,
+                             },
+-                        })),
++                        },
++                    })),
+             },
+         })(IOURequestStepWaypoint),
+     ),

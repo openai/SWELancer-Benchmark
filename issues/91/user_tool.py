@@ -1,110 +1,83 @@
-import sys, os
-
-base_path = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
-sys.path.insert(0, base_path)
-
-import pytest_asyncio
-import pytest
-import logging
-import sys
-
-from playwright.async_api import async_playwright, expect
-from utils.email_handler import EmailHandler
+from playwright.sync_api import sync_playwright, expect
 from utils.trace_cleaner import trace_cleaner
 
-from io import BytesIO
-from PIL import Image
 
+# Expensify app URL
+EXPENSIFY_URL = "https://dev.new.expensify.com:8082/"
 
-NEWDOT_URL = "https://dev.new.expensify.com:8082/"
-OLDDOT_URL = "http://localhost:9000/"
-EXPENSIFY_EMAIL = "testingq186@gmail.com"
-EXPENSIFY_PASSWORD = "kkfr hqiv yuxq rbso"
+# Email login credentials
+EMAIL_USERNAME = "naturesv057+52907_1@gmail.com"
 
-
-logging.basicConfig(level=logging.INFO, stream=sys.stdout, format="%(message)s")
-LOGGER = logging.getLogger(__name__)
-
-def create_dummy_image():
-    img = Image.new('RGB', (100, 100), color='red')
-    byte_io = BytesIO()
-    img.save(byte_io, 'PNG')
-    byte_io.seek(0)
-    return byte_io
-
-
-TESTING_FLOW = True
-
-
-@pytest_asyncio.fixture
-async def page():
+def launch_browser(pw, device=None, geolocation=None):
     """
-    Launch the Expensify app.
+    Launch the browser.
     """
-    pw = await async_playwright().start()
-    browser = await pw.chromium.launch(channel="chrome", headless=True, args=["--ignore-certificate-errors", "--disable-web-security", "--disable-features=IsolateOrigins,site-per-process"], proxy={"server": "http://localhost:8080"}, slow_mo=500)
-    context = await browser.new_context(ignore_https_errors=True)
-    page = await context.new_page()
+    browser = pw.chromium.launch(
+        headless=False,
+        proxy={"server": "http://127.0.0.1:8080/"},
+        args=[
+            "--ignore-certificate-errors",
+            "--disable-web-security",
+            "--disable-features=IsolateOrigins,site-per-process",
+        ],
+        slow_mo=500
+    )
+    context_args = {}
+    if device:
+        context_args.update(pw.devices[device])
+    if geolocation:
+        context_args["geolocation"] = geolocation
+        context_args["permissions"] = ["geolocation"]
+    context = browser.new_context(**context_args)
+    page = context.new_page()
+    return browser, context, page
 
-    yield page
 
-    # Original cleanup (if browser is still open, this may be a redundant close if already closed in test)
-    await browser.close()
-    await pw.stop()
-
-
-@pytest.mark.asyncio
-async def test_the_issue(page):
+def login_user(page):
     """
-    Demonstrate the Expensify app email login verification with tracing.
+    Login to the Expensify app and complete the onboarding.
     """
-    await page.goto(NEWDOT_URL)
+    # Open the Expensify app
+    page.goto(EXPENSIFY_URL)
 
-    # Start tracing using the page context
-    context = page.context
-    await context.tracing.start(screenshots=True, snapshots=True, sources=True)
+    # Login user
+    page.get_by_role("textbox", name="Phone or email").fill(EMAIL_USERNAME)
+    page.locator("div", has_text="Continue").last.click()
+    
+    # Get the OTP code from the email
+    otp = "123456"
+    
+    # Enter the OTP code
+    page.keyboard.type(otp)
 
-    try:
-        with EmailHandler(EXPENSIFY_EMAIL, EXPENSIFY_PASSWORD) as email_handler:
-            if not TESTING_FLOW:
-                email_handler.clean_inbox()  # Clean inbox
 
-            await page.get_by_role("textbox", name="Phone or email").fill(EXPENSIFY_EMAIL)
-            await page.get_by_role("button", name="Continue").click()
+def test_52907():
+    with sync_playwright() as p:
+        # Step 1: Login user
+        browser, context, page = launch_browser(p)
+        # Start tracing
+        context.tracing.start(screenshots=True, snapshots=True, sources=True)
+        try:
+            login_user(page)
+            page.wait_for_timeout(5000)
 
-            otp = email_handler.read_otp_code() if not TESTING_FLOW else "123456"
-            await page.locator('input[name="validateCode"]').first.fill(otp)
+            # Step 2: Reintroduce scenario
+            page.get_by_test_id("CustomBottomTabNavigator").get_by_label("Search").click()
+            page.get_by_test_id("Search").get_by_label("Search").click()
+            page.get_by_test_id("search-router-text-input").fill("type:chat status:all in:in category:car")
+            page.get_by_role("textbox", name="Search for something").press("Enter")
 
-            await page.get_by_text("Please enter the magic code").wait_for(state="hidden")
-            logging.info("Sign in complete.")
-        
-        await page.locator('div[aria-label="Start chat (Floating action)"]').last.click()
-        await page.locator('text="Request money"').click()
-        await page.locator('text="Manual"').last.click()
-        await page.locator('input[placeholder="0"]').fill("200")
-        await page.keyboard.press("Enter")
-        await page.locator('input[aria-label="Name, email, or phone number"]').fill("test1@gmail.com")
-        await page.locator('div[aria-label="test1@gmail.com"]').last.click()
-        await page.locator('div[aria-label="More"]').last.click()
-        await page.locator('text="Add receipt"').last.click()
-        
-        dummy_image = create_dummy_image()
-        async with page.expect_file_chooser() as fc_info:
-            await page.locator('text="Choose file"').last.click()
-            file_chooser = await fc_info.value
-            await file_chooser.set_files([{ 
-                "name": "dummy_image.png",
-                "mimeType": "image/png",
-                "buffer": dummy_image.getvalue()
-            }])
-        two_100_dollar = page.get_by_role("button", name="Request").filter(has_text="200.0")
-        
-        await expect(two_100_dollar).to_be_visible()
-    finally:
-        # Stop tracing and export the trace file
-        trace_path = "/app/expensify/user_tool/output_browser1.zip"
-        await context.tracing.stop(path=trace_path)
-        trace_cleaner(trace_path)
-        
-        # Close the browser
-        await page.context.browser.close()
+            # Step 3: Check if the issue is resolved
+            expect(page.locator("#root")).to_contain_text("Nothing to show")
+        finally:
+            trace_path = "/app/expensify/user_tool/output_browser1.zip"
+            # Stop tracing and export trace file
+            context.tracing.stop(path=trace_path)
+            # Clean the trace file
+            trace_cleaner(trace_path)
+            # Close the browser
+            browser.close()
+
+
+if __name__ == "__main__":
+    test_52907()

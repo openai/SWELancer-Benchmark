@@ -3,140 +3,80 @@ import sys, os
 base_path = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
 sys.path.insert(0, base_path)
 
-from playwright.async_api import (
-    async_playwright,
-    expect,
-    Page,
-    Browser,
-    PlaywrightContextManager,
-)
-import re
+"""
+Test whether the following console warning disappears on self-dm page: Function components cannot be given refs.
+
+"""
+import os
 import pytest
+from utils.login import sign_up, complete_onboarding
+from utils.browser import start_browser, close_browser
+from playwright.async_api import expect
 
-EMAIL = "expensify66+543209565435065432247@gmail.com"
-FIRST_NAME = "Milan"
-LAST_NAME = "Tonborn"
 
+EXPENSIFY_USERNAME_FIRSTNAME = "osaidtest"
+EXPENSIFY_USERNAME_LASTNAME = "testaccount"
+EXPENSIFY_USERNAME = f"{EXPENSIFY_USERNAME_FIRSTNAME} {EXPENSIFY_USERNAME_LASTNAME}"
+EXPENSIFY_EMAIL_USERNAME = "osaidtest5"
+EXPENSIFY_EMAIL = "osaidtest5@gmail.com"
+NEW_DOT_URL = "https://dev.new.expensify.com:8082"
+OLD_DOT_URL = "http://localhost:9000/"
+EXPENSIFY_PASSWORD = "ntvd acej mmaa qqmd"
+DATA_DIR = 'browser_context'
 
-async def simulate_netsuite_fail(page: Page, workspace_id: str):
+EXPENSIFY_DERIVED_EMAIL = "osaidtest5+49062_7@gmail.com"
 
-    js_code = """
-    async (workspace_id) => {
-        const net_suite = {
-            lastSync: {
-            errorDate: "2024-12-9T10:26:57+0000",
-            errorMessage: "Unable to validate NetSuite tokens",
-            isAuthenticationError: true,
-            isConnected: false,
-            isSuccessful: false,
-            source: "NEWEXPENSIFY",
-            successfulDate: "",
-            },
-            verified: false,
-        };
-
-        await Onyx.merge(`policy_${workspace_id}`, {
-            connections: {
-            netsuite: net_suite,
-            },
-        });
-    };
+async def get_user_email(page):
     """
-
-    await page.evaluate(js_code, workspace_id)
-
-
-async def login_user(
-    p: PlaywrightContextManager, first_name="Milan", last_name="T"
-) -> tuple[Browser, Page, str]:
-
-    browser = await p.chromium.launch(
-        headless=True,
-        args=[
-            "--ignore-certificate-errors",
-            "--disable-web-security",
-            "--disable-features=IsolateOrigins,site-per-process",
-        ],
-        proxy={"server": "http://127.0.0.1:8080"},
-        slow_mo=500,
+    Get User Email.
+    """
+    return await page.evaluate(
+        """async () => {
+        const credentials = await Onyx.get('credentials');
+        const {login} = credentials; 
+        return login
+    }"""
     )
-    page: Page = await browser.new_page()
 
+console_warning_detected = False
 
-    await page.goto("https://dev.new.expensify.com:8082/")
+def track_console_warning(msg):
+    if msg.type == 'error' and "Warning: Function components cannot be given refs. Attempts to access this ref will fail. Did you mean to use React.forwardRef()?" in msg.text:
+        global console_warning_detected 
+        console_warning_detected = True
 
-
-    await page.get_by_test_id("username").fill(EMAIL)
-    await page.get_by_role("button", name="Continue").click()
-
-
-    await page.get_by_role("button", name="Join").click()
-
-
-    await page.locator("text=What do you want to do today?").wait_for(timeout=5000)
-
-    await page.locator("text='Track and budget expenses'").click()
-    await page.get_by_role("button", name="Continue").click()
-
-
-    await page.locator('input[name="fname"]').fill(first_name)
-    await page.locator('input[name="lname"]').fill(last_name)
-    await page.get_by_role("button", name="Continue").last.click()
-    await page.get_by_text("Get Started").click(timeout=3000)
-
-    return browser, page
-
-
-async def create_workspace_and_enable_netsuite(page: Page) -> str:
-    """
-    Create a new workspace and enable netsuite
-    """
-
-
-    await page.get_by_label("My settings").click()
-    await page.get_by_text("Workspaces").last.click()
-    await page.get_by_text("New workspace").first.click()
-
-
-    await page.get_by_test_id("WorkspaceInitialPage").get_by_text(
-        "More features"
-    ).click()
-    workspace_id = re.search(r"settings/workspaces/([^/]+)/", page.url).group(1)
-    await page.get_by_label("Sync your chart of accounts").click()
-    await page.get_by_test_id("WorkspaceInitialPage").get_by_text(
-        "Accounting"
-    ).click()
-
-
-    await page.get_by_label("NetSuite").get_by_role(
-        "button", name="Connect"
-    ).click()
-    await page.get_by_role("button", name="Upgrade").click(timeout=3000)
-    await page.get_by_role("button", name="Got it, thanks").click()
-    await page.get_by_test_id("NetSuiteTokenInputPage").get_by_label("Back").click()
-
-    return workspace_id
-
+async def open_self_dm_page(page, email):
+    await page.get_by_label("Start chat (Floating action)").click()
+    await page.get_by_text("Start chat").click()
+    await page.get_by_test_id("selection-list-text-input").fill(email)
+    try:
+        await page.get_by_label(f"{EXPENSIFY_USERNAME} (you)").filter(has_text=email).click()
+    except:
+        await page.get_by_label(EXPENSIFY_DERIVED_EMAIL).click()
 
 @pytest.mark.asyncio
-async def test_first_issue_error_message() -> None:
-
-    async with async_playwright() as p:
-
-        browser, page = await login_user(p, FIRST_NAME, LAST_NAME)
+async def test_console_warning_for_function_components_cannot_be_given_refs_should_not_appear_in_self_dm(): 
 
 
-        workspace_id = await create_workspace_and_enable_netsuite(page)
+    derived_email = EXPENSIFY_DERIVED_EMAIL
 
 
-        await simulate_netsuite_fail(page, workspace_id)
+    context, page, playwright = await start_browser(persistent=False, data_dir=DATA_DIR, launch_args=["--ignore-certificate-errors",
+                                                        "--disable-web-security",
+                                                        "--disable-features=IsolateOrigins,site-per-process"
+                                                ])
+    page.on("console", track_console_warning)
+    await sign_up(page, derived_email)
+    try:
+        await complete_onboarding(page, first_name=EXPENSIFY_USERNAME_FIRSTNAME, last_name=EXPENSIFY_USERNAME_LASTNAME) 
+    except:
+        pass
 
 
-        await expect(
-            page.get_by_test_id("PolicyAccountingPage").get_by_text(
-                "Can't connect to NetSuite"
-            ),
-            "Error message is not visible",
-        ).to_be_visible(timeout=10000)
+    await open_self_dm_page(page, derived_email)
 
-        await browser.close()
+
+    assert not console_warning_detected, "Console Warning 'Function components cannot be given refs' appears in self-dm."
+
+
+    await close_browser(context, page, playwright)

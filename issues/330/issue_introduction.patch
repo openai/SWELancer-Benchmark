@@ -1,0 +1,16 @@
+diff --git a/src/libs/ReportUtils.ts b/src/libs/ReportUtils.ts
+index 78ebdd92751..6159737e7a0 100644
+--- a/src/libs/ReportUtils.ts
++++ b/src/libs/ReportUtils.ts
+@@ -6245,11 +6245,6 @@ function shouldReportBeInOptionList({
+         return true;
+     }
+ 
+-    // Hide only chat threads that haven't been commented on (other threads are actionable)
+-    if (isChatThread(report) && canHideReport && isEmptyChat) {
+-        return false;
+-    }
+-
+     // Show #admins room only when it has some value to the user.
+     if (isAdminRoom(report) && !shouldAdminsRoomBeVisible(report)) {
+         return false;

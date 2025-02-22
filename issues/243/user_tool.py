@@ -4,87 +4,134 @@ base_path = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
 sys.path.insert(0, base_path)
 
 import time
+from playwright.sync_api import sync_playwright, expect
+from playwright.sync_api._context_manager import PlaywrightContextManager
+from playwright._impl._browser import Browser
 from playwright._impl._page import Page
-from playwright.sync_api import sync_playwright
-from utils.trace_cleaner import trace_cleaner
+from playwright.sync_api import TimeoutError as PlaywrightTimeoutError
 
-first_name = "Alice"
-last_name = "Aliceoglu"
-workspace_name = "Jellystarfish99+430043@gmail.com's Workspace"
 
 
 def generate_random_email():
-    number = "493371"
-    return f"aliceoglualice+{number}@gmail.com"
+    timestamp = int(time.time())
 
-def login_user(page: Page) -> None:
-
-    username_input = page.get_by_test_id("username")
-    username_input.click()
-
-    username_input.fill(generate_random_email())
-
-    continue_button = page.get_by_role("button", name="Continue")
-    continue_button.click()
-    
-
-    join_button = page.get_by_role("button", name="Join")
-    join_button.click()
-    
-
-def enter_user_information(page:Page) -> None:
-
-    track_expenses_text = page.get_by_text("Track and budget expenses")
-    track_expenses_text.click()
+    return "t56826807+1733396881@gmail.com"
 
 
-    first_name_input = page.get_by_role("textbox", name="First name")
-    first_name_input.fill(first_name)
+def login_user(
+    p: PlaywrightContextManager, first_name="A", last_name="Khan"
+) -> tuple[Browser, Page, str]:
 
-    first_name_input.press("Tab")
+    browser = p.chromium.launch(
+        channel="chrome",
+        headless=True,
+        args=[
+            "--ignore-certificate-errors",
+            "--disable-web-security",
+            "--disable-features=IsolateOrigins,site-per-process",
+        ],
+        proxy={"server": "http://localhost:8080"},
+        slow_mo=500,
+    )
+    context = browser.new_context()
+    page = context.new_page()
+    user_email = generate_random_email()
 
-    last_name_input = page.get_by_role("textbox", name="Last name")
-    last_name_input.fill(last_name)
-    
 
-    continue_button_after_names = page.get_by_role("button", name="Continue")
-    continue_button_after_names.click()
+    page.goto("https://dev.new.expensify.com:8082/")
 
-def reproduce_scenario(page: Page) -> None:
-    page.get_by_label("My settings").click()
-    page.get_by_label("Status").click()
-    page.get_by_role("button", name="Save").dblclick()
-    page.wait_for_timeout(5000)
-    assert not page.get_by_label("Create").is_visible(), "The 'Create' button is unexpectedly visible"
-    
-def test_room_name_is_highlighted() -> None:
-    with sync_playwright() as playwright:
-        browser = playwright.chromium.launch(headless=True, args=["--ignore-certificate-errors", "--disable-web-security", "--disable-features=IsolateOrigins,site-per-process"])
-        context = browser.new_context(ignore_https_errors=True)
+
+    page.locator('input[type="email"]').fill(user_email)
+    page.locator('button[tabindex="0"]').click()
+    time.sleep(1)
+
+
+    try:
+        page.locator('button[tabindex="0"]').click()
+        time.sleep(1)
+    except Exception:
+        pass
+
+
+    expect(page.locator("text=What do you want to do today?")).to_be_visible()
+
+
+    page.locator("text='Track and budget expenses'").click()
+    page.get_by_role("button", name="Continue").click()
+    time.sleep(1)
+
+
+    page.locator('input[name="fname"]').fill(first_name)
+    page.locator('input[name="lname"]').fill(last_name)
+    page.get_by_role("button", name="Continue").last.click()
+    time.sleep(1)
+
+
+    return browser, page, context
+
+
+def test_old_dot_page_redirection():
+    with sync_playwright() as p:
+        browser, page, context = login_user(p)
+
 
         context.tracing.start(screenshots=True, snapshots=True, sources=True)
+
         try:
-            page = context.new_page()
-            page.goto("https://127.0.0.1:8082/")
+
+            page.goto("https://dev.new.expensify.com:8082/settings/exit-survey/reason")
+            time.sleep(1)
 
 
-            login_user(page)
+            expect(page).to_have_url(
+                "https://dev.new.expensify.com:8082/settings/exit-survey/reason"
+            )
 
 
-            if page.get_by_text("What do you want to do today?").is_visible():
-                enter_user_information(page)
+            page.get_by_text("I don't understand how to use New Expensify.").click()
 
 
-            reproduce_scenario(page)
-        except Exception as e:
+            expect(
+                page.get_by_text("I don't understand how to use New Expensify.")
+            ).to_be_visible()
 
-            raise e
+
+            page.get_by_text("Next").click()
+
+
+            page.get_by_role("textbox", name="Your response").fill("N/A")
+
+
+            expect(page.get_by_role("textbox", name="Your response")).to_have_value("N/A")
+
+
+            page.get_by_role("button", name="Next").click()
+
+
+            page.get_by_role("button", name="Switch to Expensify Classic").click()
+
+
+            try:
+                with context.expect_page() as new_page_info:
+                    new_page = new_page_info.value
+
+                    assert (
+                        new_page is not None
+                    ), "A new tab should have opened but it didn't."
+
+            except PlaywrightTimeoutError:
+                assert False, "Failed to open new tab after clicking the 'Switch to Expensify Classic' button."
+
+            time.sleep(1)
+        except Exception:
+
+            raise
         finally:
 
             trace_path = "/app/expensify/user_tool/output_browser1.zip"
             context.tracing.stop(path=trace_path)
-
+            from utils.trace_cleaner import trace_cleaner
             trace_cleaner(trace_path)
 
-            context.close()
+
             browser.close()

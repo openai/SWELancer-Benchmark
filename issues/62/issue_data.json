@@ -1,6 +1,6 @@
 {
-    "price": 500.0,
-    "title": "[HOLD for payment 2023-10-23][$500] Web - Account Settings - Inappropriate error message when add Legal name in non-English alphabet",
-    "issue_repo_steps": "Action performed: 1. Go to Settings > Profile > Personal details > Legal name\r\n2. Fill the Legal first name or Legal last name with non-English alphabet letters ( Cyrillic alphabet - \u0413\u043e\u0446\u0435 \u041c\u0430\u0442\u0435\u0441\u043a\u0438)\n\nExpected result: Error message should be appropriate, for example - Please enter a name using Latin characters\n\nActual result: None",
-    "_issue_id": "28250_990"
+    "price": 250.0,
+    "title": "[HOLD for payment 2024-12-19] [$250] [HOLD for payment 2024-12-16] Incorrect default feed name in feed selector ",
+    "issue_repo_steps": "Coming from [here](https://expensify.slack.com/archives/C06ML6X0W9L/p1733164539320359), when you first add a card feed, the default feed name is `%Bank% cards`. You can then edit this name to be whatever you want. The default feed name should appear consistently everywhere (the feed itself, feed settings, feed selector, etc.) It currently does not appear correctly on the feed selector. \r\n\r\n![image - 2024-12-03T090545 016](https://github.com/user-attachments/assets/d5edb1de-266d-4a10-a251-5ca794a047da)\r\n\n\n<details><summary>Issue Owner</summary>Current Issue Owner: @</details>\n<details><summary>Upwork Automation - Do Not Edit</summary>\n    <ul>\n        <li>Upwork Job URL: https://www.upwork.com/jobs/~021866248038611712453</li>\n        <li>Upwork Job ID: 1866248038611712453</li>\n        <li>Last Price Increase: 2024-12-09</li>\n    </ul>\n</details>\n\n<details><summary>Issue Owner</summary>Current Issue Owner: @jliexpensify</details>",
+    "_issue_id": "53470"
 }

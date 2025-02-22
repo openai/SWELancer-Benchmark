@@ -1,214 +1,189 @@
-import sys, os
+import os
 
-base_path = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
-sys.path.insert(0, base_path)
-
-import email
+import re, time
+from datetime import datetime, timezone
+from email.header import decode_header
+from PIL import Image
+from io import BytesIO
 import imaplib
-import logging
-import sys
-import time
+import email
+import re
+from playwright.sync_api import  Page, TimeoutError, expect, sync_playwright
 
-from playwright._impl._browser import Browser
-from playwright._impl._page import Page
-from playwright.sync_api import TimeoutError, expect, sync_playwright
-from playwright.sync_api._context_manager import PlaywrightContextManager
-
-
-EMAIL_USERNAME = "expensifytesting1@gmail.com"
-EMAIL_PASSWORD = "redx tbmr hzpc rbzr"
+USERNAME = "contributer0"
+APP_PASSWORD = "ughk jfyj dyee mgrs"
+USER_EMAIL = f"{USERNAME}+51388_1@gmail.com"
+NEW_DOT_URL = "https://dev.new.expensify.com:8082/"
 
 
-EMAIL_USERNAME_POSTFIX = "42525"
+def get_magic_code(user_email, password, since=None, retries=5, delay=10):
+    if since is None:
+        since = datetime.now(timezone.utc).replace(second=0, microsecond=0)
 
+    imap = imaplib.IMAP4_SSL("imap.gmail.com")
+    imap.login(user_email, password)
 
-logging.basicConfig(level=logging.INFO, stream=sys.stdout, format="%(message)s")
-LOGGER = logging.getLogger(__name__)
-
-
-def generate_user_email():
-    """
-    Generate an email address for a user login.
-    """
-    temp = EMAIL_USERNAME.rsplit("@", 1)
-    username = temp[0].strip()
-    domain = temp[1].strip()
-    return f"{username}+{EMAIL_USERNAME_POSTFIX}@{domain}"
-
-
-def clear_inbox(username, password):
-    """
-    Delete all the messages from the Inbox.
-    """
-    LOGGER.info("Clear email inbox")
-    with imaplib.IMAP4_SSL(host="imap.gmail.com") as imap:
-        imap.login(username, password)
+    for _ in range(retries):
         imap.select("inbox")
-        imap.store("1:*", "+FLAGS", "\\Deleted")
-        imap.expunge()
-        imap.close()
+        status, messages = imap.search(None, '(UNSEEN SUBJECT "Expensify magic sign-in code:")')
 
+        if status == "OK":
+            email_ids = messages[0].split()
 
-def get_otp_from_email(username, password, retries=12, delay=5):
-    """
-    Read the OTP email and return the OTP code.
-    """
+            if email_ids:
+                latest_email_id = email_ids[-1]
+                status, msg_data = imap.fetch(latest_email_id, "(RFC822)")
 
-    return "123456"
-    LOGGER.info("Waiting for the OTP email")
-    with imaplib.IMAP4_SSL(host="imap.gmail.com") as imap:
-        imap.login(username, password)
-        for i in range(1, retries + 1):
-            imap.select("inbox")
-            status, messages = imap.search(None, "ALL")
-            if status == "OK":
-                for message_id in reversed(messages[0].split()):
-                    status, data = imap.fetch(message_id, "(RFC822)")
-                    if status == "OK":
-                        email_message = email.message_from_bytes(data[0][1])
-                        subject, encoding = email.header.decode_header(email_message["Subject"])[0]
+                for response_part in msg_data:
+                    if isinstance(response_part, tuple):
+                        msg = email.message_from_bytes(response_part[1])
+                        subject, encoding = decode_header(msg["Subject"])[0]
                         if isinstance(subject, bytes):
-                            subject = subject.decode(encoding)
-                        if subject.startswith("Expensify magic sign-in code:"):
-                            otp_code = subject.split(":")[-1].strip()
-                            LOGGER.info("Got the OTP: %s", otp_code)
-                            return otp_code
-            time.sleep(delay)
-        imap.close()
-    raise AssertionError("Failed to read the OTP from the email")
+                            subject = subject.decode(encoding or "utf-8")
+
+                        match = re.search(r"Expensify magic sign-in code: (\d+)", subject)
+                        email_date = email.utils.parsedate_to_datetime(msg["Date"])
+                        if match and email_date >= since:
+                            code = match.group(1)
+                            imap.logout()
+                            return code
+                print("Email doesn't match conditions.  Retrying...")
+            else:
+                print("No unread emails found with the subject. Retrying...")
+        else:
+            print("Failed to retrieve emails. Retrying...")
+        time.sleep(delay)
+
+    imap.logout()
+    print("Max retries reached. Email not found.")
+    return None
 
 
-def login_user(p: PlaywrightContextManager, first_name="Milan", last_name="T") -> tuple[Browser, Page, str]:
+def create_user(page: Page, firstname: str = "User", lastname: str = "Test"):
+    page.get_by_role("button", name="Join").click()
 
-    browser = p.chromium.launch(
-        headless=True,
-        args=["--disable-web-security", "--disable-features=IsolateOrigins,site-per-process"],
-    )
-    page = browser.new_page()
-    user_email = generate_user_email()
-    LOGGER.info("User email: %s", user_email)
-
-
-    page.goto("https://dev.new.expensify.com:8082/")
-
-
-    clear_inbox(EMAIL_USERNAME, EMAIL_PASSWORD)
-
-
-    page.locator('input[type="email"]').fill(user_email)
-    page.locator('button[tabindex="0"]').click()
-
+    # Update profile
+    page.get_by_text("Track and budget expenses").click()
+    page.get_by_role("button", name="Continue").last.click()
+    page.get_by_role("textbox", name="First name").fill(firstname)
+    page.get_by_role("textbox", name="Last name").fill(lastname)
 
     try:
-        expect(page.get_by_test_id("SignInPage").get_by_test_id("validateCode")).to_be_visible(timeout=5000)
-    except AssertionError:
-
-        page.get_by_test_id("SignInPage").get_by_role("button", name="Join").click()
-    else:
-
-        otp_code = get_otp_from_email(EMAIL_USERNAME, EMAIL_PASSWORD)
-        page.get_by_test_id("SignInPage").get_by_test_id("validateCode").fill(otp_code)
-        try:
-            page.get_by_test_id("SignInPage").get_by_role("button", name="Sign in").click(timeout=2000)
-        except (AssertionError, TimeoutError):
-            pass
-
-
-    try:
-        expect(page.locator("text=What do you want to do today?")).to_be_visible()
-    except AssertionError:
+        page.get_by_role("button", name="Continue").click(timeout=2000)
+    except TimeoutError:
         pass
-    else:
 
-        page.locator("text='Track and budget expenses'").click()
-        page.get_by_role("button", name="Continue").click()
-
-
-        page.locator('input[name="fname"]').fill(first_name)
-        page.locator('input[name="lname"]').fill(last_name)
-        page.get_by_role("button", name="Continue").last.click()
-
-    return browser, page, user_email
+    try:
+        page.get_by_role("button", name="Get Started").click(timeout=200)
+    except TimeoutError:
+        pass
 
 
-def submit_expense_in_workspace_chat(
-    browser: Browser, page: Page, user_email: str, workspace_name: str, amount: str = "1000"
-) -> tuple[Browser, Page, str]:
 
-    page.get_by_test_id("BaseSidebarScreen").get_by_text(workspace_name, exact=True).last.click()
+def login(page: Page):
+    # get current timestamp
+    magic_code = "123456"
 
+    if magic_code is None:
+        raise ValueError("Failed to retrieve magic code")
+    page.get_by_role("textbox").fill(magic_code)
 
-    page.locator('button[aria-label="Create"]').last.click()
-    page.locator('div[aria-label="Submit expense"]').click()
+def login_or_create_user(
+    page: Page, user_email: str = USER_EMAIL, lastname: str = "Test"
+):
+    page.get_by_role("textbox", name="Phone or email").fill(user_email)
+    page.get_by_role("button", name="Continue").click()
 
+    try:
+        page.get_by_role("button", name="Join").wait_for(state="visible", timeout=2000)
+        create_user(page, lastname)
+    except TimeoutError:
+        login(page)
 
-    page.locator('button[aria-label="Manual"]').click()
-    page.locator('input[role="presentation"]').fill(amount)
-
-
-    page.locator('button[data-listener="Enter"]', has_text="Next").first.click()
-
-
-    page.locator('div[role="menuitem"]', has_text="Merchant").click()
-    page.locator('input[aria-label="Merchant"]').fill("Test Merchant")
-    page.locator("button", has_text="Save").click()
-
-
-    page.locator('button[data-listener="Enter"]', has_text="Submit").click()
+    page.get_by_label("Inbox").first.wait_for(state="visible")
 
 
-def test_save_description_in_submitted_expense():
+def create_sample_jpg():
+    # Generates an image in memory and returns the bytes
+    image = Image.new("RGB", (100, 100), color="blue")
+    img_byte_arr = BytesIO()
+    image.save(img_byte_arr, format="JPEG")
+    img_byte_arr.seek(0)
+    return img_byte_arr.getvalue()
+
+def test_51388():
     with sync_playwright() as p:
-        new_report_title = ""
 
-        browser, page, user_email = login_user(p)
+        # Launch chromium and open new page
+        browser = p.chromium.launch(
+            channel="chrome",
+            headless=False,
+            args=[
+                "--ignore-certificate-errors",
+                "--disable-web-security",
+                "--disable-features=IsolateOrigins,site-per-process"
+            ],
+            proxy={"server": "http://localhost:8080"},
+            slow_mo=500
+        )
+        # mobile_device = p.devices['Pixel 7']
+        mobile_device = p.devices['iPhone 12 Pro']
+        context = browser.new_context(**mobile_device)
+        page = context.new_page()
 
+        # Login Expensify
+        page.goto(NEW_DOT_URL)
+        login_or_create_user(page)
 
-        workspace_name = "Workspace 42525"
+        # go to Settings
+        page.get_by_label("My settings").click()
 
+        # enable debug mode 
+        page.get_by_label("Troubleshoot").click()
+        page.get_by_label("Debug mode").click()
+        page.get_by_label("Back").click()
+        page.wait_for_timeout(1000)
 
-        page.get_by_role("button", name="My settings").click()
-        page.get_by_role("menuitem", name="Workspaces").click()
-        existing_workspaces = [
-            item.split("\n")[0].strip()
-            for item in page.get_by_test_id("WorkspacesListPage").get_by_label("row", exact=True).all_inner_texts()
-        ]
-        if workspace_name not in existing_workspaces:
-            page.get_by_role("button", name="New workspace").first.click()
+        # create a new workspace
+        page.get_by_test_id("InitialSettingsPage").get_by_label("Workspaces").click()
+        page.get_by_label("New workspace").first.click()
+        page.get_by_test_id("WorkspaceInitialPage").get_by_label("Profile").click()
+        page.get_by_label("Test User's Workspace").last.click()
+        workspace_name = f"workspace{3456}"
+        page.get_by_role("textbox", name="Name").fill(workspace_name)
+        page.get_by_role("button", name="Save").click()
+        page.wait_for_timeout(1000)
+        page.get_by_test_id("WorkspacePageWithSections").get_by_label("Back").click()
+        page.get_by_test_id("WorkspaceInitialPage").get_by_label("Back").click()
+        page.get_by_test_id("WorkspacesListPage").get_by_label("Back").click()
 
-            page.get_by_test_id("WorkspacePageWithSections").get_by_text("Name", exact=True).click()
-            page.get_by_test_id("WorkspaceNamePage").get_by_role("textbox").fill(workspace_name)
-            page.get_by_test_id("WorkspaceNamePage").get_by_role("button", name="Save").click()
-            LOGGER.info("Created workspace '%s'", workspace_name)
+        page.get_by_label("Inbox").click()
 
-            page.locator('button[aria-label="Back"]').click()
-        else:
-            LOGGER.info("Workspace '%s' already exists", workspace_name)
-        page.wait_for_timeout(2000)
+        page.get_by_label("Navigates to a chat").get_by_text(workspace_name).last.click()
 
+        # send a message
+        page.locator("#composer").fill("hello")
+        page.get_by_label("Send").click()
+    
+        # Tap header 
+        try:
+            page.get_by_label(workspace_name).click(timeout=5000)
+        except:
+            page.get_by_label("Test User").click(timeout=5000)
 
-        page.locator('button[aria-label="Inbox"]').click()
+        # press debug
+        page.get_by_label("Debug").click()
 
+        # tap delete
+        page.get_by_role("button", name="Delete").click()
+        page.get_by_label("Back").last.click()
 
-        submit_expense_in_workspace_chat(browser, page, user_email, workspace_name)
-        submit_expense_in_workspace_chat(browser, page, user_email, workspace_name)
-        page.wait_for_timeout(2000)
+        # verify that not found detail page is visible and no blank page displayed
+        expect(page.get_by_text("Hmm... it's not here")).to_be_visible()
+        page.reload()
+        page.wait_for_timeout(1000)
+        expect(page.get_by_text("Hmm... it's not here")).to_be_visible()
+        page.wait_for_timeout(1000)
 
-
-        page.get_by_test_id("BaseSidebarScreen").get_by_text(workspace_name, exact=True).last.click()
-        page.locator('button[aria-label="View details"]').last.click()
-        page.locator('button[aria-label^="Expense Report #"]').last.click()
-        page.locator('div[aria-label^="Expense Report #"]').click()
-
-
-        page.locator('input[name="text_title"]').fill(new_report_title)
-        page.locator('button[data-listener="Enter"]', has_text="Save").first.click()
-
-
-        error_field = page.locator("text=This field is required.")
-        if error_field.is_visible():
-            assert True, "Empty Report title cannot be saved."
-        else:
-            assert False, "Empty Report title has been saved."
-
+        context.close()
         browser.close()

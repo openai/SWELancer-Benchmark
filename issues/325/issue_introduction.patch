@@ -1,0 +1,41 @@
+diff --git a/src/components/AttachmentModal.tsx b/src/components/AttachmentModal.tsx
+index 8de7f4575e7..e29c487308a 100644
+--- a/src/components/AttachmentModal.tsx
++++ b/src/components/AttachmentModal.tsx
+@@ -177,7 +177,6 @@ function AttachmentModal({
+     const {windowWidth} = useWindowDimensions();
+     const {shouldUseNarrowLayout} = useResponsiveLayout();
+     const nope = useSharedValue(false);
+-    const isOverlayModalVisible = (isReceiptAttachment && isDeleteReceiptConfirmModalVisible) || (!isReceiptAttachment && isAttachmentInvalid);
+     const iouType = useMemo(() => (isTrackExpenseAction ? CONST.IOU.TYPE.TRACK : CONST.IOU.TYPE.SUBMIT), [isTrackExpenseAction]);
+     const parentReportAction = ReportActionsUtils.getReportAction(report?.parentReportID ?? '-1', report?.parentReportActionID ?? '-1');
+     const transactionID = ReportActionsUtils.isMoneyRequestAction(parentReportAction) ? ReportActionsUtils.getOriginalMessage(parentReportAction)?.IOUTransactionID ?? '-1' : '-1';
+@@ -276,6 +275,7 @@ function AttachmentModal({
+     const closeConfirmModal = useCallback(() => {
+         setIsAttachmentInvalid(false);
+         setIsDeleteReceiptConfirmModalVisible(false);
++        closeModal();
+     }, []);
+ 
+     /**
+@@ -484,7 +484,7 @@ function AttachmentModal({
+             <Modal
+                 type={modalType}
+                 onSubmit={submitAndClose}
+-                onClose={isOverlayModalVisible ? closeConfirmModal : closeModal}
++                onClose={closeModal}
+                 isVisible={isModalOpen}
+                 onModalShow={() => {
+                     onModalShow();
+diff --git a/src/libs/ReportUtils.ts b/src/libs/ReportUtils.ts
+index 78ebdd92751..75b245bddae 100644
+--- a/src/libs/ReportUtils.ts
++++ b/src/libs/ReportUtils.ts
+@@ -3066,7 +3066,6 @@ function canEditFieldOfMoneyRequest(reportAction: OnyxInputOrEntry<ReportAction>
+         CONST.EDIT_REQUEST_FIELD.CURRENCY,
+         CONST.EDIT_REQUEST_FIELD.MERCHANT,
+         CONST.EDIT_REQUEST_FIELD.DATE,
+-        CONST.EDIT_REQUEST_FIELD.RECEIPT,
+         CONST.EDIT_REQUEST_FIELD.DISTANCE,
+         CONST.EDIT_REQUEST_FIELD.DISTANCE_RATE,
+     ];

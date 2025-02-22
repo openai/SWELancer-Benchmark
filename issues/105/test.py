@@ -1,152 +1,123 @@
-import sys, os
-
-base_path = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
-sys.path.insert(0, base_path)
-
-import time
 from playwright.sync_api import sync_playwright, expect
+from playwright.sync_api._context_manager import PlaywrightContextManager
+from playwright._impl._browser import Browser
+from playwright._impl._page import Page
+import re, time
 import imaplib
 import email
-from email.header import decode_header
-import re
 
-user_email = "totherandomuser@gmail.com"
-password = "umei djwi bfmp jntm"
+EMAIL = "mancity9271+678@gmail.com"
+APP_PASSWORD = "aplp neek apqv cjbr"
+NEWDOT_URL = "https://dev.new.expensify.com:8082/"
 
 
-def get_magic_code(user_email, password, retries=5, delay=10):
+# Function to log in an existing user using get_otp flow
+class IMAPOTPExtractor:
+    def __init__(self, email_address, password):
+        if not self._validate_email(email_address):
+            raise ValueError("Invalid email address format.")
+        self.original_email = email_address
+        self.password = password
 
-    imap = imaplib.IMAP4_SSL("imap.gmail.com")
-    imap.login(user_email, password)
+    def _validate_email(self, email_address):
+        return bool(re.match(r"[^@]+@[^@]+\.[^@]+", email_address))
+    
+    def set_new_email(self, email):
+        self.new_email = email
 
-    for attempt in range(retries):
+    def check_for_otp(self):
+        #In case we are using flow file, return static otp_code
+        otp_code = "123456"
+        return otp_code
+        try:
+            mail = imaplib.IMAP4_SSL("imap.gmail.com")
+            mail.login(self.original_email, self.password)
+            mail.select("inbox")
+            
+            status, messages = mail.search(None, "UNSEEN")
+            if status != "OK":
+                return None
 
-        imap.select("inbox")
-        status, messages = imap.search(None, '(UNSEEN SUBJECT "Expensify magic sign-in code:")')
-
-        if status == "OK":
-            email_ids = messages[0].split()
-
-            if email_ids:
-                latest_email_id = email_ids[-1]
-                status, msg_data = imap.fetch(latest_email_id, "(RFC822)")
-
+            email_ids = messages[0].split()[::-1]
+            for email_id in email_ids:
+                status, msg_data = mail.fetch(email_id, '(RFC822)')
+                if status != "OK":
+                    print("Failed to fetch email ID:", email_id)
+                    continue
+                
                 for response_part in msg_data:
                     if isinstance(response_part, tuple):
                         msg = email.message_from_bytes(response_part[1])
-                        subject, encoding = decode_header(msg["Subject"])[0]
-                        if isinstance(subject, bytes):
-                            subject = subject.decode(encoding or "utf-8")
+                        if self.new_email in msg["To"]:
+                            otp_code = self._extract_otp_from_email(msg)
+                            if otp_code:
+                                mail.store(email_id, '+FLAGS', '\\Deleted')
+                                mail.expunge()
+                                mail.close()
+                                mail.logout()
+                                return otp_code
+            mail.close()
+            mail.logout()
+            return None
 
+        except imaplib.IMAP4.error as e:
+            print(f"IMAP error: {e}")
+            return None
 
-                        match = re.search(r"Expensify magic sign-in code: (\d+)", subject)
-                        if match:
-                            code = match.group(1)
-                            imap.logout()
-                            return code
-            else:
-                print("No unread emails found with the subject. Retrying...")
+    def _extract_otp_from_email(self, msg):
+        email_body = None
+        if msg.is_multipart():
+            for part in msg.walk():
+                if part.get_content_type() == "text/plain":
+                    email_body = part.get_payload(decode=True).decode()
+                    break
         else:
-            print("Failed to retrieve emails. Retrying...")
+            email_body = msg.get_payload(decode=True).decode()
+
+        if email_body:
+            otp_code = self._extract_otp(email_body)
+            return otp_code
+        return None
+
+    def _extract_otp(self, text):
+        match = re.search(r"\b\d{6}\b", text)
+        return match.group(0) if match else None
+
+class UserLogin():
+    gmail_account_helper = IMAPOTPExtractor(EMAIL, APP_PASSWORD)
+
+    def new_dot_login(self,page, email):
+        page.goto(NEWDOT_URL)  
+        page.locator('input[type="email"]').fill(email)
+        page.wait_for_timeout(2000)
+        page.get_by_role("button", name="Continue").nth(0).click()
+        page.wait_for_timeout(10000)
+
+        self.gmail_account_helper.set_new_email(email)
+        otp = self.gmail_account_helper.check_for_otp()
+
+        if otp:
+            page.locator('input[data-testid="validateCode"]').fill(otp)
+            # page.get_by_role("button", name="Sign In").click()
+        else:
+            print("OTP not received.")
 
 
-        time.sleep(delay)
-
-    imap.logout()
-    print("Max retries reached. Email not found.")
-    return None
-
-
-def login(p, if_phone=False, first_name="John", last_name="Cena"):
-
-    permissions = ['clipboard-read', 'clipboard-write']
-    browser = p.chromium.launch(headless=True, args=[
-        '--disable-web-security',
-        '--disable-features=IsolateOrigins,site-per-process'
-    ])
-
-    if if_phone:
-        phone = p.devices['iPhone 12 Pro']
-        context = browser.new_context(**phone, permissions=permissions, reduced_motion='no-preference')
-    else:
-        context = browser.new_context()
-
-    page = context.new_page()
-
-    page.goto('https://dev.new.expensify.com:8082/')
-
-    phone_or_email_input = page.locator('input[type="email"]')
-    expect(phone_or_email_input).to_be_visible()
-    phone_or_email_input.fill(user_email)
-
-    continue_button = page.locator('button[tabindex="0"]')
-    expect(continue_button).to_be_visible()
-    continue_button.click()
-
-    page.wait_for_timeout(1000)
-
-
-    magic_code = "123456"
-    validate_code_input = page.locator('input[name="validateCode"]')
-    expect(validate_code_input).to_be_visible()
-    validate_code_input.fill(magic_code)
-
-    page.wait_for_timeout(1000)
-
-    return browser, page
-
-
-def test():
+def test_verify_workspace_switcher_as_filter():
     with sync_playwright() as p:
-
-        browser, page = login(p, False)
-
-        page.wait_for_timeout(5000)
-
-
-        group_chat = page.get_by_text(f"Totherandomuser's Workspace 2").first
-        expect(group_chat).to_be_visible()
-        group_chat.click()
-
-        page.wait_for_timeout(1000)
-
-        page.get_by_role("textbox").fill("My Message")
-        page.get_by_role("textbox").press("Enter")
-        page.wait_for_timeout(1000)
-
-        page.get_by_label("My settings").click()
-        page.get_by_label("Preferences").click()
-        page.get_by_label("Force offline").click()
-        page.locator("#overLayBottomButton").click()
-        page.wait_for_timeout(1000)
-
-        message = page.locator('span', has_text="My Message").last
-        expect(message).to_be_visible()
-        message.click(button="right")
-        page.wait_for_timeout(1000)
-
-
-        delete_button = page.locator('[aria-label="Delete comment"]').first
-        delete_button.click()
-        page.get_by_role("button", name="Delete").click()
-
-        page.wait_for_timeout(1000)
-        message = page.locator('span', has_text="My Message").last
-        expect(message).to_be_visible()
-        message.click(button="right")
-        page.wait_for_timeout(1000)
-
-        is_unsubscribed = False
-
-
-
-
-
-        unsubscribe_div = page.locator('div[data-selection-scrapper-hidden-element="false"].css-text-146c3p1',
-                                       has_text="Unsubscribe from thread")
-        is_unsubscribe_present = unsubscribe_div.is_visible()
-
-
-        print(is_unsubscribe_present)
-
-        assert is_unsubscribe_present == False, "Unsubscribe from thread Button should not be visible."
+        # Launch Chromium browser in visible mode (non-headless)
+        browser = p.chromium.launch(headless=False, slow_mo=500, args=[
+        "--ignore-certificate-errors", 
+        "--disable-web-security",
+        "--disable-features=IsolateOrigins,site-per-process"
+    ])
+        context = browser.new_context(ignore_https_errors=True)
+        # Log in user and complete onboarding
+        page = context.new_page()
+        user = UserLogin()
+        user.new_dot_login(page, EMAIL)
+        
+        #Click on Workspace switcher
+        page.get_by_label("Workspaces").click()
+        #Check if expensify app icon is not visible on workspace switcher page
+        expect(page.locator('.expensify-app-icon_svg__st1').nth(2)).not_to_be_visible()

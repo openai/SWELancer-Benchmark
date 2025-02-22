@@ -1,93 +1,75 @@
-diff --git a/src/pages/workspace/reportFields/CreateReportFieldsPage.tsx b/src/pages/workspace/reportFields/CreateReportFieldsPage.tsx
-index 79be1022da3..2de5fc61569 100644
---- a/src/pages/workspace/reportFields/CreateReportFieldsPage.tsx
-+++ b/src/pages/workspace/reportFields/CreateReportFieldsPage.tsx
-@@ -143,16 +143,6 @@ function CreateReportFieldsPage({
-                                 onTypeSelected={(type) => formRef.current?.resetForm({...inputValues, type, initialValue: type === CONST.REPORT_FIELD_TYPES.DATE ? defaultDate : ''})}
-                             />
+diff --git a/.env.example b/.env.example
+index f398a72aa0a..3980629f86c 100644
+--- a/.env.example
++++ b/.env.example
+@@ -1,6 +1,6 @@
+ NEW_EXPENSIFY_URL=https://new.expensify.com/
+ SECURE_EXPENSIFY_URL=https://secure.expensify.com.dev/
+-EXPENSIFY_URL=https://www.expensify.com.dev/
++EXPENSIFY_URL=https://www.expensify.com/
+ EXPENSIFY_PARTNER_NAME=chat-expensify-com
+ EXPENSIFY_PARTNER_PASSWORD=e21965746fd75f82bb66
+ PUSHER_APP_KEY=ac6d22b891daae55283a
+diff --git a/src/CONST.ts b/src/CONST.ts
+index 8e38812ccdc..3c13c830813 100755
+--- a/src/CONST.ts
++++ b/src/CONST.ts
+@@ -737,7 +737,7 @@ const CONST = {
+     CFPB_PREPAID_URL: 'https://cfpb.gov/prepaid',
+     STAGING_NEW_EXPENSIFY_URL: 'https://staging.new.expensify.com',
+     NEWHELP_URL: 'https://help.expensify.com',
+-    INTERNAL_DEV_EXPENSIFY_URL: 'https://www.expensify.com.dev',
++    INTERNAL_DEV_EXPENSIFY_URL: 'https://www.expensify.com',
+     STAGING_EXPENSIFY_URL: 'https://staging.expensify.com',
+     EXPENSIFY_URL: 'https://www.expensify.com',
+     BANK_ACCOUNT_PERSONAL_DOCUMENTATION_INFO_URL:
+diff --git a/src/components/IFrame.tsx b/src/components/IFrame.tsx
+index f492df0f386..4918afc8267 100644
+--- a/src/components/IFrame.tsx
++++ b/src/components/IFrame.tsx
+@@ -96,7 +96,7 @@ function OldDotIFrame({session}: OldDotIFrameProps) {
+     const [oldDotURL, setOldDotURL] = useState('https://staging.expensify.com');
  
--                            {inputValues[INPUT_IDS.TYPE] === CONST.REPORT_FIELD_TYPES.LIST && (
--                                <MenuItemWithTopDescription
--                                    description={translate('workspace.reportFields.listValues')}
--                                    shouldShowRightIcon
--                                    onPress={() => Navigation.navigate(ROUTES.WORKSPACE_REPORT_FIELDS_LIST_VALUES.getRoute(policyID))}
--                                    title={formDraft?.[INPUT_IDS.LIST_VALUES]?.sort(localeCompare)?.join(', ')}
--                                    numberOfLinesTitle={5}
--                                />
--                            )}
--
-                             {inputValues[INPUT_IDS.TYPE] === CONST.REPORT_FIELD_TYPES.TEXT && (
-                                 <InputWrapper
-                                     InputComponent={TextPicker}
-@@ -182,6 +172,23 @@ function CreateReportFieldsPage({
-                                     inputID={INPUT_IDS.INITIAL_VALUE}
-                                     label={translate('common.initialValue')}
-                                     subtitle={translate('workspace.reportFields.listValuesInputSubtitle')}
-+                                    rightLabel={translate('common.required')}
-+                                />
-+                            )}
-+
-+                            {inputValues[INPUT_IDS.TYPE] === CONST.REPORT_FIELD_TYPES.LIST && (
-+                                <MenuItemWithTopDescription
-+                                    description={translate('workspace.reportFields.listValues')}
-+                                    shouldShowRightIcon
-+                                    onPress={() => Navigation.navigate(ROUTES.WORKSPACE_REPORT_FIELDS_LIST_VALUES.getRoute(policyID))}
-+                                />
-+                            )}
-+
-+                            {inputValues[INPUT_IDS.TYPE] === CONST.REPORT_FIELD_TYPES.LIST && (
-+                                <MenuItemWithTopDescription
-+                                    description={translate('workspace.reportFields.listValues')}
-+                                    shouldShowRightIcon
-+                                    onPress={() => Navigation.navigate(ROUTES.WORKSPACE_REPORT_FIELDS_LIST_VALUES.getRoute(policyID))}
-                                 />
-                             )}
-                         </View>
-diff --git a/src/pages/workspace/reportFields/ReportFieldsSettingsPage.tsx b/src/pages/workspace/reportFields/ReportFieldsSettingsPage.tsx
-index cc6460d2064..e325e674b6e 100644
---- a/src/pages/workspace/reportFields/ReportFieldsSettingsPage.tsx
-+++ b/src/pages/workspace/reportFields/ReportFieldsSettingsPage.tsx
-@@ -47,8 +47,7 @@ function ReportFieldsSettingsPage({
+     useEffect(() => {
+-        setOldDotURL(`https://expensify.com.dev/${getOldDotURL(window.location.href)}`);
++        setOldDotURL(`https://expensify.com/${getOldDotURL(window.location.href)}`);
  
-     const isDateFieldType = reportField.type === CONST.REPORT_FIELD_TYPES.DATE;
-     const isListFieldType = reportField.type === CONST.REPORT_FIELD_TYPES.LIST;
--    const isListFieldEmpty = isListFieldType && reportField.disabledOptions.filter((disabledListValue) => !disabledListValue).length <= 0;
--    const listValues = Object.values(policy?.fieldList?.[reportFieldKey]?.values ?? {})?.sort(localeCompare);
-+    const isListFieldEmpty = isListFieldType && reportField.values.length <= 0;
+         window.addEventListener('message', (event: MessageEvent<string>) => {
+             const url = event.data;
+@@ -110,8 +110,8 @@ function OldDotIFrame({session}: OldDotIFrameProps) {
+         if (!session) {
+             return;
+         }
+-        document.cookie = `authToken=${session.authToken}; domain=expensify.com.dev; path=/;`;
+-        document.cookie = `email=${session.email}; domain=expensify.com.dev; path=/;`;
++        document.cookie = `authToken=${session.authToken}; domain=expensify.com; path=/;`;
++        document.cookie = `email=${session.email}; domain=expensify.com; path=/;`;
+     }, [session]);
  
-     const deleteReportFieldAndHideModal = () => {
-         ReportField.deleteReportFields(policyID, [reportFieldKey]);
-@@ -97,17 +96,6 @@ function ReportFieldsSettingsPage({
-                         description={translate('common.type')}
-                         interactive={false}
-                     />
--                    {isListFieldType && (
--                        <MenuItemWithTopDescription
--                            style={[styles.moneyRequestMenuItem]}
--                            titleStyle={styles.flex1}
--                            description={translate('workspace.reportFields.listValues')}
--                            shouldShowRightIcon
--                            onPress={() => Navigation.navigate(ROUTES.WORKSPACE_REPORT_FIELDS_LIST_VALUES.getRoute(policyID, reportFieldID))}
--                            title={listValues.join(', ')}
--                            numberOfLinesTitle={5}
--                        />
--                    )}
-                     {!isListFieldEmpty && (
-                         <MenuItemWithTopDescription
-                             style={[styles.moneyRequestMenuItem]}
-@@ -119,6 +107,15 @@ function ReportFieldsSettingsPage({
-                             onPress={() => Navigation.navigate(ROUTES.WORKSPACE_EDIT_REPORT_FIELDS_INITIAL_VALUE.getRoute(policyID, reportFieldID))}
+     return (
+diff --git a/src/libs/Permissions.ts b/src/libs/Permissions.ts
+index 24de2e61220..a2ecf3ce139 100644
+--- a/src/libs/Permissions.ts
++++ b/src/libs/Permissions.ts
+@@ -4,7 +4,8 @@ import type {IOUType} from '@src/CONST';
+ import type Beta from '@src/types/onyx/Beta';
+ 
+ function canUseAllBetas(betas: OnyxEntry<Beta[]>): boolean {
+-    return !!betas?.includes(CONST.BETAS.ALL);
++    return true;
+ }
+ 
+ function canUseDefaultRooms(betas: OnyxEntry<Beta[]>): boolean {
+diff --git a/src/pages/workspace/tags/TagSettingsPage.tsx b/src/pages/workspace/tags/TagSettingsPage.tsx
+index 0461024b3f1..e57571ca0a5 100644
+--- a/src/pages/workspace/tags/TagSettingsPage.tsx
++++ b/src/pages/workspace/tags/TagSettingsPage.tsx
+@@ -174,7 +174,7 @@ function TagSettingsPage({route, navigation}: TagSettingsPageProps) {
                          />
-                     )}
-+                    {isListFieldType && (
-+                        <MenuItemWithTopDescription
-+                            style={[styles.moneyRequestMenuItem]}
-+                            titleStyle={styles.flex1}
-+                            description={translate('workspace.reportFields.listValues')}
-+                            shouldShowRightIcon
-+                            onPress={() => Navigation.navigate(ROUTES.WORKSPACE_REPORT_FIELDS_LIST_VALUES.getRoute(policyID, reportFieldID))}
-+                        />
-+                    )}
-                     {!hasAccountingConnections && (
-                         <View style={styles.flexGrow1}>
-                             <MenuItem
+                     </OfflineWithFeedback>
+ 
+-                    {policy?.areRulesEnabled && canUseCategoryAndTagApprovers && !isMultiLevelTags && (
++                    {policy?.areRulesEnabled && canUseCategoryAndTagApprovers && (
+                         <>
+                             <View style={[styles.mh5, styles.mv3, styles.pt3, styles.borderTop]}>
+                                 <Text style={[styles.textNormal, styles.textStrong, styles.mv3]}>{translate('workspace.tags.tagRules')}</Text>

@@ -3,123 +3,114 @@ import sys, os
 base_path = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
 sys.path.insert(0, base_path)
 
-import pytest
-from playwright.sync_api import sync_playwright, Page
+from json import tool
+import time
+from playwright.sync_api import sync_playwright, expect
+from playwright.sync_api._context_manager import PlaywrightContextManager
+from playwright._impl._browser import Browser
+from playwright._impl._page import Page
 
-SITE_URL = "https://dev.new.expensify.com:8082/"
-PRIMARY_EMAIL = "expensifyolddot+1733631442@gmail.com"
-FIRST_NAME = "Expenolddot"
-LAST_NAME = "1733631442"
+static_email = "testuserexpensify1+44@gmail.com"
 
+def login_user(p: PlaywrightContextManager, first_name="Milan", last_name="T") -> tuple[Browser, Page, str]:
 
-@pytest.fixture
-def setup_playwright():
-    playwright = sync_playwright().start()
-
-    browser = playwright.chromium.launch(
-        channel="chrome",
-        headless=True,
-        args=[
-            "--ignore-certificate-errors",
-            "--disable-web-security",
-            "--disable-features=IsolateOrigins,site-per-process"
-        ],
-        proxy={"server": "http://localhost:8080"},
-        slow_mo=500
-    )
-    context_args = {}
-    context_args["timezone_id"] = "Asia/Kathmandu"
-    context = browser.new_context(**context_args)
-
-    yield context
+    browser = p.chromium.launch(headless=True, slow_mo=1000, args=["--disable-web-security", "--disable-features=IsolateOrigins,site-per-process"])
+    page = browser.new_page()
+    user_email = static_email
 
 
-    browser.close()
-    playwright.stop()
+    page.goto('https://dev.new.expensify.com:8082/') 
 
 
-def login_user(page: Page, email: str):
-    page.goto(SITE_URL)
-    page.locator('input[type="email"]').fill(email)
+    page.locator('input[type="email"]').fill(user_email)
     page.locator('button[tabindex="0"]').click()
-    try:
-        page.locator("button", has_text="Join").click()
+    page.wait_for_timeout(1000)
+
+
+    try: 
+        page.locator('button[tabindex="0"]').click() 
+        page.wait_for_timeout(1000)
     except Exception:
         pass
+        
 
-
-def complete_onboarding(page: Page, fname: str, lname: str):
     page.locator("text='Track and budget expenses'").click()
-    page.locator('input[name="fname"]').fill(fname)
-    page.locator('input[name="lname"]').fill(lname)
+    page.get_by_role("button", name="Continue").click()
+    page.wait_for_timeout(1000)
+
+
+    page.locator('input[name="fname"]').fill(first_name)
+    page.locator('input[name="lname"]').fill(last_name)
     page.get_by_role("button", name="Continue").last.click()
+    page.wait_for_timeout(1000)
+
+    return browser, page, user_email
 
 
-def is_connected(page: Page):
-    text = page.locator('div[aria-label="NetSuite"][role="menuitem"]').last.inner_text()
-    return "Last synced" in text
+def test_close_account_bottom_margin():
+    with sync_playwright() as p:
+        
+        first_name = 'John'
+        last_name = 'Doe'
+        new_workspace_name = 'Testing workspace'
 
 
-@pytest.mark.parametrize(
-    "setup_playwright",
-    [{"width": 1280, "height": 360}],
-    indirect=True,
-)
-def test(setup_playwright):
-    context = setup_playwright
+        browser, page, user_email = login_user(p, first_name, last_name)
+        context = browser.new_context()
+        
 
-    page = context.new_page()
+        profile = page.locator('button[aria-label="My settings"]')
+        profile.click()
+        page.wait_for_timeout(1000)
+        
 
-    login_user(page, PRIMARY_EMAIL)
+        troubleshoot = page.locator('div[role="menuitem"]').nth(9)
+        troubleshoot.click()
+        page.wait_for_timeout(1000)
+        
 
-    complete_onboarding(page, FIRST_NAME, LAST_NAME)
+        forced_offline = page.locator('button[aria-label="Force offline"]')
+        forced_offline.click()
+        page.wait_for_timeout(1000)
+        
+        
 
-    page.locator('button[aria-label="Workspaces"]').click()
-    page.get_by_test_id("WorkspaceSwitcherPage").get_by_role(
-        "button", name="New workspace"
-    ).click()
+        plus_icon = page.locator('button[aria-label="Start chat (Floating action)"]')
+        plus_icon.click()
+        page.wait_for_timeout(2000)
+        
 
-    page.locator('div[aria-label="More features"]').click()
-    page.locator('button[aria-label="Sync your chart of accounts and more."]').click()
-    page.locator('div[aria-label="Accounting"]').click()
-    (
-        page.locator('div[aria-label="NetSuite"]')
-        .locator("button", has_text="Connect")
-        .click()
-    )
+        new_workspace_button = page.locator('div[aria-label="New workspace"]')
+        new_workspace_button.click()
+        page.wait_for_timeout(1000)
+        
+        
+        workspace_name = f"{first_name} {last_name}'s Workspace"
+        
 
-    page.locator("button", has_text="Upgrade").last.click()
-    page.locator("button", has_text="Got it, thanks").last.click()
-    page.locator("button", has_text="Next").last.click()
-    page.locator("button", has_text="Next").last.click()
-    page.locator("button", has_text="Next").last.click()
-    page.locator("button", has_text="Next").last.click()
+        profile = page.locator(f'div[aria-label="{workspace_name}"]')
+        profile.click()
+        page.wait_for_timeout(1000)
+        
 
-    page.locator('input[aria-label="NetSuite Account ID"]').last.fill("123")
-    page.locator('input[aria-label="Token ID"]').last.fill("123")
-    page.locator('input[aria-label="Token Secret"]').last.fill("123")
-    page.locator("button", has_text="Confirm").last.click()
+        page.locator('input[aria-label="Name"]').fill(new_workspace_name)
+        save_button = page.locator('button', has_text="Save")
+        save_button.click()
+        page.wait_for_timeout(1000)
+        
 
+        new_profile = page.locator(f'div[aria-label="{new_workspace_name}"]')
+        page.wait_for_timeout(1000)
+        
+        profile_opacity = new_profile.evaluate(
+            'element => window.getComputedStyle(element.parentElement.parentElement.parentElement.parentElement).opacity'
+        )
+        
+        if profile_opacity == '0.5':
+            assert True, 'Profile is grayed out.'
+        else:
+            assert False, 'Profile is not grayed out.'
+            
 
-    page.wait_for_timeout(5000)
-    page.reload()
-
-    new_page = context.new_page()
-    new_page.goto(
-        f"https://dev.new.expensify.com:8082/settings/workspaces/{page.url.split('/')[-2]}/accounting/netsuite/import/custom-segment/new"
-    )
-
-    new_page.locator('button[aria-label="Custom segment"]').last.click()
-    new_page.locator("button", has_text="Next").last.click()
-    new_page.locator('input[aria-label="Name"]').last.fill("abc")
-    new_page.locator("button", has_text="Next").last.click()
-    new_page.locator("button", has_text="Next").last.click()
-    new_page.locator('button[aria-label="Back"]').last.click()
-
-    rhn_text = new_page.locator(
-        'div[data-testid="NetSuiteImportAddCustomSegmentPage"]'
-    ).last.inner_text()
-
-    assert (
-        "Please fix the errors in the form before continuing." not in rhn_text
-    ), "Error message did not disappear!"
+        page.wait_for_timeout(1000)
+        browser.close()

@@ -1,6 +1,6 @@
 {
-    "price": 500.0,
-    "title": "[HOLD for payment 2024-01-11] [$500] Update all selectors to use new format for selected participant ",
-    "issue_repo_steps": "Action performed: None\n\nExpected result: None\n\nActual result: None",
-    "_issue_id": "29916_609"
+    "price": 250.0,
+    "title": "[HOLD for payment 2024-12-20] [$250] Add header description to Concierge chat",
+    "issue_repo_steps": "## Problem\r\n\r\nWe've had multiple instance in our testing of people not knowing what Concierge is. Some think it's related to AI in some way. This causes them to miss out on one of the best features of Expensify.\r\n\r\n## Solution\r\n\r\nAdd a small description in the header of the Concierge chat like we do on Self DM:\r\n\r\n![image](https://github.com/user-attachments/assets/c5cd89a3-3696-4123-9331-04c4fa725ac5)\r\n\r\ncc @Expensify/design @jamesdeanexpensify \n<details><summary>Upwork Automation - Do Not Edit</summary>\n    <ul>\n        <li>Upwork Job URL: https://www.upwork.com/jobs/~021859701770005360001</li>\n        <li>Upwork Job ID: 1859701770005360001</li>\n        <li>Last Price Increase: 2024-11-21</li>\n<li>Automatic offers: </li>\n<ul>\n<li>mkzie2 | Contributor | 105063643</li>\n</ul></li>\n    </ul>\n</details>\n\n<details><summary>Issue Owner</summary>Current Issue Owner: @garrettmknight / @sonialiap</details>",
+    "_issue_id": "52855"
 }

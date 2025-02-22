@@ -1,0 +1,39 @@
+diff --git a/src/components/EmojiPicker/CategoryShortcutBar.tsx b/src/components/EmojiPicker/CategoryShortcutBar.tsx
+index 25c1ff85f6a..e440e8c7a97 100644
+--- a/src/components/EmojiPicker/CategoryShortcutBar.tsx
++++ b/src/components/EmojiPicker/CategoryShortcutBar.tsx
+@@ -15,7 +15,7 @@ type CategoryShortcutBarProps = {
+ function CategoryShortcutBar({onPress, headerEmojis}: CategoryShortcutBarProps) {
+     const styles = useThemeStyles();
+     return (
+-        <View style={[styles.ph4, styles.flexRow]}>
++        <View style={[styles.pt2, styles.ph4, styles.flexRow]}>
+             {headerEmojis.map((headerEmoji) => (
+                 <CategoryShortcutButton
+                     icon={headerEmoji.icon}
+diff --git a/src/components/EmojiPicker/EmojiPickerMenu/index.tsx b/src/components/EmojiPicker/EmojiPickerMenu/index.tsx
+index d6c1e1f9255..3e38f03eadc 100755
+--- a/src/components/EmojiPicker/EmojiPickerMenu/index.tsx
++++ b/src/components/EmojiPicker/EmojiPickerMenu/index.tsx
+@@ -322,7 +322,7 @@ function EmojiPickerMenu({onEmojiSelected, activeEmoji}: EmojiPickerMenuProps, r
+                 arePointerEventsDisabled ? styles.pointerEventsNone : styles.pointerEventsAuto,
+             ]}
+         >
+-            <View style={[styles.ph4, styles.pb3, styles.pt2]}>
++            <View style={[styles.ph4, styles.pb2, styles.pt2]}>
+                 <TextInput
+                     label={translate('common.search')}
+                     accessibilityLabel={translate('common.search')}
+diff --git a/src/pages/workspace/WorkspaceMembersPage.tsx b/src/pages/workspace/WorkspaceMembersPage.tsx
+index 52b8a06ba93..d86a47b48e6 100644
+--- a/src/pages/workspace/WorkspaceMembersPage.tsx
++++ b/src/pages/workspace/WorkspaceMembersPage.tsx
+@@ -662,7 +662,7 @@ function WorkspaceMembersPage({personalDetails, route, policy, currentUserPerson
+                         isVisible={isDownloadFailureModalVisible}
+                         onClose={() => setIsDownloadFailureModalVisible(false)}
+                     />
+-                    <View style={[styles.w100, styles.flex1]}>
++                    <View style={[styles.w100, styles.pv4, styles.flex1]}>
+                         <SelectionListWithModal
+                             ref={selectionListRef}
+                             canSelectMultiple={canSelectMultiple}

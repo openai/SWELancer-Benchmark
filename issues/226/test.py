@@ -4,112 +4,122 @@ base_path = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
 sys.path.insert(0, base_path)
 
 import pytest
-from utils.login import sign_up, complete_onboarding
-from utils.email_handler import get_unique_derived_email
-from utils.browser import close_browser
-from playwright.async_api import expect, async_playwright
-from playwright._impl._browser import Browser
-from playwright._impl._page import Page
+from playwright.sync_api import sync_playwright, Page
+
+SITE_URL = "https://dev.new.expensify.com:8082/"
+PRIMARY_EMAIL = "expensifyolddot+1733631442@gmail.com"
+FIRST_NAME = "Expenolddot"
+LAST_NAME = "1733631442"
 
 
-async def start_browser(headless=True, mobile_device=None, launch_args=["--ignore-certificate-errors"]):
+@pytest.fixture
+def setup_playwright():
+    playwright = sync_playwright().start()
 
-    playwright = await async_playwright().start()
-    device_profile = playwright.devices[mobile_device] if mobile_device else {}
-    browser = await playwright.chromium.launch(headless=headless, args=launch_args)
-    context = await browser.new_context(ignore_https_errors=True, **device_profile)
-    page = await context.new_page()
-    return context, page, playwright
+    browser = playwright.chromium.launch(
+        channel="chrome",
+        headless=True,
+        args=[
+            "--ignore-certificate-errors",
+            "--disable-web-security",
+            "--disable-features=IsolateOrigins,site-per-process"
+        ],
+        proxy={"server": "http://localhost:8080"},
+        slow_mo=500
+    )
+    context_args = {}
+    context_args["timezone_id"] = "Asia/Kathmandu"
+    context = browser.new_context(**context_args)
 
-
-async def track_expense(page: Page):
-
-    await page.locator('button[aria-label="Start chat (Floating action)"]').click()
-
-
-    await page.locator('div[aria-label="Track expense"]').click()
-
-
-    await page.locator('button:has-text("Got it")').click()
-
-
-    await page.locator('button[aria-label="Manual"]').click()
+    yield context
 
 
-    await page.locator('input[role="presentation"]').fill("50")
+    browser.close()
+    playwright.stop()
 
 
-    await page.locator('button[data-listener="Enter"]', has_text="Next").first.click()
-
-
-    await page.locator('button:has-text("Track expense")').click()
-
-
-
-@pytest.mark.asyncio
-async def test_issue_46374():
-    """
-    Sign up and check if Inbox is visible
-    """
-
-
-    original_email = "testuserexpensify@gmail.com"
-    derived_email = "testuserexpensify+15114188@gmail.com"
-
-
-    context, page, playwright = await start_browser(launch_args=[
-        '--disable-web-security',
-        '--disable-features=IsolateOrigins,site-per-process'
-    ], mobile_device='iPhone 12 Pro')
-
-
-    await sign_up(page, derived_email)
-
-
+def login_user(page: Page, email: str):
+    page.goto(SITE_URL)
+    page.locator('input[type="email"]').fill(email)
+    page.locator('button[tabindex="0"]').click()
     try:
-        await complete_onboarding(page)
+        page.locator("button", has_text="Join").click()
     except Exception:
         pass
 
 
-    await expect(page.get_by_label("Inbox")).to_be_visible()
-    await page.mouse.click(0,0)
+def complete_onboarding(page: Page, fname: str, lname: str):
+    page.locator("text='Track and budget expenses'").click()
+    page.locator('input[name="fname"]').fill(fname)
+    page.locator('input[name="lname"]').fill(lname)
+    page.get_by_role("button", name="Continue").last.click()
 
 
-    await track_expense(page)
-    await page.wait_for_timeout(1000)
+def is_connected(page: Page):
+    text = page.locator('div[aria-label="NetSuite"][role="menuitem"]').last.inner_text()
+    return "Last synced" in text
 
 
-    back_button = page.locator('button[aria-label="Back"]')
-    await back_button.wait_for()
-    await back_button.click()
+@pytest.mark.parametrize(
+    "setup_playwright",
+    [{"width": 1280, "height": 360}],
+    indirect=True,
+)
+def test(setup_playwright):
+    context = setup_playwright
 
-    await page.wait_for_timeout(4000)
-    await page.locator('button[aria-label="Search"]').click()
-    button = page.get_by_test_id('selection-list').locator('button[tabindex="0"]')
-    await button.wait_for()
+    page = context.new_page()
+
+    login_user(page, PRIMARY_EMAIL)
+
+    complete_onboarding(page, FIRST_NAME, LAST_NAME)
+
+    page.locator('button[aria-label="Workspaces"]').click()
+    page.get_by_test_id("WorkspaceSwitcherPage").get_by_role(
+        "button", name="New workspace"
+    ).click()
+
+    page.locator('div[aria-label="More features"]').click()
+    page.locator('button[aria-label="Sync your chart of accounts and more."]').click()
+    page.locator('div[aria-label="Accounting"]').click()
+    (
+        page.locator('div[aria-label="NetSuite"]')
+        .locator("button", has_text="Connect")
+        .click()
+    )
+
+    page.locator("button", has_text="Upgrade").last.click()
+    page.locator("button", has_text="Got it, thanks").last.click()
+    page.locator("button", has_text="Next").last.click()
+    page.locator("button", has_text="Next").last.click()
+    page.locator("button", has_text="Next").last.click()
+    page.locator("button", has_text="Next").last.click()
+
+    page.locator('input[aria-label="NetSuite Account ID"]').last.fill("123")
+    page.locator('input[aria-label="Token ID"]').last.fill("123")
+    page.locator('input[aria-label="Token Secret"]').last.fill("123")
+    page.locator("button", has_text="Confirm").last.click()
 
 
-    await button.hover()
-    await page.mouse.down()
-    await page.wait_for_timeout(1000)
-    await page.mouse.up()
+    page.wait_for_timeout(5000)
+    page.reload()
 
+    new_page = context.new_page()
+    new_page.goto(
+        f"https://dev.new.expensify.com:8082/settings/workspaces/{page.url.split('/')[-2]}/accounting/netsuite/import/custom-segment/new"
+    )
 
-    await page.locator('div[aria-label="Select"]').click()
+    new_page.locator('button[aria-label="Custom segment"]').last.click()
+    new_page.locator("button", has_text="Next").last.click()
+    new_page.locator('input[aria-label="Name"]').last.fill("abc")
+    new_page.locator("button", has_text="Next").last.click()
+    new_page.locator("button", has_text="Next").last.click()
+    new_page.locator('button[aria-label="Back"]').last.click()
 
+    rhn_text = new_page.locator(
+        'div[data-testid="NetSuiteImportAddCustomSegmentPage"]'
+    ).last.inner_text()
 
-    await page.locator('button:has-text("1 selected")').click()
-
-
-    await page.locator('div[aria-label="Delete"]').click()
-
-
-    await page.locator('button:has-text("Delete")').click()
-
-    await page.wait_for_timeout(1000)
-    b_button = page.locator('button[aria-label="Back"]')
-    assert await b_button.count() == 0, "Back button was not found, This is accepted."
-
-
-    await close_browser(context, page, playwright)
+    assert (
+        "Please fix the errors in the form before continuing." not in rhn_text
+    ), "Error message did not disappear!"

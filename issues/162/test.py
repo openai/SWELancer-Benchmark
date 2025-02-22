@@ -1,109 +1,92 @@
-import sys, os
-
-base_path = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
-sys.path.insert(0, base_path)
-
+import time
 import pytest
-from playwright.async_api import Page, async_playwright, expect
-
-USER_NAME = "xecuycismfsga+42204"
-USER_EMAIL = f"{USER_NAME}@gmail.com"
-PASSWORD = "uwgb zzoc cofa kaaq"
+from playwright.sync_api import sync_playwright, Page
 
 
-def get_magic_code(
-    user_email: str, password: str, current_timestamp: int, retries=5, delay=3
-):
-    return "123456"
+def generate_random_email():
+    # return f"t56826807+{int(time.time())}@gmail.com"
+    return "t56826807+1739702555@gmail.com"
 
 
-async def login(page: Page, user_email: str, password: str):
+@pytest.fixture
+def setup_playwright():
+    playwright = sync_playwright().start()
 
-    now = 20241211
-    await page.get_by_test_id("username").fill(user_email)
-    await page.get_by_role("button", name="Continue").click()
-    await page.wait_for_timeout(3000)  # keeps getting old otp
-    magic_code = get_magic_code(user_email, password, now, retries=3, delay=3)
-    await page.get_by_role("textbox").fill(magic_code)
-    await page.get_by_label("Inbox").wait_for(state="visible")
+    browser = playwright.chromium.launch(
+        headless=False,
+        args=[
+            "--ignore-certificate-errors",
+            "--disable-web-security",
+            "--disable-features=IsolateOrigins,site-per-process",
+        ],
+        proxy={"server": "http://localhost:8080"},
+        slow_mo=500,
+    )
+    context = browser.new_context()
+    page = context.new_page()
 
+    yield page
 
-async def close_button_if_present(page: Page):
-    """
-    Occasionally, there is a close button that prevents any clicks on the page as
-    it covers most of the screen. This button cannot be seen visually.
-    """
-    close_button = page.locator('button[aria-label="Close"]')
-    if await close_button.is_visible():
-        await close_button.click()
-
-
-async def leave_group_chat(page: Page):
-    if await page.get_by_text(USER_NAME).first.is_visible():
-
-        await page.get_by_text(USER_NAME).first.click()
-        await page.locator(
-            f'div[data-testid="DisplayNamesWithTooltip"]:has-text("{USER_NAME}")'
-        ).last.click()
-        await page.get_by_label("Leave").click()
-        await page.get_by_label("Back").first.click()
+    # Cleanup: close browsers and stop Playwright
+    browser.close()
+    playwright.stop()
 
 
-@pytest.mark.asyncio  # ensure you have pytest-asyncio installed
-async def test_leave_group_chat():
-
-    async with async_playwright() as p:
-
-        browser = await p.chromium.launch(headless=True, slow_mo=500, args=[
-            '--disable-web-security',
-            '--disable-features=IsolateOrigins,site-per-process',
-        ])
-
-        context = await browser.new_context()
-        page = await context.new_page()
+def login_user(page: Page, email: str):
+    page.goto("https://dev.new.expensify.com:8082/")
+    page.locator('input[type="email"]').fill(email)
+    page.locator("button", has_text="Continue").click()
+    page.locator("button", has_text="Join").click()
 
 
-        await page.goto("https://dev.new.expensify.com:8082/")
-        await login(page, USER_EMAIL, PASSWORD)
+def complete_onboarding(page: Page, first_name: str, last_name: str = ""):
+    page.locator("text='Track and budget expenses'").click()
+    page.locator('input[name="fname"]').fill(first_name)
+    page.locator('input[name="lname"]').fill(last_name)
+    page.get_by_role("button", name="Continue").last.click()
 
 
-        await leave_group_chat(page)
 
+def test(setup_playwright):
+    page = setup_playwright
 
-        await close_button_if_present(page)
-        await page.get_by_label("Start chat (Floating action)").click()
-        await page.get_by_label("Start chat", exact=True).click()
-        await page.get_by_test_id("selection-list-text-input").fill(
-            f"{USER_NAME}_0@gmail.com"
-        )
-        await page.get_by_role("button", name="Add to group").click()
-        await page.get_by_role("button", name="Next").click()
-        await page.get_by_role("button", name="Start group").click()
+    email_user, name_user = generate_random_email(), "User A"
+    
+    login_user(page, email_user)
+    
+    complete_onboarding(page, name_user)
 
+    page.evaluate("""
+        window.consoleErrors = [];
+        
+        (function() {
+            const oldConsoleError = console.error;
+            console.error = function(...args) {
+                window.consoleErrors.push("ConsoleError: " + args.map(String).join(" "));
+                oldConsoleError.apply(console, args);
+            };
+        })();
 
-        await page.get_by_role("textbox").fill("Hello World")
-        await page.get_by_role("button", name="Send").click()
+        window.onerror = function(message, source, lineno, colno, error) {
+            let fullMessage = `UncaughtError: ${message} at ${source}:${lineno}:${colno}`;
+            if (error && error.stack) {
+                fullMessage += `\nStack: ${error.stack}`;
+            }
+            window.consoleErrors.push(fullMessage);
+        };
+    """)
 
+    page.locator('button[aria-label="Navigates to a chat"]', has_text="User A (you)").click()
 
-        await page.locator(
-            f'div[data-testid="DisplayNamesWithTooltip"]:has-text("{USER_NAME}_0@gmail.com")'
-        ).last.click()
+    page.locator("#composer").fill("abc")
+    page.get_by_role("paragraph").click()
+    page.keyboard.press("ControlOrMeta+a")
+    page.keyboard.press("ControlOrMeta+c")
+    page.keyboard.press("ControlOrMeta+v")
 
+    error_detected = page.evaluate("""
+        window.consoleErrors.some(msg => msg.includes("IndexSizeError"))
+    """)
 
-        await page.get_by_label("Members").click()
-        await page.get_by_label(f"{USER_NAME}_0@gmail.com").last.click()
-        await page.get_by_role("button", name="selected").click()
-        await page.get_by_label("Remove members").click()
-        await page.get_by_role("button", name="Remove").click()
-
-
-        await page.get_by_test_id("ReportParticipantsPage").get_by_label("Back").click()
-        await page.get_by_label("Leave").click()
-
-        await expect(page.get_by_role("button", name="Leave")).to_be_visible()
-        await page.get_by_role("button", name="Leave").click()
-
-
-        await context.close()
-        await browser.close()
-
+    print("error_detected: ", error_detected)
+    assert not error_detected

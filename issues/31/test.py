@@ -1,151 +1,166 @@
+import re
+import time
+from playwright.sync_api import sync_playwright
+import random
+import imaplib
+import email as email_lib
+from playwright.sync_api import sync_playwright, expect
 import os
 
-import pytest
-from playwright.async_api import Browser, Page, TimeoutError, async_playwright
+NEWDOT_URL = "https://dev.new.expensify.com:8082/"
 
-EMAIL_USERNAME = "xecuycismfsga"
-EMAIL_ALIAS = "r5p4hfur"
-USER_EMAIL = f"{EMAIL_USERNAME}+{EMAIL_ALIAS}@gmail.com"
-PASSWORD = "uwgb zzoc cofa kaaq"
-SLOW_MO: int | None = 500
-PROXY_URL = os.getenv("PROXY_URL")
+class IMAPOTPExtractor:
+    def __init__(self, email_address, password):
+        # Validate email and password input
+        if not self._validate_email(email_address):
+            raise ValueError("Invalid email address format.")
+        self.original_email = email_address
+        self.password = password
 
-LONG_FIRSTNAME = "XzH9tXRklkFrTjMU"
-LONG_LASTNAME = "MwuCGEtROJc5CZz9"
-PARTICIPANT_ALIAS = "wzec6tou"
-PARTICIPANT_EMAIL = f"{EMAIL_USERNAME}+{PARTICIPANT_ALIAS}@gmail.com"
+        # Generate new random email using "+" prefix
+        random_suffix = random.randint(1000, 9999)
+        current_timestamp = int(time.time())
+        random_suffix = f"{current_timestamp}{random_suffix}"
+        self.new_email = self._generate_new_email(email_address, random_suffix)
+    
+    def _validate_email(self, email_address):
+        # Simple email validation
+        return bool(re.match(r"[^@]+@[^@]+\.[^@]+", email_address))
+    
+    def _generate_new_email(self, email_address, suffix):
+        # Add random number suffix to the email before the "@" symbol
+        username, domain = email_address.split('@')
+        return f"{username}+{suffix}@{domain}"
 
+    def get_new_email(self):
+        # Return the generated email with "+" suffix
+        return self.new_email
 
-async def get_magic_code(
-    _page: Page, _user_email: str = USER_EMAIL, _password: str = PASSWORD
-):
-    return "123456"
-
-
-async def create_user(page: Page, firstname: str = "User", lastname: str = EMAIL_ALIAS):
-    await page.get_by_role("button", name="Join").click()
-
-    # Update profile
-    await page.get_by_text("Track and budget expenses").click()
-    await page.get_by_role("textbox", name="First name").fill(firstname)
-    await page.get_by_role("textbox", name="Last name").fill(lastname)
-    await page.get_by_role("button", name="Continue").click()
-
-
-async def login(page: Page):
-    # get current timestamp
-    magic_code = await get_magic_code(page)
-
-    if magic_code is None:
-        raise ValueError("Failed to retrieve magic code")
-
-    await page.get_by_role("textbox").fill(magic_code)
-
-
-async def login_or_create_user(
-    page: Page,
-    firstname: str = "User",
-    lastname: str = EMAIL_ALIAS,
-    user_email: str = USER_EMAIL,
-):
-    await page.goto("https://dev.new.expensify.com:8082/")
-    await page.get_by_test_id("username").fill(user_email)
-    await page.get_by_role("button", name="Continue").click()
-
-    try:
-        await page.get_by_role("button", name="Join").wait_for(
-            state="visible", timeout=2000
-        )
-        await create_user(page, firstname=firstname, lastname=lastname)
-    except TimeoutError:
-        await login(page)
-
-    await page.get_by_label("Inbox").wait_for(state="visible", timeout=10000)
-
-
-async def create_participant_account(browser: Browser):
-    context_1 = await browser.new_context()
-    page_1 = await context_1.new_page()
-
-    await login_or_create_user(
-        page_1,
-        user_email=PARTICIPANT_EMAIL,
-        firstname=LONG_FIRSTNAME,
-        lastname=LONG_LASTNAME,
-    )
-
-    await page_1.close()
-    await context_1.close()
-
-
-async def submit_expense(page: Page):
-    await page.get_by_label("Create").last.click()
-    await page.get_by_label("Submit expense").click()
-    await page.get_by_label("Manual").click()
-    await page.get_by_placeholder("0").fill("1000000")
-    await (
-        page.locator("#numPadContainerView").get_by_role("button", name="Next").click()
-    )
-    await page.get_by_role("button", name="Submit").click()
-
-
-@pytest.mark.asyncio
-async def test_search_bar_spacing():
-    async with async_playwright() as p:
-        browser = await p.chromium.launch(
-            proxy={"server": PROXY_URL} if PROXY_URL else None,
-            headless=False,
-            args=[
-                "--no-sandbox",
-                "--disable-dev-shm-usage",
-                "--ignore-certificate-errors",
-                "--disable-web-security",
-                "--disable-features=IsolateOrigins,site-per-process",
-            ],
-            slow_mo=SLOW_MO,
-        )
-
-        await create_participant_account(browser)
-
-        iphone = p.devices["iPhone SE"]
-        context = await browser.new_context(**iphone)
-        page = await context.new_page()
-
-        await login_or_create_user(page)
-
-        participant_chat = page.locator(
-            'button[aria-label="Navigates to a chat"]',
-            has_text=f"{LONG_FIRSTNAME} {LONG_LASTNAME}",
-        ).first
-
+    def set_new_email(self, email_address):
+        self.new_email = email_address
+    
+    def check_for_otp(self):
+        # Connect to the Gmail server using IMAP
         try:
-            await participant_chat.click(timeout=3000)
-        except TimeoutError:
-            await page.get_by_label("Start chat (Floating action)").click()
-            await page.get_by_label("Start chat", exact=True).click()
-            await page.get_by_test_id("selection-list-text-input").fill(
-                PARTICIPANT_EMAIL
-            )
-            await page.get_by_label(PARTICIPANT_EMAIL).click()
+            mail = imaplib.IMAP4_SSL("imap.gmail.com")
+            mail.login(self.original_email, self.password)
+            mail.select("inbox")
 
-        expense_preview = (
-            page.get_by_role("button", name="View details")
-            .filter(has_text=f"{LONG_FIRSTNAME} owes:")
-            .last
-        )
+            # Fetch all unread emails
+            status, messages = mail.search(None, "UNSEEN")
+            if status != "OK":
+                print("No unread emails found.")
+                return None
 
+            email_ids = messages[0].split()
+            # Start from the latest email by reversing the list
+            email_ids = email_ids[::-1]  # Reverse order to process latest first
+
+            # Iterate over each email until OTP is found
+            for email_id in email_ids:
+                # Fetch the email by ID
+                status, msg_data = mail.fetch(email_id, '(RFC822)')
+                if status != "OK":
+                    print("Error fetching email.")
+                    continue
+
+                for response_part in msg_data:
+                    if isinstance(response_part, tuple):
+                        msg = email_lib.message_from_bytes(response_part[1])
+
+                        # Check if the To address matches the generated new email
+                        if msg["To"] == self.new_email:
+                            # Extract OTP from the email body
+                            otp_code = self._extract_otp_from_email(msg)
+                            if otp_code:
+                                # Delete the email containing the OTP
+                                mail.store(email_id, '+FLAGS', '\\Deleted')
+                                mail.expunge()  # Permanently removes deleted emails from the mailbox
+                                
+                                # Logout and return OTP
+                                mail.close()
+                                mail.logout()
+                                return otp_code
+
+            # Logout if OTP not found in unread emails
+            mail.close()
+            mail.logout()
+            return None
+        
+        except imaplib.IMAP4.error:
+            print("Failed to connect to Gmail. Please check your email address or password.")
+            return None
+
+    def _extract_otp_from_email(self, msg):
+        # Extract OTP code from the email content
+        if msg.is_multipart():
+            for part in msg.walk():
+                if part.get_content_type() == "text/plain":
+                    email_body = part.get_payload(decode=True).decode()
+                    otp_code = self._extract_otp(email_body)
+                    if otp_code:
+                        return otp_code
+        else:
+            email_body = msg.get_payload(decode=True).decode()
+            otp_code = self._extract_otp(email_body)
+            if otp_code:
+                return otp_code
+        return None
+
+    def _extract_otp(self, text):
+        # Find a 6-digit code in the email body
+        match = re.search(r"\b\d{6}\b", text)
+        return match.group(0) if match else None
+
+
+def launch_app(pw, headless=False, device=None, geolocation=None):
+    browser = pw.chromium.launch(proxy = {"server": "http://localhost:8080"}, headless = False, args = ["--no-sandbox", "--disable-dev-shm-usage", "--ignore-certificate-errors", "--disable-web-security", "--disable-features=IsolateOrigins,site-per-process"], slow_mo = 2000, channel = "chromium")
+
+    context_args = {}
+    if device:
+        context_args.update(pw.devices[device])
+    if geolocation:
+        context_args["geolocation"] = geolocation
+        context_args["permissions"] = ["geolocation"]
+    context = browser.new_context(**context_args)
+    page = context.new_page()
+    return browser, context, page
+
+
+def login_user_with_otp(page, email, email_extractor):
+    page.goto(NEWDOT_URL)
+
+    page.get_by_role("textbox", name="Phone or email").fill(email)
+    page.get_by_role("button", name="Continue").click()
+   
+    otp_input = page.locator('input[data-testid="validateCode"]')
+    otp_input.fill('123456')
+
+
+def test_main():
+    with sync_playwright() as pw:
+        # User-provided email and password
+        email_address = "rgarciatammy4@gmail.com"
+        password = "ezkm eepd sctl nanx"
+
+        # Initialize the IMAPOTPExtractor
+        email_extractor = IMAPOTPExtractor(email_address, password)
+        email = "rgarciatammy4+144@gmail.com"
+        email_extractor.set_new_email(email)
+
+
+        browser, context, page = launch_app(pw)
+        login_user_with_otp(page, email, email_extractor)
+
+        # sometimes a hidden layer appears
         try:
-            await expense_preview.click(timeout=3000)
-        except TimeoutError:
-            await submit_expense(page)
+            page.get_by_label("Close").click(timeout=1000)
+        except:
+            pass
 
-        right_margin = await page.locator(
-            "div[id='searchButton'][aria-label='Search']"
-        ).last.evaluate("el => getComputedStyle(el).marginRight")
+        page.get_by_role("button", name="Reports").click()
+        invoice_menu = page.get_by_role("menuitem", name="Invoices").count()
+        assert invoice_menu == 0, "Invoice menu is visible for invitee user, Usser exists!"
 
-        assert right_margin != "0px", "Right margin should not be zero pixels"
-
-        # Close all tabs and browser
-        await page.close()
-        await context.close()
-        await browser.close()
+        context.close()
+        browser.close()

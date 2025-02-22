@@ -1,60 +1,53 @@
-import sys, os
+import time
 
-base_path = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
-sys.path.insert(0, base_path)
-
-from playwright.sync_api import sync_playwright, expect
-from playwright.sync_api._context_manager import PlaywrightContextManager
-from playwright._impl._browser import Browser
-from playwright._impl._page import Page
-
-static_email = "testuserexpensify1+63@gmail.com"
-
-def login_user(p: PlaywrightContextManager, first_name="John", last_name="Doe") -> tuple[Browser, Page, str]:
-
-    browser = p.chromium.launch(headless=True, slow_mo=1000, args=["--disable-web-security", "--disable-features=IsolateOrigins,site-per-process"])
-
-    page = browser.new_page()
-
-    user_email = static_email
+from playwright.sync_api import Page, expect, sync_playwright
 
 
-    page.goto('https://dev.new.expensify.com:8082/') 
+# Utility to generate a random email
+def generate_random_email(timestamp):
+    return f"openaipg+{timestamp}@gmail.com"
 
 
-    page.locator('input[type="email"]').fill(user_email)
-    page.locator('button[tabindex="0"]').click()
+def create_user(
+    page: Page, firstname: str, lastname: str = None, timestamp: int = None
+):
+    timestamp = timestamp
+    # Sign up
+    page.get_by_test_id("username").fill(generate_random_email(timestamp))
+    page.get_by_role("button", name="Continue").click()
+    page.get_by_role("button", name="Join").click()
 
-
-    try: 
-        page.locator('button[tabindex="0"]').click() 
-    except Exception:
-        pass
-
-    page.locator("text='Something else'").click()
+    # Update profile
+    page.get_by_text("Track and budget expenses").click()
+    page.get_by_role("textbox", name="First name").fill(firstname)
+    page.get_by_role("textbox", name="Last name").fill(
+        lastname or f"{timestamp}")
     page.get_by_role("button", name="Continue").click()
 
 
-    page.locator('input[name="fname"]').fill(first_name)
-    page.locator('input[name="lname"]').fill(last_name)
-    page.get_by_role("button", name="Continue").last.click()
-  
-    return browser, page, user_email
+def test_download_button_snackbar():
 
-def test_44728():
     with sync_playwright() as p:
-        browser, page, user_email = login_user(p)
+        timestamp = 1740041211
 
-        personal_chat = page.get_by_text(f"(you)")
-        personal_chat.click()
+        # Launch chromium and open new page
+        browser = p.chromium.launch(proxy = {"server": "http://localhost:8080"}, headless = False, args = ["--no-sandbox", "--disable-dev-shm-usage", "--ignore-certificate-errors", "--disable-web-security", "--disable-features=IsolateOrigins,site-per-process"], slow_mo = 1000, channel = "chromium")
+        context = browser.new_context()
+        page = context.new_page()
 
+        page.goto("https://dev.new.expensify.com:8082/")
 
-        concierge_text = page.locator('text=Concierge').nth(1)
+        # create user
+        create_user(page, "TestUser", f"{timestamp}", timestamp)
 
+        page.goto("https://dev.new.expensify.com:8082/statements/202404")
 
-        font_weight = concierge_text.evaluate("el => window.getComputedStyle(el).fontWeight")
+        # Test Download
+        page.get_by_label("Download").click()
 
-        assert int(font_weight) >= 700, "The Concierge chat is not marked as unread."
-        
+        # In fixed state, Snackbar with given text should not appear
+        expect(page.get_by_text("We're generating your PDF")).not_to_be_visible()
 
+        # ---------------------
+        context.close()
         browser.close()

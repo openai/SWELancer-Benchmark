@@ -1,13 +1,99 @@
-diff --git a/src/pages/workspace/members/WorkspaceMemberDetailsPage.tsx b/src/pages/workspace/members/WorkspaceMemberDetailsPage.tsx
-index 075cfc55a0c..b2c1c89c518 100644
---- a/src/pages/workspace/members/WorkspaceMemberDetailsPage.tsx
-+++ b/src/pages/workspace/members/WorkspaceMemberDetailsPage.tsx
-@@ -93,7 +93,7 @@ function WorkspaceMemberDetailsPage({personalDetails, policy, route}: WorkspaceM
-     const confirmModalPrompt = useMemo(() => {
-         const isApprover = Member.isApprover(policy, accountID);
-         if (!isApprover) {
--            return translate('workspace.people.removeMemberPrompt', {memberName: displayName});
-+            translate('workspace.people.removeMemberPrompt', {memberName: displayName});
-         }
-         return translate('workspace.people.removeMembersWarningPrompt', {
-             memberName: displayName,
+diff --git a/src/libs/actions/IOU.ts b/src/libs/actions/IOU.ts
+index 7ce9b9dfb27..c7fed229c52 100644
+--- a/src/libs/actions/IOU.ts
++++ b/src/libs/actions/IOU.ts
+@@ -643,6 +643,18 @@ function buildOnyxDataForMoneyRequest(
+         });
+     }
+ 
++    if (!isOneOnOneSplit) {
++        optimisticData.push({
++            onyxMethod: Onyx.METHOD.SET,
++            key: ONYXKEYS.NVP_QUICK_ACTION_GLOBAL_CREATE,
++            value: {
++                action: newQuickAction,
++                chatReportID: chatReport?.reportID,
++                isFirstQuickAction: isEmptyObject(quickAction),
++            },
++        });
++    }
++
+     if (optimisticPolicyRecentlyUsedCategories.length) {
+         optimisticData.push({
+             onyxMethod: Onyx.METHOD.SET,
+@@ -873,23 +885,6 @@ function buildOnyxDataForMoneyRequest(
+         },
+     ];
+ 
+-    if (!isOneOnOneSplit) {
+-        optimisticData.push({
+-            onyxMethod: Onyx.METHOD.SET,
+-            key: ONYXKEYS.NVP_QUICK_ACTION_GLOBAL_CREATE,
+-            value: {
+-                action: newQuickAction,
+-                chatReportID: chatReport?.reportID,
+-                isFirstQuickAction: isEmptyObject(quickAction),
+-            },
+-        });
+-        failureData.push({
+-            onyxMethod: Onyx.METHOD.SET,
+-            key: ONYXKEYS.NVP_QUICK_ACTION_GLOBAL_CREATE,
+-            value: quickAction ?? null,
+-        });
+-    }
+-
+     if (!isEmptyObject(transactionThreadCreatedReportAction)) {
+         failureData.push({
+             onyxMethod: Onyx.METHOD.MERGE,
+@@ -4167,11 +4162,6 @@ function createSplitsAndOnyxData(
+                 pendingFields: null,
+             },
+         },
+-        {
+-            onyxMethod: Onyx.METHOD.SET,
+-            key: ONYXKEYS.NVP_QUICK_ACTION_GLOBAL_CREATE,
+-            value: quickAction ?? null,
+-        },
+     ];
+ 
+     if (existingSplitChatReport) {
+@@ -4744,11 +4734,6 @@ function startSplitBill({
+                 errors: ErrorUtils.getMicroSecondOnyxErrorWithTranslationKey('iou.error.genericCreateFailureMessage'),
+             },
+         },
+-        {
+-            onyxMethod: Onyx.METHOD.SET,
+-            key: ONYXKEYS.NVP_QUICK_ACTION_GLOBAL_CREATE,
+-            value: quickAction ?? null,
+-        },
+     ];
+ 
+     if (existingSplitChatReport) {
+@@ -6434,11 +6419,6 @@ function getSendMoneyParams(
+                 },
+             },
+         },
+-        {
+-            onyxMethod: Onyx.METHOD.SET,
+-            key: ONYXKEYS.NVP_QUICK_ACTION_GLOBAL_CREATE,
+-            value: quickAction ?? null,
+-        },
+     ];
+ 
+     // Now, let's add the data we need just when we are creating a new chat report
+diff --git a/src/libs/actions/Task.ts b/src/libs/actions/Task.ts
+index c5a2442048f..a2d5fa3d632 100644
+--- a/src/libs/actions/Task.ts
++++ b/src/libs/actions/Task.ts
+@@ -256,11 +256,6 @@ function createTaskAndNavigate(
+             targetAccountID: assigneeAccountID,
+         },
+     });
+-    failureData.push({
+-        onyxMethod: Onyx.METHOD.SET,
+-        key: ONYXKEYS.NVP_QUICK_ACTION_GLOBAL_CREATE,
+-        value: quickAction ?? null,
+-    });
+ 
+     // If needed, update optimistic data for parent report action of the parent report.
+     const optimisticParentReportData = ReportUtils.getOptimisticDataForParentReportAction(parentReportID, currentTime, CONST.RED_BRICK_ROAD_PENDING_ACTION.ADD);

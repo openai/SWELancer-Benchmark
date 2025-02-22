@@ -1,98 +1,56 @@
-import os
+from playwright._impl._page import Page
 from playwright.sync_api import sync_playwright, expect
 
+NEW_DOT_URL = "https://dev.new.expensify.com:8082"
+ONE_SECOND = 1000
+TWO_SECONDS = 2000
+THREE_SECONDS = 3000
+FIVE_SECONDS = 5000
+email_address = "adebayovicktor0+test53030@gmail.com"
 
-# Expensify app URL
-EXPENSIFY_URL = "https://dev.new.expensify.com:8082/"
 
-# Email login credentials
-EMAIL_USERNAME = "naturesv057+52319_4@gmail.com"
-
-def launch_browser(pw, device=None, geolocation=None):
+# Sign In to Expensify
+def sign_in_new_dot(page: Page, email: str, url: str=None):
     """
-    Launch the browser.
+    Sign in into the new Expensify dot.
     """
-    browser = pw.chromium.launch(
-        headless=False,
-        proxy = {"server": "http://127.0.0.1:8080/"},
-        args=[
-            "--ignore-certificate-errors",
-            "--disable-web-security",
-            "--disable-features=IsolateOrigins,site-per-process",
-        ],
-        slow_mo=500
-    )
-    context_args = {}
-    if device:
-        context_args.update(pw.devices[device])
-    if geolocation:
-        context_args["geolocation"] = geolocation
-        context_args["permissions"] = ["geolocation"]
-    context = browser.new_context(**context_args)
-    page = context.new_page()
-    return browser, context, page
+    # Go to URL
+    url = url if url else NEW_DOT_URL
+    page.goto(url)
+    # Sign In
+    page.get_by_test_id("username").fill(email)
+    page.wait_for_timeout(TWO_SECONDS)
+    page.get_by_role("button", name="Continue").click()
+    page.wait_for_timeout(FIVE_SECONDS)
+    # OTP is hardcoded for replay
+    otp = '123456'
+    page.get_by_test_id("validateCode").fill(otp)
+    page.wait_for_timeout(TWO_SECONDS)
+
+    # Wait sign in to complete
+    page.get_by_text("Please enter the magic code").wait_for(state="hidden")
+    page.wait_for_timeout(THREE_SECONDS)
 
 
-def login_user(page):
+def test_phone_number_field_is_not_auto_focused():
     """
-    Login to the Expensify app and complete the onboarding.
+    Test to verify that the send button is focused when the modal is opened
     """
-    # Open the Expensify app
-    page.goto(EXPENSIFY_URL)
-
-    # Login user
-    page.get_by_role("textbox", name="Phone or email").fill(EMAIL_USERNAME)
-    page.locator("div", has_text="Continue").last.click()
-    
-    # Get the OTP code from the email
-    otp = "123456"
-    
-    # Enter the OTP code
-    page.keyboard.type(otp)
-
-
-def upload_attachment(page):
-    filename = "output.txt"
-
-    with open(filename, "wb") as file:
-        for i in range(1, 101):
-            line = f"Line {i}: This is a sample line of content.\n"
-            file.write(line.encode("utf-8"))  # Convert string to bytes
-
-    edit_text_button = page.locator('div[aria-label="Add attachment"]').locator("visible=true")
-    
-    with page.expect_file_chooser() as file_chooser_info:
-        edit_text_button.click()
-    page.wait_for_timeout(3000)
-    file_chooser = file_chooser_info.value
-    file_path = os.path.join(os.getcwd(), filename)
-    file_chooser.set_files(file_path)
-    page.wait_for_timeout(2000)
-
-    page.locator('button:has-text("Send")').click()
-    page.wait_for_timeout(2000) 
-    return page
-
-
-def test_52319():
     with sync_playwright() as p:
-        # Step 1: Login user
-        browser, context, page = launch_browser(p)
-        login_user(page)
-        page.wait_for_timeout(2000)
+        browser = p.chromium.launch(headless=False,
+                                    proxy = {"server": "http://127.0.0.1:8080/"},
+                                    args=[
+                                        "--ignore-certificate-errors",
+                                        "--disable-web-security",
+                                        "--disable-features=IsolateOrigins,site-per-process"
+                                    ],
+                                    slow_mo=1000
+                                    )
+        context = browser.new_context()
+        page = context.new_page()
+        sign_in_new_dot(page, email_address)
+        page.get_by_label("My settings").click()
+        page.get_by_role("menuitem", name="Phone number").click()
+        page.wait_for_timeout(1000)
+        expect(page.get_by_role("textbox", name="Phone number")).to_be_focused()
 
-        # Step 2: Reintroduce scenario
-        page.get_by_label("Start chat (Floating action)").click()
-        page.get_by_label("Start chat", exact=True).click()
-        chat_email = "naturesv057+378357843@gmail.com"
-        page.get_by_test_id("selection-list-text-input").fill(chat_email)
-        page.get_by_label(chat_email).last.click()
-        page.locator("#composer").last.fill("Hi There")
-        page.get_by_label("Create").last.click() 
-
-        page = upload_attachment(page)
-
-        #Step 3: Check if the issue is resolved
-        page.locator("#composer").last.click()
-        page.locator("#composer").last.press("ArrowUp")
-        expect(page.get_by_role("button", name="Save changes")).to_be_visible()

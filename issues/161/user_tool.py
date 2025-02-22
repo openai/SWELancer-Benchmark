@@ -1,126 +1,103 @@
-import sys, os
-
-base_path = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
-sys.path.insert(0, base_path)
-
+import time
+import imaplib
+import re
+import pytest
+import email
 from playwright.sync_api import sync_playwright, expect
 from playwright.sync_api._context_manager import PlaywrightContextManager
 from playwright._impl._browser import Browser
 from playwright._impl._page import Page
-import time
-
 from utils.trace_cleaner import trace_cleaner
 
+# Utility function to generate a unique random email for testing
+def generate_random_email():
+    timestamp = int(time.time())
+    return f"freelanceapptest+{timestamp}@gmail.com"
+
+EMAIL = "t1533148@gmail.com"  # for example test+1234@gmail.com
+PASSWORD = "logb hzkg pkfk kskg"  # it will be something like "sdib pxop ovyl uawy"
 
 
-TEST_URL = "https://dev.new.expensify.com:8082/"
-USER_NAME = "expensify31"
-USER_PASSWORD = "Pass@123456"
+def get_otp_from_email(username, password, retries=12):
+    """
+    Read the OTP email and return the OTP code.
+    """
+    with imaplib.IMAP4_SSL(host="imap.gmail.com") as imap:
+        imap.login(username, password)
+        for _ in range(1, retries + 1):
+            imap.select("inbox")
+            status, messages = imap.search(None, "ALL")
+            if status == "OK":
+                for message_id in reversed(messages[0].split()):
+                    status, data = imap.fetch(message_id, "(RFC822)")
+                    if status == "OK":
+                        email_message = email.message_from_bytes(data[0][1])
+                        subject, encoding = email.header.decode_header(email_message["Subject"])[0]
+                        if isinstance(subject, bytes):
+                            subject = subject.decode(encoding)
+                        if subject.startswith("Expensify magic sign-in code:"):
+                            otp_code = subject.split(":")[-1].strip()
+                            return otp_code
+            
+        imap.close()
+    raise AssertionError("Failed to read the OTP from the email")
 
 
+# Function to log in a user and complete onboarding steps
 
-
-def get_test_user_info(seed = None):
-    if seed is None:
-        return {"email": f"{USER_NAME}@gmail.com", "password": USER_PASSWORD, "first_name": f"{USER_NAME}", "last_name": "Test"}
-    if type(seed) == type(True):
-        seed = int(time.time())
-
-    return {"email": f"{USER_NAME}+{seed}@gmail.com", "password": USER_PASSWORD, "first_name": f"Test", "last_name": "User"}
-
-def wait(page, for_seconds=1):
-    page.wait_for_timeout(for_seconds * 1000)
-
-
-
-def login(p: PlaywrightContextManager, user_info, if_phone=False) -> tuple[Browser, Page, str]:
-    permissions = ['clipboard-read', 'clipboard-write']
-    browser = p.chromium.launch(headless=True,
-                                args =[
-            '--ignore-certificate-errors',
-            '--disable-web-security',
-            '--disable-features=IsolateOrigins,site-per-process',
-        ])
-
-    if if_phone:
-        phone = p.devices['iPhone 12 Pro']
-        context = browser.new_context(**phone, permissions=permissions, reduced_motion='no-preference')
-    else:
-        context = browser.new_context()
-
+def login_user(p: PlaywrightContextManager, first_name="Milan", last_name="T") -> tuple:
+    # Launch Chromium browser in visible mode (non-headless)
+    browser = p.chromium.launch(headless=False, args=[
+        "--ignore-certificate-errors",
+        "--disable-web-security",
+        "--disable-features=IsolateOrigins,site-per-process"
+    ],
+    proxy={"server": "http://localhost:8080"}, slow_mo=1000)
+    context = browser.new_context(ignore_https_errors=True)
     page = context.new_page()
+    user_email = generate_random_email()
 
-    page.goto(TEST_URL, timeout=120000)
+    # Step 1: Open the Expensify URL
+    page.goto('https://dev.new.expensify.com:8082')
 
-    phone_or_email_input = page.locator('input[type="email"]')
-    expect(phone_or_email_input).to_be_visible()
-    phone_or_email_input.fill(user_info["email"])
-
-    continue_button = page.locator('button[tabindex="0"]')
-    expect(continue_button).to_be_visible()
-    continue_button.click()
-
-    wait(page)
-
-    join_button = page.locator('button:has-text("Join")')
-    if join_button.count() > 0:
-        print("Join button found. This is a new user.")
-        join_button.click()
-    else:
-        print("Join button not found. This is an existing user. Use Magic Code to sign in.")
-        magic_code = "123456"
-        print(f"Magic code: {magic_code}")
-
-        validate_code_input = page.locator('input[data-testid="validateCode"]')
-        expect(validate_code_input).to_be_visible()
-        validate_code_input.fill(magic_code)
-    return browser, page
-
-
-def test_manual_expense_description_cursor_should_not_overlap_with_text_content():
-    with sync_playwright() as p:
-
-        user_info = get_test_user_info(seed=None)
-        browser, page = login(p, user_info, False)
-        context = page.context
-
-        context.tracing.start(screenshots=True, snapshots=True, sources=True)
+    # Step 2: Enter the generated email and click continue
+    page.locator('input[type="email"]').fill(user_email)
+    page.get_by_role("button", name="Continue").click()
+    try:
         try:
-            page.wait_for_timeout(2000)
-            email1= "random212@gmail.com"
+            page.wait_for_selector('button[tabindex="0"]:has-text("Join")', timeout=15000) 
+            page.get_by_role("button", name="Join").click()
+            page.locator("text='Track and budget expenses'").click()
+            page.locator("body").press("Enter")
+            page.wait_for_timeout(1000)
+            # Enter first name and last name
+            page.locator('input[name="fname"]').fill(first_name)
+            page.locator('input[name="lname"]').fill(last_name)
+            page.get_by_role("button", name="Continue").last.click()
+            page.wait_for_timeout(4000) 
+        except:
+            page.wait_for_timeout(5000)
+            otp_code = get_otp_from_email(EMAIL, PASSWORD)
+            page.get_by_test_id("SignInPage").get_by_test_id("validateCode").fill(otp_code)
+    except:
+        pass
 
-            create_button = page.locator('button[aria-label="Start chat (Floating action)"]')
-            create_button.click(timeout=2000)
-
-            submit_expense_button = page.get_by_role('menuitem', name='Submit expense')
-            submit_expense_button.click()
-
-
-            manual_expense_button = page.get_by_role('button', name='Manual')
-            manual_expense_button.click()
-
-
-            page.get_by_placeholder('0').fill('100')
-            page.locator('#numPadContainerView').get_by_role('button', name= 'Next' ).click()
-
-
-            page.get_by_test_id('selection-list-text-input').click()
-            page.get_by_test_id('selection-list-text-input').fill(email1)
-            page.get_by_label(email1).click()
+    return browser, context, page, user_email
 
 
-            page.get_by_role('menuitem',name= 'Description' ).get_by_role('img').click()
-            page.get_by_role('textbox',name= "What's it for?").fill('> hey')
+# Test to verify opening distance receipt from another workspace opens without issue
 
-
-            blockquote_element = page.locator('span[data-type="blockquote"]')
-            expect(blockquote_element).to_have_css('padding-right', '1px')
-        except Exception as e:
-
-            raise e
+def test_open_receipt_different_workspace():
+    with sync_playwright() as p:
+        browser, context, page, user_email1 = login_user(p)
+        # Start tracing
+        context.tracing.start(screenshots=True, snapshots=True, sources=True)
+        trace_path = "/app/expensify/user_tool/output_browser1.zip"
+        try:
+            expect(page.get_by_text("It's great to meet you!", exact=True).last).to_be_visible()
         finally:
-
-            context.tracing.stop(path="/app/expensify/user_tool/output_browser1.zip")
-            trace_cleaner("/app/expensify/user_tool/output_browser1.zip")
-
-        browser.close()
+            # Stop tracing and export the trace
+            context.tracing.stop(path=trace_path)
+            trace_cleaner(trace_path)
+            context.close()
+            browser.close()

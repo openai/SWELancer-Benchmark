@@ -1,192 +1,196 @@
-from playwright.sync_api import sync_playwright, expect
+import sys, os
+
+base_path = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
+sys.path.insert(0, base_path)
+
+from utils.trace_cleaner import trace_cleaner
+
+import imaplib
+import email
+import re
+import random
+import time
+from typing import Any
+from playwright.sync_api import sync_playwright
 from playwright.sync_api._context_manager import PlaywrightContextManager
 from playwright._impl._browser import Browser
 from playwright._impl._page import Page
-from utils.trace_cleaner import trace_cleaner
 
 
-# Utility to generate an email
-def generate_email():
-    timestamp = '639000'
-    return f"freelanceapptest+{timestamp}@gmail.com"
+master_email_address = "brighturing926+49492@gmail.com"
+master_app_password = "sijknxflhloopmta"
+dev_base_url = "https://dev.new.expensify.com:8082"
 
 
-# Function to log in the user and complete onboarding steps
-def login_user(p: PlaywrightContextManager, first_name="Milan", last_name="T") -> tuple[Browser, Page, str]:
-    # Launch Chromium and open a new page
-    browser = p.chromium.launch(
-        proxy={"server": "http://localhost:8080"}, headless=False, args=["--no-sandbox", "--disable-dev-shm-usage", "--ignore-certificate-errors", "--disable-web-security", "--disable-features=IsolateOrigins,site-per-process"], slow_mo=200, channel="chromium")
+class EmailHandler:
+    def __init__(self, email_address, password) -> Any:
 
-    context = browser.new_context(ignore_https_errors=True)
-    page = context.new_page()
-    user_email = generate_email()
+        if not self._validate_email(email_address):
+            raise ValueError("Invalid email address format.")
+        self.original_email = email_address
+        self.password = password
 
-    # Step 1: Open the Expensify URL
-    page.goto('https://dev.new.expensify.com:8082/')
 
-    # Step 2: Enter a generated email and click continue
+        random_suffix = random.randint(1000, 9999)
+        current_timestamp = int(time.time())
+        random_suffix = f"{current_timestamp}{random_suffix}"
+        self.new_email = email_address
+
+    def _validate_email(self, email_address) -> Any:
+
+        return bool(re.match(r"[^@]+@[^@]+\.[^@]+", email_address))
+
+    def get_email_address(self) -> Any:
+
+        return self.new_email
+
+    def check_for_otp(self) -> Any:
+
+        try:
+            mail = imaplib.IMAP4_SSL("imap.gmail.com")
+            mail.login(self.original_email, self.password)
+            mail.select("inbox")
+
+
+            status, messages = mail.search(None, "UNSEEN")
+            if status != "OK":
+                print("No unread emails found.")
+                return None
+
+            email_ids = messages[0].split()
+
+            email_ids = email_ids[::-1]  # Reverse order to process latest first
+
+
+            for email_id in email_ids:
+
+                status, msg_data = mail.fetch(email_id, '(RFC822)')
+                if status != "OK":
+                    print("Error fetching email.")
+                    continue
+
+                for response_part in msg_data:
+                    if isinstance(response_part, tuple):
+                        msg = email.message_from_bytes(response_part[1])
+
+
+                        if msg["To"] == self.new_email:
+
+                            otp_code = self._extract_otp_from_email(msg)
+                            if otp_code:
+
+                                mail.store(email_id, '+FLAGS', '\\Deleted')
+                                mail.expunge()  # Permanently removes deleted emails from the mailbox
+
+                                mail.close()
+                                mail.logout()
+                                return otp_code
+
+
+            mail.close()
+            mail.logout()
+            print("No OTP found in unread emails.")
+            return None
+
+        except imaplib.IMAP4.error:
+            print("Failed to connect to Gmail. Please check your email address or password.")
+            return None
+
+    def _extract_otp_from_email(self, msg) -> Any:
+
+        if msg.is_multipart():
+            for part in msg.walk():
+                if part.get_content_type() == "text/plain":
+                    email_body = part.get_payload(decode=True).decode()
+                    otp_code = self._extract_otp(email_body)
+                    if otp_code:
+                        return otp_code
+        else:
+            email_body = msg.get_payload(decode=True).decode()
+            otp_code = self._extract_otp(email_body)
+            if otp_code:
+                return otp_code
+        return None
+
+    def _extract_otp(self, text) -> Any:
+
+        match = re.search(r"\b\d{6}\b", text)
+        return match.group(0) if match else None
+
+
+def login_user(p: PlaywrightContextManager, user_email: str) -> tuple[Browser, Page]:
+
+    browser = p.chromium.launch(headless=True, args=["--ignore-certificate-errors", "--disable-web-security", "--disable-features=IsolateOrigins,site-per-process"],
+    proxy={"server": "http://localhost:8080"},
+    slow_mo=500)
+    context = browser.new_context()
+    page: Page = context.new_page()
+
+
+    page.goto(dev_base_url)
+
+
     page.locator('input[type="email"]').fill(user_email)
     page.locator('button[tabindex="0"]').click()
-    page.wait_for_timeout(1000)
 
-    # Step 3: Click the join button if available, otherwise skip
+
+    page.wait_for_timeout(5000)
+
+    my_otp_code = "111111"
+
+    page.get_by_test_id("validateCode").fill(my_otp_code)
+
+
     try:
-        page.locator('button[tabindex="0"]').click()
-        page.wait_for_timeout(1000)
+        page.get_by_role("button", name="Sign in").click()
     except Exception:
         pass
-
-    # Step 4: Ensure that the user reaches the dashboard by checking for visible text
-    expect(page.locator("text=What do you want to do today?")).to_be_visible()
-
-    # Step 5: Select 'Track and budget expenses' in the onboarding page and click Continue
-    page.locator("text='Track and budget expenses'").click()
-    page.wait_for_timeout(1000)
-
-    # Step 6: Enter first name, last name, and continue
-    page.locator('input[name="fname"]').fill(first_name)
-    page.locator('input[name="lname"]').fill(last_name)
-    page.get_by_role("button", name="Continue").last.click()
-    page.wait_for_timeout(1000)
 
     return browser, page
 
 
-def test_multiple_selector_in_workspace():
+def test_enter_key_to_delete() -> None:
     with sync_playwright() as p:
-        # A list to store any assertion failures so we can print them at the end
-        errors = []
 
-        # Step 1: Login user
-        browser, page = login_user(p)
+        browser, page = login_user(p, master_email_address)
         context = page.context
-        # Start tracing
         context.tracing.start(screenshots=True, snapshots=True, sources=True)
-        
+
         try:
-            # Navigate to Workspaces settings
-            page.get_by_label("My settings").click()
-            page.get_by_test_id("InitialSettingsPage").get_by_label("Workspaces").get_by_text("Workspaces").click()
-            page.get_by_label("New workspace").click()
-            page.get_by_text("More features").click()
-            page.get_by_label("Classify costs and track").click()
-            page.get_by_label("Document and reclaim eligible").click()
-            page.get_by_label("Set up custom fields for").click()
-            page.get_by_role("button", name="Upgrade").click()
+            page.get_by_test_id("CustomBottomTabNavigator").get_by_label("Search").click()
             page.wait_for_timeout(1000)
-            page.get_by_role("button", name="Got it, thanks").click()
-
-            # --- Categories Section ---
-            page.get_by_test_id("WorkspaceInitialPage").get_by_text("Categories").click()
-            page.locator("#Benefits").get_by_label("Benefits").click()
+            page.get_by_role("button", name="Filters").click()
             page.wait_for_timeout(1000)
-            page.locator("#Advertising").get_by_label("Advertising").click()
+            page.get_by_test_id("SearchAdvancedFiltersPage").get_by_role("menuitem", name="Category").click()
             page.wait_for_timeout(1000)
-            page.locator("#Car").get_by_label("Car").click()
-            assert page.get_by_role("button", name="selected").is_visible()
-            # Check button is green
-            button_locator = page.get_by_role("button", name="selected")
-
-            # Evaluate the element's inline style for backgroundColor
-            actual_bg_color = button_locator.evaluate("el => el.style.backgroundColor")
-
-            # Assert or compare with the expected value
-            try:
-                # If the element truly has inline style: background-color: rgb(3, 212, 124);
-                # you should see "rgb(3, 212, 124)" in actual_bg_color.
-                assert actual_bg_color == "rgb(3, 212, 124)", (
-                    f"Expected inline backgroundColor to be 'rgb(3, 212, 124)' in Categories, "
-                    f"but got '{actual_bg_color}'\n"
-                )
-            except AssertionError as e:
-                errors.append(str(e))
-            page.wait_for_timeout(1000)
-
-            # --- Tags Section ---
-            page.get_by_test_id("WorkspaceInitialPage").get_by_text("Tags").click()
-            page.get_by_role("button", name="Add tag").click()
-            page.get_by_role("textbox", name="Name").fill("To pay")
+            page.locator("#Equipment").click()
             page.get_by_role("button", name="Save").click()
-            page.locator("button").filter(has_text="To payEnabled").get_by_label("To pay").click()
-            # Check button is green
-            button_locator = page.get_by_role("button", name="selected")
-
-            # Evaluate the element's inline style for backgroundColor
-            actual_bg_color = button_locator.evaluate("el => el.style.backgroundColor")
-
-            # Assert or compare with the expected value
-            try:
-                # If the element truly has inline style: background-color: rgb(3, 212, 124);
-                # you should see "rgb(3, 212, 124)" in actual_bg_color.
-                assert actual_bg_color == "rgb(3, 212, 124)", (
-                    f"Expected inline backgroundColor to be 'rgb(3, 212, 124)' in Tags, "
-                    f"but got '{actual_bg_color}'\n"
-                )
-            except AssertionError as e:
-                errors.append(str(e))
+            page.wait_for_timeout(1000)
+            page.get_by_test_id("SearchAdvancedFiltersPage").get_by_role("menuitem", name="Currency").click()
             page.wait_for_timeout(1000)
 
-            # --- Taxes Section ---
-            page.get_by_test_id("WorkspaceInitialPage").get_by_text("Taxes").click()
-            page.locator("#id_TAX_RATE_1").get_by_label("Tax Rate").click()
-            # Check button is green
-            button_locator = page.get_by_role("button", name="selected")
-
-            # Evaluate the element's inline style for backgroundColor
-            actual_bg_color = button_locator.evaluate("el => el.style.backgroundColor")
-
-            # Assert or compare with the expected value
-            try:
-                # If the element truly has inline style: background-color: rgb(3, 212, 124);
-                # you should see "rgb(3, 212, 124)" in actual_bg_color.
-                assert actual_bg_color == "rgb(3, 212, 124)", (
-                    f"Expected inline backgroundColor to be 'rgb(3, 212, 124)' in Taxes, "
-                    f"but got '{actual_bg_color}'\n"
-                )
-            except AssertionError as e:
-                errors.append(str(e))
+            page.get_by_test_id("selection-list-text-input").fill("usd")
+            page.locator("[id=\"USD\\ -\\ $\"]").click()
             page.wait_for_timeout(1000)
-
-            # --- Report Fields Section ---
-            page.get_by_test_id("WorkspaceInitialPage").get_by_text("Report fields").click()
-            page.get_by_role("button", name="Add field").click()
-            page.get_by_test_id("CreateReportFieldsPage").get_by_text("Name").click()
-            page.get_by_role("textbox", name="Name").fill("to pay")
-            page.get_by_test_id("TextSelectorModal").get_by_role("button", name="Save").click()
-            page.get_by_test_id("CreateReportFieldsPage").get_by_text("Type").click()
-            page.get_by_label("Text").click()
-            page.get_by_text("Initial value").click()
-            page.get_by_role("textbox", name="Initial value").fill("none")
-            page.get_by_test_id("TextSelectorModal").get_by_role("button", name="Save").click()
-            page.get_by_role("button", name="Save").nth(0).click()
-            page.locator("#field_id_TO_PAY").get_by_label("to pay").click()
-            # Check button is green
-            button_locator = page.get_by_role("button", name="selected")
-
-            # Evaluate the element's inline style for backgroundColor
-            actual_bg_color = button_locator.evaluate("el => el.style.backgroundColor")
-
-            # Assert or compare with the expected value
-            try:
-                # If the element truly has inline style: background-color: rgb(3, 212, 124);
-                # you should see "rgb(3, 212, 124)" in actual_bg_color.
-                assert actual_bg_color == "rgb(3, 212, 124)", (
-                    f"Expected inline backgroundColor to be 'rgb(3, 212, 124)' in Reports fields, "
-                    f"but got '{actual_bg_color}'\n"
-                )
-            except AssertionError as e:
-                errors.append(str(e))
+            page.get_by_role("button", name="Save").click()
+            page.get_by_role("button", name="Save search").click()
             page.wait_for_timeout(1000)
-
-            assert not errors, "\n".join(errors)
+            page.get_by_label("More").first.click()
+            page.get_by_label("Delete").click()
+            page.wait_for_timeout(1000)
+            page.locator("body").press("Enter")
+            page.wait_for_timeout(1000)
+            
+            delete_model = page.get_by_role("button", name="Delete")
+            
+            assert not delete_model.is_visible(), "Enter key not working, Delete modal is still visible"
 
         finally:
-            # Stop tracing and export the trace file
-            trace_path = "/app/expensify/user_tool/output_browser1.zip"
-            context.tracing.stop(path=trace_path)
-            trace_cleaner(trace_path)
+            trace_zip_path = "/app/expensify/user_tool/output_browser1.zip"
+            context.tracing.stop(path=trace_zip_path)
+            trace_cleaner(trace_zip_path)
             browser.close()
 
 
-if __name__ == '__main__':
-    test_multiple_selector_in_workspace()
+if __name__ == "__main__":
+    test_enter_key_to_delete()

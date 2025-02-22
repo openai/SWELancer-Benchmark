@@ -1,130 +1,134 @@
+import sys, os
 
-"""
-Verify that Save Search option is present on applying custom filters
+base_path = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
+sys.path.insert(0, base_path)
 
-"""
-import pytest
-import os
-from playwright.async_api import Page, expect, async_playwright
-from utils.login import NEW_DOT_URL, sign_in
-from utils.browser import close_browser, start_browser
+from playwright.sync_api import sync_playwright, expect
+import time
+import re
+import random
 
-STATIC_PREFIX = 53036
-EXPENSIFY_USERNAME_FIRSTNAME = "osaidtest"
-EXPENSIFY_USERNAME_LASTNAME = "testaccount"
-EXPENSIFY_USERNAME = f"{EXPENSIFY_USERNAME_FIRSTNAME} {EXPENSIFY_USERNAME_LASTNAME}"
-EXPENSIFY_EMAIL_USERNAME = "osaidtest5"
-EXPENSIFY_EMAIL = f"osaidtest5+{STATIC_PREFIX}@gmail.com"
-EXPENSIFY_PASSWORD = "ntvd acej mmaa qqmd"
-DATA_DIR = "browser_context"
-WORKSPACE_NAME = "workspace1"
-SLOW_MO = 1000
-NORMAL_RUN = False
-PROXY_SETTINGS = {"server": "http://localhost:8080"}
-SEARCH_QUERY = "type:expense status:all from:osaidtest5+530366@gmail.com to:osaidtest5+53036@gmail.com"
-SECOND_USER_USERNAME = 'second usr'
+NEWDOT_URL = "https://dev.new.expensify.com:8082/"
+EMAIL = "dev091197@gmail.com"
+task_id = 48694
+EMAIL1 = f"dev091197+{task_id}@gmail.com"
+PASSWORD = "ptul fwbd fvze yzva"
 
-async def sign_in_recorded(page: Page, email: str):
-    await page.get_by_test_id("username").fill(email)
-    await page.get_by_role("button", name="Continue").click()
-    await page.get_by_test_id("validateCode").fill("123456")
-
-async def start_browser(
-    headless=False,
-    persistent=False,
-    data_dir=None,
-    slow_mo=500,
-    launch_args=["--ignore-certificate-errors"],
-    proxy=None,
-):
-    """
-    Start a browser instance with the given parameters.
-
-    :param headless: Boolean to specify if the browser should run in headless mode.
-    :param persistent: Boolean to specify if the browser context should be persistent.
-    :param data_dir: Directory to store browser data for persistent context.
-    :return: A tuple of (context, page, playwright).
-    """
-
-    # Initialize Playwright
-    playwright = await async_playwright().start()
-    device = playwright.devices["Desktop Safari"]
-    context, page = None, None
-    if persistent:
-        if data_dir is None:
-            data_dir = "browser_context"
-        if not os.path.exists(data_dir):
-            os.makedirs(data_dir)
-
-        context = await playwright.chromium.launch_persistent_context(
-            data_dir,
-            proxy=proxy,
-            headless=headless,
-            args=launch_args,
-            slow_mo=slow_mo,
-            timezone_id="Asia/Karachi",
-            **device
-        )
-        page = context.pages[0]
+class IMAPOTPExtractor:
+  def __init__(self, email_address, password):
+    if not self._validate_email(email_address):
+      raise ValueError("Invalid email address format.")
+    self.original_email = email_address
+    self.password = password
+    random_suffix = random.randint(1000, 9999)
+    current_timestamp = int(time.time())
+    random_suffix = f"{current_timestamp}{random_suffix}"
+  def _validate_email(self, email_address):
+    return bool(re.match(r"[^@]+@[^@]+\.[^@]+", email_address))
+  def set_new_email(self, email):
+    self.new_email = email
+  def check_for_otp(self):
+    default_otp_code="123456"
+    return default_otp_code
+  def _extract_otp_from_email(self, msg):
+    if msg.is_multipart():
+      for part in msg.walk():
+        if part.get_content_type() == "text/plain":
+          email_body = part.get_payload(decode=True).decode()
+          otp_code = self._extract_otp(email_body)
+          if otp_code:
+            return otp_code
     else:
-        browser = await playwright.chromium.launch(
-            headless=headless, args=launch_args, slow_mo=slow_mo, proxy=proxy, 
-        )
-        context = await browser.new_context(
-            ignore_https_errors=True, timezone_id="Asia/Karachi", permissions=["clipboard-read", "clipboard-write"], **device
-        )
-        page = await context.new_page()
+      email_body = msg.get_payload(decode=True).decode()
+      otp_code = self._extract_otp(email_body)
+      if otp_code:
+        return otp_code
+    return None
+  def _extract_otp(self, text):
+    match = re.search(r"\b\d{6}\b", text)
+    return match.group(0) if match else None
+gmail_account_helper = IMAPOTPExtractor(EMAIL, PASSWORD)
 
-    return context, page, playwright  # Return playwright to close later
+def new_dot_login(page, email):
+  page.goto(NEWDOT_URL)
+  page.locator('input[type="email"]').fill(email)
+  page.wait_for_timeout(2000)
+  page.get_by_role("button", name="Continue").nth(0).click()
+  page.wait_for_timeout(10000)
+  gmail_account_helper.set_new_email(email)
+  otp = gmail_account_helper.check_for_otp()
+  page.locator('input[data-testid="validateCode"]').fill(otp)
+  try:
+    page.get_by_role("button", name="Sign In").click()
+  except:
+    pass
 
+def task_check(page):
+  random_int_1 = 13
+  random_int_2 = 21
+  workspace_name =  f"WS-{random_int_1}{random_int_2}"
+  room_name =  f"r-{random_int_1}{random_int_2}"
+  email_1 = f"dev091197+{random_int_1}+{random_int_2}@gmail.com"
+  test_name = "test inzi"
+  page.get_by_label("My settings").click()
+  page.wait_for_timeout(2000)
+  page.get_by_test_id("InitialSettingsPage").get_by_label("Workspaces").click()
+  page.get_by_role("button", name="New workspace").first.click()
+  page.wait_for_timeout(1000)
+  page.get_by_test_id("WorkspacePageWithSections").get_by_text("Name").click()
+  page.wait_for_timeout(1000)
+  page.get_by_role("textbox", name="Name").press("ControlOrMeta+a")
+  page.wait_for_timeout(1000)
+  page.get_by_role("textbox", name="Name").fill(workspace_name)
+  page.wait_for_timeout(1000)
+  page.get_by_role("button", name="Save").click()
+  page.wait_for_timeout(1000)
+  page.get_by_label("Back").click()
+  page.get_by_label("Inbox").click()
+  page.wait_for_timeout(1000)
+  page.get_by_label("Start chat (Floating action)").click()
+  page.get_by_label("Start chat", exact=True).click()
+  page.wait_for_timeout(1000)
+  page.get_by_label("Room").first.click()
+  page.get_by_placeholder("social").fill(room_name)
+  page.wait_for_timeout(1000)
+  page.get_by_test_id("WorkspaceNewRoomPage").get_by_label("WS-").get_by_text("Workspace").click()
+  page.get_by_test_id("ValueSelectorModal").get_by_label(workspace_name).click()
+  page.wait_for_timeout(1000)
+  page.get_by_role("button", name="Create room").click()
+  page.get_by_label(f"#{room_name}").click()
+  page.wait_for_timeout(1000)
+  page.get_by_test_id("ReportDetailsPage").get_by_label("Settings").click()
+  page.get_by_text("Notify me about new messages").click()
+  page.wait_for_timeout(1000)
+  page.get_by_test_id("selection-list").get_by_label("Daily").click()
+  page.get_by_test_id("ReportSettingsPage").get_by_label("Back").click()
+  page.wait_for_timeout(1000)
+  page.get_by_label("Leave").click()
+  page.wait_for_timeout(1000)
+  page.locator("#composer").last.click()
+  page.locator("#composer").last.fill(f"message-{random_int_1}{random_int_2}")
+  page.wait_for_timeout(1000)
+  page.get_by_label("Send").last.click()
+  page.get_by_label(f"#{room_name}").click()
+  page.wait_for_timeout(1000)
+  page.get_by_test_id("ReportDetailsPage").get_by_label("Settings").click()
+  page.wait_for_timeout(2000)
+  expect(page.get_by_text("Daily")).to_be_visible()
 
-@pytest.mark.asyncio
-async def test_53036():
-    try:
-        context, page, playwright = await start_browser(
-            persistent=False,
-            data_dir=DATA_DIR,
-            headless=False,
-            slow_mo=SLOW_MO,
-            launch_args=[
-                "--ignore-certificate-errors",
-                "--disable-web-security",
-                "--disable-features=IsolateOrigins,site-per-process",
-            ],
-            proxy=PROXY_SETTINGS
-        )
-
-        # Step 1: Sign in
-        if NORMAL_RUN:
-            # Normal test run
-            await sign_in(page, EXPENSIFY_EMAIL, password=EXPENSIFY_PASSWORD)
-        else:
-            # Recorded Test Run.
-            await page.goto(NEW_DOT_URL)
-            await sign_in_recorded(page=page, email=EXPENSIFY_EMAIL)
-
-        await page.get_by_test_id("CustomBottomTabNavigator").get_by_label("Search").click()
-
-        # Cleanup (Reset Filters if present)
-        await page.get_by_role("button", name="Filters").click()
-        if await page.get_by_role("link", name="Reset filters").is_visible():
-            await page.get_by_role("link", name="Reset filters").click()
-        await page.get_by_label("Back").click()
-        
-        await page.get_by_test_id("Search").get_by_label("Search").click()
-        await page.get_by_test_id("search-router-text-input").fill(SEARCH_QUERY)
-        await page.get_by_test_id("search-router-text-input").press("Enter")
-
-        await page.get_by_role("button", name="Filters").click()
-
-        # Assert that the filters are correctly applied.
-        await expect(page.get_by_test_id("SearchAdvancedFiltersPage").get_by_text(SECOND_USER_USERNAME)).to_be_visible()
-        await expect(page.get_by_test_id("SearchAdvancedFiltersPage").get_by_text(EXPENSIFY_USERNAME)).to_be_visible()
-        await expect(page.get_by_role("button", name="Save search")).to_be_visible()
-  
-
-    finally:
-        # Step 6: Close the browser.
-        await close_browser(context, page, playwright)
-
-
+def test_expensify_0000():
+   with sync_playwright() as p:
+    browser = p.chromium.launch(headless=True, args=[
+            '--disable-web-security',
+            '--disable-features=IsolateOrigins,site-per-process',
+        ])
+    
+    first_user_context = browser.new_context(
+      ignore_https_errors=True
+    )
+    page = first_user_context.new_page()
+    page.wait_for_timeout(2000)
+    new_dot_login(page, EMAIL1)
+    page.wait_for_timeout(2000)
+    task_check(page)
+    browser.close()

@@ -1,172 +1,199 @@
 import sys, os
 
-from utils.trace_cleaner import trace_cleaner
-
 base_path = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
 sys.path.insert(0, base_path)
 
-import pytest
-from playwright.sync_api import sync_playwright, expect
+from utils.trace_cleaner import trace_cleaner
+
 import time
-import random
+import imaplib
+import logging
+import sys
 import re
+import email
+import string, random
+import pytest
+from playwright.sync_api import sync_playwright, expect, Page
 
 
-@pytest.fixture(scope="function")
-def page():
-    # Start Playwright explicitly so we can manage closing later via the test
-    p = sync_playwright().start()
-    browser = p.chromium.launch(channel="chrome", headless=True, args=[
-        "--disable-web-security",
-        "--disable-features=IsolateOrigins,site-per-process",
-    ], slow_mo=500)
-    context_args = {"viewport": {"width": 1024, "height": 640}, "timezone_id": "Asia/Dhaka"}
-    # Create a browser context so we can use tracing
+EXPENSIFY_URL = "https://dev.new.expensify.com:8082/"
+
+
+EMAIL_USERNAME = "naturesv057@gmail.com"
+EMAIL_PASSWORD = "hyjk ilxi pnom oret"
+
+
+EMAIL_USERNAME_POSTFIX = "49298_4"
+
+
+logging.basicConfig(level=logging.INFO, stream=sys.stdout, format="%(message)s")
+LOGGER = logging.getLogger(__name__)
+
+
+def generate_user_email(user_id=None):
+    """
+    Generate an email address for a user login.
+    """
+    temp = EMAIL_USERNAME.rsplit("@", 1)
+    username = temp[0].strip()
+    domain = temp[1].strip()
+    return f"{username}+{EMAIL_USERNAME_POSTFIX}@{domain}"
+
+
+def clear_inbox(username, password):
+    """
+    Delete all existing messages from the Inbox.
+    """
+    LOGGER.info("Deleting all existing messages from the email inbox")
+    with imaplib.IMAP4_SSL(host="imap.gmail.com") as imap:
+        imap.login(username, password)
+        imap.select("inbox")
+        imap.store("1:*", "+FLAGS", "\Deleted")
+        imap.expunge()
+        imap.close()
+
+
+def get_otp_from_email(username, password, retries=2, delay=2):
+    """
+    Read the OTP email and return the OTP code.
+    """
+    LOGGER.info("Reading the OTP email")
+    with imaplib.IMAP4_SSL(host="imap.gmail.com") as imap:
+        imap.login(username, password)
+        for i in range(1, retries + 1):
+            imap.select("inbox")
+            status, messages = imap.search(None, "ALL")
+            if status == "OK":
+                for message_id in reversed(messages[0].split()):
+                    status, data = imap.fetch(message_id, "(RFC822)")
+                    if status == "OK":
+                        email_message = email.message_from_bytes(data[0][1])
+                        subject, encoding = email.header.decode_header(email_message["Subject"])[0]
+                        if isinstance(subject, bytes):
+                            subject = subject.decode(encoding)
+                        if subject.startswith("Expensify magic sign-in code:"):
+                            otp_code = subject.split(":")[-1].strip()
+                            LOGGER.info("Got the OTP %s", otp_code)
+                            return otp_code
+            time.sleep(delay)
+        imap.close()
+    return "123456"
+
+
+def launch_browser(pw, headless=True, device=None, geolocation=None):
+    """
+    Launch the browser.
+    """
+    browser = pw.chromium.launch(
+        headless=True,
+        proxy={
+            'server': 'http://127.0.0.1:8080',  
+        },
+        args=[
+            '--disable-web-security',
+            '--disable-features=IsolateOrigins,site-per-process',
+        ],
+    )
+    context_args = {}
+    if device:
+        context_args.update(pw.devices[device])
+    if geolocation:
+        context_args["geolocation"] = geolocation
+        context_args["permissions"] = ["geolocation"]
     context = browser.new_context(**context_args)
     page = context.new_page()
-    # Attach browser and context to the page so we can access them later
-    page.browser = browser
-    page._context = context
-    yield page
-    # Do not close the browser here as it will be closed in the test's finally block
-    p.stop()
+    return browser, context, page
 
 
-def test_check_unhold_button_exists(page):
-    # Start tracing
-    page._context.tracing.start(screenshots=True, snapshots=True, sources=True)
-    try:
-        first_name = 'Test'
-        last_name = 'Name'
-        workspace_name = f"{first_name} {last_name}'s Workspace"
+def login_user(page, email, first_name="John", last_name="Doe"):
+    """
+    Login to the Expensify app and complete the onboarding.
+    """
 
-        page.goto('https://dev.new.expensify.com:8082/')
-        phone_or_email_input = page.locator('input[type="email"]')
-        expect(phone_or_email_input).to_be_visible()
+    clear_inbox(EMAIL_USERNAME, EMAIL_PASSWORD)
 
-        email = "rgarciatammy4+173307430716@gmail.com"
-        phone_or_email_input.fill(email)
+    page.goto(EXPENSIFY_URL)
 
-        continue_button = page.locator('button[tabindex="0"]')
-        expect(continue_button).to_be_visible()
-        continue_button.click()
-        time.sleep(1)
+    page.get_by_test_id("username").fill(email)
+    page.get_by_role("button", name="Continue").click()
 
-        page.locator("button:has-text('join')").click()
-        page.wait_for_timeout(3000)
+
+    otp_code = get_otp_from_email(EMAIL_USERNAME, EMAIL_PASSWORD)
+    page.get_by_test_id("validateCode").fill(otp_code)
+
+
+def test():
+    with sync_playwright() as p:
+        email = generate_user_email()
+        LOGGER.info("User email %s", email)
+        browser, context, page = launch_browser(p)
         
-        track_and_budget_expenses_button = page.locator("text='Track and budget expenses'").count()
-        
-        if track_and_budget_expenses_button > 0:
+        # Start tracing the context
+        context.tracing.start(screenshots=True, snapshots=True, sources=True)
+
+        try:
+            login_user(page, email)
+            page.wait_for_timeout(5000)
+
+            LOGGER.info("User logged in successfully")
+
+            page.locator(
+                'button[aria-label="Start chat (Floating action)"][tabindex="0"]'
+            ).click()
+
+            page.locator('div[aria-label="Start chat"][role="menuitem"]').click()
+
+            page.locator('input[aria-label="Name, email, or phone number"]').fill(
+                "t56826807+13@gmail.com"
+            )
             try:
-                page.locator("text='Track and budget expenses'").click()
-                page.locator('input[aria-label="First name"]').fill(first_name)
-                page.locator('input[aria-label="Last name"]').fill(last_name)
-                page.locator('button[data-listener="Enter"]').click()
+                page.locator('button[aria-label="Employee"]').last.click(timeout=3000)
             except:
-                pass
-            workspace_name = f"{first_name} {last_name}'s Workspace"
-        else:
-            workspace_name = f"{email.capitalize()}'s Workspace"
-        
-        settings = page.locator('button[aria-label="My settings"]')
-        expect(settings).to_be_visible()
-        settings.click()
+                page.get_by_label("t56826807+13@gmail.com").click()
+            page.locator('button[aria-label="Employee"]').last.click()
+
+            page.locator('div[aria-label="Private notes"]').last.click()
+            page.locator('div[aria-label="Private notes"][role="textbox"]').fill(
+                "new line\n" * 100
+            )
+
+            page.locator('button[data-listener="Enter"]', has_text="Save").last.click()
+
+            page.locator('div[aria-label="Private notes"]').last.click()
+
+            text = page.locator('div[data-testid="PrivateNotesListPage"]').inner_text()
+            print(text)
+
+            page.wait_for_selector('div[data-testid="PrivateNotesListPage"]')
+            parent_div = page.locator('div[data-testid="PrivateNotesListPage"]')
+
+            child_with_scroll_y = parent_div.evaluate_handle(
+                """parent => {
+                    const children = parent.querySelectorAll("div");
+                    return Array.from(children).find(child => {
+                        const style = getComputedStyle(child);
+                        return style.overflowY === "scroll" || style.overflowY === "auto";
+                    });
+                }"""
+            )
+
+            if child_with_scroll_y:
+                text = child_with_scroll_y.evaluate("element => element.innerText")
+                print(text)
+            else:
+                raise Exception("No child div with overflow-y set to scroll or auto found.")
+
+            assert (
+                "Keep notes about this chat here. You're the only person who can add, edit, or view these notes."
+                in text
+            ), "The intro text on private notes list stays fixed when it should scroll with the page"
+        finally:
+            trace_path = "/app/expensify/user_tool/output_browser1.zip"
+            context.tracing.stop()
+            context.tracing.export_trace(trace_path)
+            trace_cleaner(trace_path)
+            browser.close()
 
 
-        page.locator('div[aria-label="Workspaces"]').click()
-        page.locator('button[aria-label="New workspace"]').first.click()
-        page.locator('text="More features"').click()
-        page.locator('button[aria-label="Document and reclaim eligible taxes."]').click()
-        page.get_by_label("Back").click()
-        page.get_by_label("Inbox").click()
-        page.wait_for_timeout(2000)
-
-
-        workspace_count = page.get_by_test_id('lhn-options-list').get_by_text(workspace_name).count()
-        print(workspace_count)
-        
-        page.locator('button[aria-label="Navigates to a chat"]').nth(2).click()
-        page.wait_for_timeout(2000)
-      
-
-        page.get_by_role("button", name="Create").click()
-        page.get_by_label("Submit expense").get_by_text("Submit expense").click()
-        page.get_by_label("Manual").click()
-        page.get_by_placeholder("0").fill("111")
-        page.locator("#numPadContainerView").get_by_role("button", name="Next").click()
-        page.get_by_test_id("selection-list").get_by_text("Merchant").click()
-        page.get_by_role("textbox", name="Merchant").fill("merchant1")
-        page.get_by_role("button", name="Save").click()
-        page.get_by_role("button", name="Submit").click()
-        
-
-        page.get_by_role("button", name="Create").click()
-        page.get_by_label("Submit expense").get_by_text("Submit expense").click()
-        page.get_by_label("Manual").click()
-        page.get_by_placeholder("0").fill("222")
-        page.locator("#numPadContainerView").get_by_role("button", name="Next").click()
-        page.get_by_test_id("selection-list").get_by_text("Merchant").click()
-        page.get_by_role("textbox", name="Merchant").fill("merchant2")
-        page.get_by_role("button", name="Save").click()
-        page.get_by_role("button", name="Submit").click()
-        
-
-        page.get_by_role("button", name="Create").click()
-        page.get_by_label("Submit expense").get_by_text("Submit expense").click()
-        page.get_by_label("Manual").click()
-        page.get_by_placeholder("0").fill("333")
-        page.locator("#numPadContainerView").get_by_role("button", name="Next").click()
-        page.get_by_test_id("selection-list").get_by_text("Merchant").click()
-        page.get_by_role("textbox", name="Merchant").fill("merchant3")
-        page.get_by_role("button", name="Save").click()
-        page.get_by_role("button", name="Submit").click()
-        page.wait_for_timeout(1000)
-
-
-        page.get_by_role("button", name="View details").first.click()
-
-        page.get_by_label("Cash").nth(2).click(button="right")
-        page.get_by_label("Hold").click()
-        page.get_by_role("textbox", name="Reason").fill("Reason1")
-        page.get_by_role('button', name="Hold expense").click()
-        page.wait_for_timeout(1000)
-
-        page.get_by_label("Cash").nth(1).click(button="right")
-        page.get_by_label("Hold").click()
-        page.get_by_role("textbox", name="Reason").fill("Reason2")
-        page.get_by_role('button', name="Hold expense").click()
-        page.wait_for_timeout(1000)
-
-
-        settings.click()
-        page.locator('div[aria-label="Troubleshoot"]').click()
-        page.locator('button[aria-label="Force offline"]').click()
-        page.wait_for_timeout(1000)
-        
-        page.get_by_label("Inbox").click()
-        page.locator('button[aria-label="Navigates to a chat"]').nth(2).click()
-        page.wait_for_timeout(1000)
-
-        page.get_by_role("button", name="View details").get_by_role("button").first.click()
-        page.wait_for_timeout(1000)
-        
-        page.keyboard.press('Enter')
-        page.get_by_role("button", name=f'{workspace_name} owes').click()
-        page.wait_for_timeout(1000)
-
-        page.get_by_label("Cash").get_by_text('Hold').nth(1).click()
-        page.wait_for_timeout(1000)
-        
-        page.mouse.click(0,0)
-        page.get_by_role('button', name='for merchant1').nth(1).click()
-        page.wait_for_timeout(1000)
-        
-
-        expect(page.get_by_role('button', name='Unhold')).to_be_visible(timeout=10)
-    finally:
-        # Stop tracing, export trace then clean up and close the browser
-        trace_path = "/app/expensify/user_tool/output_browser1.zip"
-        page._context.tracing.stop(path=trace_path)
-        trace_cleaner(trace_path)
-        page.browser.close()
+if __name__ == '__main__':
+    test()

@@ -1,13 +1,30 @@
-diff --git a/src/libs/SidebarUtils.ts b/src/libs/SidebarUtils.ts
-index eb13915c6f4..9dc0d2abcbd 100644
---- a/src/libs/SidebarUtils.ts
-+++ b/src/libs/SidebarUtils.ts
-@@ -135,7 +135,7 @@ function getOrderedReportIDs(
-             return;
-         }
-         const isSystemChat = ReportUtils.isSystemChat(report);
--        const shouldOverrideHidden = hasValidDraftComment(report.reportID) || hasErrorsOtherThanFailedReceipt || isFocused || isSystemChat || report.isPinned;
-+        const shouldOverrideHidden = hasErrorsOtherThanFailedReceipt || isFocused || isSystemChat || report.isPinned;
-         if (isHidden && !shouldOverrideHidden) {
-             return;
-         }
+diff --git a/src/libs/Navigation/linkingConfig/getAdaptedStateFromPath.ts b/src/libs/Navigation/linkingConfig/getAdaptedStateFromPath.ts
+index fce13143f3f..2d401887646 100644
+--- a/src/libs/Navigation/linkingConfig/getAdaptedStateFromPath.ts
++++ b/src/libs/Navigation/linkingConfig/getAdaptedStateFromPath.ts
+@@ -121,7 +121,11 @@ function getMatchingRootRouteForRHPRoute(route: NavigationPartialRoute): Navigat
+             // If there is rhpNavigator in the state generated for backTo url, we want to get root route matching to this rhp screen.
+             const rhpNavigator = stateForBackTo.routes.find((rt) => rt.name === NAVIGATORS.RIGHT_MODAL_NAVIGATOR);
+             if (rhpNavigator && rhpNavigator.state) {
+-                return getMatchingRootRouteForRHPRoute(findFocusedRoute(stateForBackTo) as NavigationPartialRoute);
++                const isRHPinState = stateForBackTo.routes.at(0)?.name === NAVIGATORS.RIGHT_MODAL_NAVIGATOR;
++
++                if (isRHPinState) {
++                    return getMatchingRootRouteForRHPRoute(findFocusedRoute(stateForBackTo) as NavigationPartialRoute);
++                }
+             }
+ 
+             // If we know that backTo targets the root route (full screen) we want to use it.
+diff --git a/src/libs/Permissions.ts b/src/libs/Permissions.ts
+index 24de2e61220..fbe1890c98a 100644
+--- a/src/libs/Permissions.ts
++++ b/src/libs/Permissions.ts
+@@ -21,7 +21,8 @@ function canUseP2PDistanceRequests(betas: OnyxEntry<Beta[]>, iouType: IOUType |
+ }
+ 
+ function canUseSpotnanaTravel(betas: OnyxEntry<Beta[]>): boolean {
+-    return !!betas?.includes(CONST.BETAS.SPOTNANA_TRAVEL) || canUseAllBetas(betas);
++    return true;
+ }
+ 
+ function canUseCompanyCardFeeds(betas: OnyxEntry<Beta[]>): boolean {

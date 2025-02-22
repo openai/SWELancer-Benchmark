@@ -1,174 +1,102 @@
-import sys, os
-
-base_path = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
-sys.path.insert(0, base_path)
-
-import os
-import time
 import pytest
 from playwright.sync_api import sync_playwright, expect
 from playwright.sync_api._context_manager import PlaywrightContextManager
 from playwright._impl._browser import Browser
 from playwright._impl._page import Page
-from playwright.sync_api import sync_playwright, expect
-import re, time
-import os
-import imaplib
-import email
-import re
-import random
 
-NEWDOT_URL = "https://dev.new.expensify.com:8082/"
-OLDDOT_URL = "http://localhost:9000/"
-EMAIL = "turingvidhant+111@gmail.com"
-PASSWORD = "uotx fzkt kfeg dehz"
+EMAIL_USERNAME = "ibukunsamuel999"
+EMAIL_PASSWORD = "jkgz unyn rnwl slrp"
 
-class IMAPOTPExtractor:
-    def __init__(self, email_address, password):
-        if not self._validate_email(email_address):
-            raise ValueError("Invalid email address format.")
-        self.original_email = email_address
-        self.password = password
-
-        random_suffix = random.randint(1000, 9999)
-        current_timestamp = int(time.time())
-        random_suffix = f"{current_timestamp}{random_suffix}"
-    
-    def _validate_email(self, email_address):
-        return bool(re.match(r"[^@]+@[^@]+\.[^@]+", email_address))
-    
-    def set_new_email(self, email):
-        self.new_email = email
-    
-    def check_for_otp(self):
-        try:
-            mail = imaplib.IMAP4_SSL("imap.gmail.com")
-            mail.login(self.original_email, self.password)
-            mail.select("inbox")
-            
-            status, messages = mail.search(None, "UNSEEN")
-            if status != "OK":
-                return None
-            
-            email_ids = messages[0].split()            
-            email_ids = email_ids[::-1]
-
-            for email_id in email_ids:
-                status, msg_data = mail.fetch(email_id, '(RFC822)')
-                if status != "OK":
-                    continue
-                
-                for response_part in msg_data:
-                    if isinstance(response_part, tuple):
-                        msg = email.message_from_bytes(response_part[1])
-
-                        if self.new_email in msg["To"]:
-                            otp_code = self._extract_otp_from_email(msg)
-                            if otp_code:
-                                mail.store(email_id, '+FLAGS', '\\Deleted')
-                                mail.expunge()
-                                mail.close()
-                                mail.logout()
-                                return otp_code
-            
-            mail.close()
-            mail.logout()
-            return None
-
-        except imaplib.IMAP4.error:
-            return None
-
-    def _extract_otp_from_email(self, msg):
-        if msg.is_multipart():
-            for part in msg.walk():
-                if part.get_content_type() == "text/plain":
-                    email_body = part.get_payload(decode=True).decode()
-                    otp_code = self._extract_otp(email_body)
-                    if otp_code:
-                        return otp_code
-        else:
-            email_body = msg.get_payload(decode=True).decode()
-            otp_code = self._extract_otp(email_body)
-            if otp_code:
-                return otp_code
-        return None
-
-    def _extract_otp(self, text):
-        match = re.search(r"\b\d{6}\b", text)
-        return match.group(0) if match else None
-
-gmail_account_helper = IMAPOTPExtractor(EMAIL, PASSWORD)
+EXPENSIFY_URL = "https://dev.new.expensify.com:8082/"
 
 
-def new_dot_login(page, email):
-    page.goto(NEWDOT_URL)  
-    page.locator('input[type="email"]').fill(email)
-    page.wait_for_timeout(3000)
-    page.get_by_role("button", name="Continue").nth(0).click()
-    page.wait_for_timeout(3000)
-    gmail_account_helper.set_new_email(email)
-    otp = gmail_account_helper.check_for_otp()
-    page.locator('input[data-testid="validateCode"]').fill("123456")
+def login_user(page, email, first_name="Test", last_name="User"):
+    """
+    Log into the Expensify app.
+    """
+    # Open the Expensify app
+    page.goto(EXPENSIFY_URL)
+    # Login user
+    page.get_by_test_id("username").fill(email)
+    page.get_by_role("button", name="Continue").click()
+    # Check if OTP is required for the login
     try:
-        page.get_by_role("button", name="Sign In").click()
-    except:
+        expect(page.get_by_test_id("SignInPage").get_by_test_id("validateCode")).to_be_visible()
+    except (AssertionError, TimeoutError):
+        # If not required, expect the join button to appear and click the button
+        page.get_by_test_id("SignInPage").get_by_role("button", name="Join").click()
+    # Check if onboarding is required
+    try:
+        expect(page.get_by_text("What do you want to do today?")).to_be_visible()
+    except (AssertionError, TimeoutError):
         pass
-
-def launch_browser(pw, headless=True, device=None, geolocation=None):
-    """
-    Launch the browser.
-    """
-    browser = pw.chromium.launch(headless=headless)
-    context_args = {}
-    if device:
-        context_args.update(pw.devices[device])
-    if geolocation:
-        context_args["geolocation"] = geolocation
-        context_args["permissions"] = ["geolocation"]
-    context = browser.new_context(**context_args)
-    page = context.new_page()
-    return browser, context, page
-
-
-def test_expensify():
-     with sync_playwright() as p:
-        browser = p.chromium.launch(headless=True, args=[
-            "--disable-web-security",
-            "--disable-features=IsolateOrigins,site-per-process"
-        ])
-
-        first_user_context = browser.new_context(ignore_https_errors=True)
-        page = first_user_context.new_page()        
-        page.wait_for_timeout(3000)
-
-        new_dot_login(page, EMAIL)
-        page.wait_for_timeout(3000)
+    else:
+        # Complete the onboarding
+        page.get_by_label("Track and budget expenses").click()
+        page.get_by_role("textbox", name="First name").fill(first_name)
+        page.get_by_role("textbox", name="Last name").fill(last_name)
+        page.get_by_role("button", name="Continue").click()
         
-        page.get_by_text("This is your personal space. Use it for notes, tasks, drafts, and reminders.").click()
+    # Expect the main screen to appear
+    expect(page.get_by_test_id("BaseSidebarScreen")).to_be_visible()
+        
+        
+# Test to verify that the expense report header appears instantly in 1:1 DM
+def test_toggle_delay_submission():
+    with sync_playwright() as p:
+        # Launch Chromium browser in visible mode (non-headless)
+        browser = p.chromium.launch(proxy = {"server": "http://localhost:8080"}, headless = False, args = ["--no-sandbox", "--disable-dev-shm-usage", "--ignore-certificate-errors", "--disable-web-security", "--disable-features=IsolateOrigins,site-per-process"], slow_mo = 1000, channel = "chromium")
+        context = browser.new_context(ignore_https_errors=True)
+        page = context.new_page()
+        user_email = 'ibukunsamuel999+1739892705@gmail.com'
+        # Step 1: Login User A
+        login_user(page, user_email, first_name="Milan", last_name="T")
 
-        page.get_by_label("Start chat (Floating action)").click()
-        page.get_by_text("Track expense").click()
-        page.get_by_label("Manual").click()
+        if page.get_by_label("Close").count() > 0:
+            page.get_by_label("Close").click()
 
-        scan_button = page.get_by_label("Scan")
+        # Step 2: Click on + icon and click on "New workspace"
+        page.get_by_label("My settings").click()
 
-        distance_button = page.get_by_label("Distance")
-        distance_initial_bg_color = distance_button.evaluate("element => window.getComputedStyle(element).backgroundColor")
+        if page.get_by_label("Close").count() > 0:
+            page.get_by_label("Close").click()
+        
+        page.locator("div[aria-label='Workspaces']").click()
+        new_workspace_button = page.get_by_label("New workspace")
+        new_workspace_button.click()  
 
-        scan_initial_background_color = scan_button.evaluate("element => window.getComputedStyle(element).backgroundColor")
+        # Step 3: Click on More Features
+        page_feature = page.locator('div[aria-label="More features"]')
+        page_feature.click()       
+        
+        # Step 4: Enable Workflows Toggle and click on it
+        workflows = page.locator('button[aria-label="Configure how spend is approved and paid."]')
+        workflows.click()
+               
+        workflow_setting = page.locator('div[aria-label="Workflows"]')
+        workflow_setting.click()
 
-        scan_button.hover()
-        scan_hover_background_color = scan_button.evaluate("element => window.getComputedStyle(element).backgroundColor")
+        # Enable Approvals
+        approval_toggle = page.locator('button[aria-label="Require additional approval before authorizing a payment."][role="switch"]')
+        if approval_toggle.get_attribute('aria-checked') == "false":
+            approval_toggle.click()
 
-        distance_button.hover()
-        distance_hover_bg_color = distance_button.evaluate("element => window.getComputedStyle(element).backgroundColor")
+        # Modify Approvals
+        page.locator('button[aria-label="Add approvals"]').click()
+        page.locator(
+            'div[data-tag="pressable"]', has_text="Additional Approver"
+        ).click()
 
-        try:
-            assert scan_initial_background_color != scan_hover_background_color, "Scan Button Background color did not change on hover"
-        except AssertionError as scan_error:
-            print(scan_error.__str__())
-        assert distance_initial_bg_color != distance_hover_bg_color, "Distance Button Background color did not change on hover"
-
-        page.wait_for_timeout(1500)
-        page.close()
+        # Upgrade Account
+        page.locator("button", has_text="Upgrade").click()
+        
+        
+        # Step 7: check if delay submission toggle is off
+        is_delay_toggle_off = page.locator("button[aria-label*='Choose a custom schedule']")
+        aria_checked_value = is_delay_toggle_off.get_attribute('aria-checked')
+        if aria_checked_value == "true":
+            assert False, "Delay submissions turns on after upgrading workspace"
+        else:
+            assert True, "Delay submissions does not turns on after upgrading workspace"
+        
         browser.close()

@@ -1,94 +1,76 @@
-import sys, os
-
-base_path = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
-sys.path.insert(0, base_path)
-
 from playwright.sync_api import sync_playwright, expect
-from playwright.sync_api._context_manager import PlaywrightContextManager
-import re
-from utils.trace_cleaner import trace_cleaner  # Added import
-
-original_email = "nitish.expensify@gmail.com"
-APP_PASSWORD = "ojhi eovp lbkz ktfb"
+from utils.trace_cleaner import trace_cleaner
 
 
-def get_user_email():
-    return f"nitish.expensify+{72}@gmail.com"
+# Expensify app URL
+EXPENSIFY_URL = "https://dev.new.expensify.com:8082/"
 
+# Email login credentials
+EMAIL_USERNAME = "naturesv057+52907_1@gmail.com"
 
-def get_magic_code():
-    return "123456"
-
-
-def login_user(p: PlaywrightContextManager):
-    browser = p.chromium.launch(headless=True, args=[
-        "--ignore-certificate-errors", "--disable-web-security", "--disable-features=IsolateOrigins,site-per-process"],
-        slow_mo=1000)
-
-    context = browser.new_context(ignore_https_errors=True)
+def launch_browser(pw, device=None, geolocation=None):
+    """
+    Launch the browser.
+    """
+    browser = pw.chromium.launch(
+        headless=False,
+        proxy={"server": "http://127.0.0.1:8080/"},
+        args=[
+            "--ignore-certificate-errors",
+            "--disable-web-security",
+            "--disable-features=IsolateOrigins,site-per-process",
+        ],
+        slow_mo=500
+    )
+    context_args = {}
+    if device:
+        context_args.update(pw.devices[device])
+    if geolocation:
+        context_args["geolocation"] = geolocation
+        context_args["permissions"] = ["geolocation"]
+    context = browser.new_context(**context_args)
     page = context.new_page()
-    user_email = get_user_email()
+    return browser, context, page
 
 
-    page.goto('https://dev.new.expensify.com:8082/')
+def login_user(page):
+    """
+    Login to the Expensify app and complete the onboarding.
+    """
+    # Open the Expensify app
+    page.goto(EXPENSIFY_URL)
+
+    # Login user
+    page.get_by_role("textbox", name="Phone or email").fill(EMAIL_USERNAME)
+    page.locator("div", has_text="Continue").last.click()
+    
+    # Get the OTP code from the email
+    otp = "123456"
+    
+    # Enter the OTP code
+    page.keyboard.type(otp)
 
 
-    page.locator('input[type="email"]').fill(user_email)
-    page.locator('button[tabindex="0"]').click()
-
-    try:
-        expect(page.get_by_role("button", name="Sign in")).to_be_visible()
-        page.get_by_test_id("validateCode").fill(get_magic_code())
-    except Exception:
-        page.get_by_role("button", name="Join").click()
-
-    return browser, page
-
-
-def test_hide_thread():
+def test_52907():
     with sync_playwright() as p:
-        trace_path = "/app/expensify/user_tool/output_browser1.zip"
-        context = None
-        browser = None
-        page = None
-        
+        browser, context, page = launch_browser(p)
+        context.tracing.start(screenshots=True, snapshots=True, sources=True)
         try:
+            # Step 1: Login user
+            login_user(page)
+            page.wait_for_timeout(5000)
 
-            browser, page = login_user(p)
-            context = page.context
+            # Step 2: Reintroduce scenario
+            page.get_by_test_id("CustomBottomTabNavigator").get_by_label("Search").click()
+            page.get_by_test_id("Search").get_by_label("Search").click()
+            page.get_by_test_id("search-router-text-input").fill("type:chat status:all in:in category:car")
+            page.get_by_role("textbox", name="Search for something").press("Enter")
 
-            context.tracing.start(screenshots=True, snapshots=True, sources=True)
-
-
-            page.get_by_label("Workspaces").click()
-            page.get_by_label("Back").click()
-
-            page.locator('div[data-testid="DisplayNamesWithTooltip"]',
-                         has_text="#room").nth(0).click()
-
-
-            page.get_by_role("textbox").fill("hey")
-            page.locator('button[aria-label="Send"]').nth(-1).click()
-
-            page.locator("div").filter(has_text=re.compile(
-                r"^hey$")).nth(-1).click(button="right")
-
-            page.get_by_text("Reply in thread").click()
-
-            page.locator('div[data-testid="DisplayNamesWithTooltip"]',
-                         has_text="#room").nth(0).click()
-
-
-            expect(page.locator('button[aria-label="Navigates to a chat"][role="button"][tabindex="0"]',
-                                has_text="No activity yet")).not_to_be_visible()
-        except Exception as e:
-
-            raise e
+            # Step 3: Check if the issue is resolved
+            expect(page.locator("#root")).to_contain_text("Nothing to show")
         finally:
-            if context:
-                context.tracing.stop()
-                context.tracing.export_to(trace_path)
-                trace_cleaner(trace_path)
-
-            if browser:
-                browser.close()
+            context.tracing.stop()
+            trace_output = "/app/expensify/user_tool/output_browser1.zip"
+            context.tracing.export_trace(trace_output)
+            trace_cleaner(trace_output)
+            browser.close()

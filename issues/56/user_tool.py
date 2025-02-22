@@ -1,195 +1,172 @@
-import sys, os
-
-base_path = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
-sys.path.insert(0, base_path)
-
-import secrets
-import string
-import time
-from email.header import decode_header
-import base64
-
-import pyotp
-import pyperclip
-import pytest
-from playwright.async_api import Page, TimeoutError, async_playwright, expect
+from playwright.sync_api import sync_playwright, expect
+from playwright._impl._page import Page
+import re
+import imaplib
+import email
 from utils.trace_cleaner import trace_cleaner
 
-USER_EMAIL = "expensifysam@gmail.com"
-PASSWORD = "behw ywoc huxq yywe"
-SLOW_MO: float | None = 500
-NOW = int(time.time())
+
+class EmailHandler:
+    def __init__(self, email_address, password):
+        # Validate email and password input
+        if not self._validate_email(email_address):
+            raise ValueError("Invalid email address format.")
+        self.original_email = email_address
+        self.password = password
+        self.new_email = email_address
+
+    def _validate_email(self, email_address):
+        # Simple email validation
+        return bool(re.match(r"[^@]+@[^@]+\.[^@]+", email_address))
+
+    def _generate_new_email(self, email_address, suffix):
+        # Add random number suffix to the email before the "@" symbol
+        username, domain = email_address.split('@')
+        return f"{username}+{suffix}@{domain}"
+
+    def get_email_address(self):
+        # Return the generated email with "+" suffix
+        return self.new_email
+
+    def check_for_otp(self):
+        # Connect to the Gmail server using IMAP
+        try:
+            mail = imaplib.IMAP4_SSL("imap.gmail.com")
+            mail.login(self.original_email, self.password)
+            mail.select("inbox")
+
+            # Fetch all unread emails
+            status, messages = mail.search(None, "UNSEEN")
+            if status != "OK":
+                print("No unread emails found.")
+                return None
+
+            email_ids = messages[0].split()
+            # Start from the latest email by reversing the list
+            email_ids = email_ids[::-1]  # Reverse order to process latest first
+
+            # Iterate over each email until OTP is found
+            for email_id in email_ids:
+                # Fetch the email by ID
+                status, msg_data = mail.fetch(email_id, '(RFC822)')
+                if status != "OK":
+                    print("Error fetching email.")
+                    continue
+
+                for response_part in msg_data:
+                    if isinstance(response_part, tuple):
+                        msg = email.message_from_bytes(response_part[1])
+
+                        # Check if the To address matches the generated new email
+                        if msg["To"] == self.new_email:
+                            # Extract OTP from the email body
+                            otp_code = self._extract_otp_from_email(msg)
+                            if otp_code:
+                                # Delete the email containing the OTP
+                                mail.store(email_id, '+FLAGS', '\\Deleted')
+                                mail.expunge()  # Permanently removes deleted emails from the mailbox
+
+                                # Logout and return OTP
+                                mail.close()
+                                mail.logout()
+                                return otp_code
+
+            # Logout if OTP not found in unread emails
+            mail.close()
+            mail.logout()
+            print("No OTP found in unread emails.")
+            return None
+
+        except imaplib.IMAP4.error:
+            print("Failed to connect to Gmail. Please check your email address or password.")
+            return None
+
+    def _extract_otp_from_email(self, msg):
+        # Extract OTP code from the email content
+        if msg.is_multipart():
+            for part in msg.walk():
+                if part.get_content_type() == "text/plain":
+                    email_body = part.get_payload(decode=True).decode()
+                    otp_code = self._extract_otp(email_body)
+                    if otp_code:
+                        return otp_code
+        else:
+            email_body = msg.get_payload(decode=True).decode()
+            otp_code = self._extract_otp(email_body)
+            if otp_code:
+                return otp_code
+        return None
+
+    def _extract_otp(self, text):
+        # Find a 6-digit code in the email body
+        match = re.search(r"\b\d{6}\b", text)
+        return match.group(0) if match else None
 
 
-def generate_random_string(length=12):
-
-    random_bytes = secrets.token_bytes(length)
-    base64_string = base64.b64encode(random_bytes).decode("utf-8")
-
-
-    alphanumeric_string = "".join(
-        filter(lambda x: x in string.ascii_letters + string.digits, base64_string)
-    )
-
-
-    return alphanumeric_string[:length]
-
-
-async def create_user(page: Page, firstname: str, lastname: str):
-    await page.get_by_role("button", name="Join").click()
-
-
-    await page.get_by_text("Track and budget expenses").click()
-    await page.get_by_role("textbox", name="First name").fill(firstname)
-    await page.get_by_role("textbox", name="Last name").fill(lastname)
-    await page.get_by_role("button", name="Continue").click()
-
-
-async def login(page: Page, user_email: str, password: str):
-
-    magic_code = "123456"
-    await page.get_by_role("textbox").fill(magic_code)
-
-
-async def login_or_create_user(page: Page, user_email: str, password: str):
-    await page.get_by_test_id("username").fill(user_email)
-    await page.get_by_role("button", name="Continue").click()
-
-    try:
-        await page.get_by_role("button", name="Join").wait_for(
-            state="visible", timeout=2000
-        )
-        firstname, lastname = generate_random_string(6), generate_random_string(6)
-        await create_user(page, firstname, lastname)
-    except TimeoutError:
-        await login(page, user_email, password)
-
-
-async def verify_email(page: Page):
-    await page.get_by_label("My settings").click()
-    await page.get_by_role("menuitem", name="Profile").click()
-    await page.get_by_text("Contact method").click()
-    await page.get_by_test_id("ContactMethodsPage").get_by_text(USER_EMAIL).click()
-
-    if await page.get_by_text("Please enter the magic code sent to").is_visible():
-        magic_code = "123456"
-        await page.get_by_role("textbox").fill(magic_code)
-        await page.get_by_role("button", name="Verify").click()
-        await page.get_by_text("Add more ways for people to").wait_for(state="visible")
-        await page.get_by_label("Back").first.click()  # Go back to settings page
+# Function to log in to the application
+def login(page: Page, user_email: str, email_handler, first_name: str = "Milan", last_name: str = "T"):
+    # Open Expensify URL and log in
+    page.locator('input[type="email"]').fill(user_email)
+    page.get_by_role("button", name="Continue").click()
+    page.wait_for_timeout(9000)
+    if page.locator('input[data-testid="validateCode"]').is_visible():
+        # otp = email_handler.check_for_otp()
+        page.locator('input[data-testid="validateCode"]').fill("012345")
     else:
-        await page.get_by_test_id("ContactMethodDetailsPage").get_by_label(
-            "Back"
-        ).click()
-        await page.get_by_label("Back").first.click()  # Go back to settings page
+        page.get_by_role("button", name="Join").click()
+        page.wait_for_timeout(3000)
+        # Enter user details and complete onboarding
+        page.get_by_label("Track and budget expenses").click()
+        page.locator('input[name="fname"]').fill(first_name)
+        page.locator('input[name="lname"]').fill(last_name)
+        page.get_by_role("button", name="Continue").last.click()
 
 
-async def enable_two_factor_authentication(page: Page):
-
-    await page.get_by_label("Security").click()
-    await page.get_by_label("Two-factor authentication").click()
-    await page.get_by_text("Copy").click()  # copy recovery codes
-
-    with open("recovery_codes.txt", "w", encoding="utf-8") as f:
-        f.write(pyperclip.paste())
-    await page.get_by_role("button", name="Next").click()
-
-
-    await page.get_by_text("Or add this secret key to").wait_for(
-        state="visible", timeout=2000
-    )
-    await page.get_by_text("Copy").click()
-    secret_key = pyperclip.paste()
-
-
-    totp = pyotp.TOTP(secret_key)
-    otp = totp.now()
-    await page.get_by_role("textbox").fill(otp)
-
-    await page.get_by_text("Two-factor authentication is").wait_for(
-        state="visible", timeout=2000
-    )
-
-    await page.get_by_role("button", name="Got it").click()
-    await page.get_by_label("Back").click()  # Go back to settings page
-
-
-async def enter_incorrect_otp(page: Page):
-    await page.get_by_text("Please enter your authenticator code").wait_for(
-        state="visible", timeout=2000
-    )
-    await page.get_by_role("textbox").fill("123456")  # enter incorrect otp
-    await expect(
-        page.get_by_text("Please enter a valid authenticator code")
-    ).to_be_visible()
-
-    await page.get_by_label("Use recovery code").click()
-    await page.get_by_role("textbox", name="Recovery code").fill("werwer")
-    await page.get_by_role("textbox", name="Recovery code").press("Enter")
-    await expect(page.get_by_text("Incorrect recovery code.")).to_be_visible()
-
-
-async def sign_in_with_incorrect_otp(page: Page):
-    now = int(time.time()) - 1000  # 1 second ago
-
-    await page.get_by_test_id("username").fill(USER_EMAIL)
-    await page.get_by_role("button", name="Continue").click()
-
-    magic_code = "654321"
-    await page.get_by_role("textbox").fill(magic_code)
-
-    await enter_incorrect_otp(page)
-
-
-@pytest.mark.asyncio
-async def test_recovery_code_login():
-    async with async_playwright() as p:
-
-        browser = await p.chromium.launch(headless=True, slow_mo=SLOW_MO, args=[
+def test_28820():
+    with sync_playwright() as p:
+        # Launch chromium and open new page
+        browser = p.chromium.launch(headless=False, args=[
             "--disable-web-security",
             "--disable-features=IsolateOrigins,site-per-process"
         ])
-        context = await browser.new_context()
-
-        await context.tracing.start(screenshots=True, snapshots=True)
-        page = await context.new_page()
+        context = browser.new_context()
+        context.tracing.start(screenshots=True, snapshots=True, sources=True)
+        page = context.new_page()
+        
         try:
-            await page.goto("https://dev.new.expensify.com:8082/")
+            page.goto("https://dev.new.expensify.com:8082/")
+            # In broken state, this will not show the "track expense" button
+            email_address_1 = "rgulraiz2000+4084013@gmail.com"
+            # In broken state, this will show the "track expense" button
+            email_address_2 = "rgulraiz2000+204@gmail.com"
 
+            password = "kepw uquj myoa npvj"
+            user_fname = "Ehsan"
+            user_lname = "G"
 
-            await login_or_create_user(page, USER_EMAIL, PASSWORD)
-
-            try:
-                await page.get_by_text("Please enter your authenticator code").wait_for(
-                    state="visible", timeout=2000
-                )
-
-
-                await enter_incorrect_otp(page)
-                return
-            except TimeoutError:
-                pass
-
-
-            await verify_email(page)
-
-
-            await enable_two_factor_authentication(page)
-
-
-            await page.get_by_label("Sign out").click()
-
-
-            await sign_in_with_incorrect_otp(page)
-        except Exception as e:
-
-            raise e
-        finally:
-
+            email_handler = EmailHandler(email_address=email_address_1, password=password)
+            login(page, email_address_1, email_handler, user_fname, user_lname)
+            page.wait_for_timeout(6000)
             
-            await context.tracing.stop(path="/app/expensify/user_tool/output_browser1.zip")
+            page.get_by_label("Start chat (Floating action)").click()
+            expect(page.get_by_label("Track expense")).not_to_be_visible()
+            
+            page.get_by_label("Inbox").click()
+            page.get_by_label("My settings").click()
+            page.get_by_label("Sign out").click()
+
+            email_handler = EmailHandler(email_address=email_address_2, password=password)
+            login(page, email_address_2, email_handler, user_fname, user_lname)
+            page.wait_for_timeout(6000)
+            page.get_by_label("Start chat (Floating action)").click()
+            expect(page.get_by_label("Track expense")).not_to_be_visible()
+
+        finally:
+            context.tracing.stop(path="/app/expensify/user_tool/output_browser1.zip")
             trace_cleaner("/app/expensify/user_tool/output_browser1.zip")
+            browser.close()
 
 
-            await context.close()
-            await browser.close()
+# To run the test, you can call test_28820(), for example:
+if __name__ == "__main__":
+    test_28820()

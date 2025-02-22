@@ -1,100 +1,111 @@
-import sys, os
+import pytest_asyncio
+import pytest
 
-base_path = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
-sys.path.insert(0, base_path)
+from playwright.async_api import async_playwright, expect, Page
+from utils.login import EmailHandler, complete_onboarding
 
-from playwright.sync_api import sync_playwright, expect
-from playwright._impl._page import Page
+NEWDOT_URL = "http://dev.new.expensify.com:8082/"
+EXPENSIFY_EMAIL = "testingq186+52137@gmail.com"
+EXPENSIFY_PASSWORD = "kkfr hqiv yuxq rbso"
+FIRST_NAME = "Testing"
+LAST_NAME = "52137"
 
+TESTING_FLOW = True
 
-def launch_browser(playwright, platform="desktop"):
-
-    mobile_context = {}
-
-    if platform.lower() == "mobile":
-        mobile_context = {
-            "viewport": {"width": 540, "height": 864},
-            "is_mobile": True,
-        }
-
-    browser = playwright.chromium.launch(
-                channel="chrome",
-                headless=True,
-                args=[
-                    "--ignore-certificate-errors",
-                    "--disable-web-security",
-                    "--disable-features=IsolateOrigins,site-per-process"
-                ],
-                proxy={"server": "http://localhost:8080"},
-                slow_mo=500
-            )
-        
-    context = browser.new_context(timezone_id = "Asia/Karachi", **mobile_context)
-    page = context.new_page()
-
-    return context, page
-
-
-def login_user(page: Page, first_name="Asaad", last_name="I"):
-    page.bring_to_front()
-
-    page.goto("https://dev.new.expensify.com:8082/")
-
-    email = "lbrxifzk+1735219804@gmail.com"
-
-    page.get_by_test_id("username").fill(email)
-    page.get_by_role('button', name="Continue").click()
-    page.get_by_role('button', name="Join").click()
-
-    try:
-        expect(page.locator("text=What do you want to do today?")).to_be_visible()
-        page.get_by_text("Track and budget expenses").click()
-        page.get_by_role("button", name="Continue").click()
-        page.get_by_role("textbox", name="First name").fill(first_name)
-        page.get_by_role("textbox", name="Last name").fill(last_name)
-        page.get_by_role("button", name="Continue").click()
-    except:
-        pass
-
-
-def handle_close_btn(page):
-    try:
-        close_btn = page.get_by_label("Close")
-        expect(close_btn).to_be_visible()
-        close_btn.click()
-    except:
-        pass
-
-
-def test_qbo_connection_alignment_in_accounting_settings_narrow_layout():
-
-    playwright = sync_playwright().start()
-    context, page = launch_browser(playwright, "mobile")
-    login_user(page, "Asaad", "I")
-
-    handle_close_btn(page)
-
-    page.get_by_label("Start chat (Floating action)").click()
-    page.get_by_label("New workspace").click()
-    page.get_by_label("More features").click()
-    page.get_by_label("Sync your chart of accounts").click()
-    page.get_by_label("Accounting").click()
-
-
-    qbo_text_box = page.get_by_text("Quickbooks Online", exact=True).bounding_box()
-    qbo_text_box_center_y = qbo_text_box["y"] + qbo_text_box["height"] / 2
-    connect_button_box = (
-        page.get_by_label("Quickbooks Online")
-        .get_by_role("button", name="Connect")
-        .bounding_box()
+@pytest_asyncio.fixture
+async def page():
+    """
+    Launch the Expensify app.
+    """
+    pw = await async_playwright().start()
+    browser = await pw.chromium.launch(
+        channel="chrome",
+        headless=False,
+        args=[
+            "--ignore-certificate-errors",
+            "--disable-web-security",
+            "--disable-features=IsolateOrigins,site-per-process"
+        ],
+        proxy={"server": "http://localhost:8080"},
+        slow_mo=500
     )
-    connect_button_center_y = connect_button_box["y"] + connect_button_box["height"] / 2
 
+    context = await browser.new_context(ignore_https_errors=True)
+    context.set_default_timeout(30_000)
+    page = await context.new_page()
 
-    tolerance = 1
-    assert (
-        abs(qbo_text_box_center_y - connect_button_center_y) < tolerance
-    ), "Text and button are not vertically center-aligned."
+    yield page
+    await browser.close()
+    await pw.stop()
 
-    context.close()
-    playwright.stop()
+async def new_dot_login(page: Page, email, password):
+    await page.goto(NEWDOT_URL)
+    with EmailHandler(email, password) as email_handler:
+        if not TESTING_FLOW :
+            email_handler.clean_inbox()  # Clean inbox
+
+        # Enter email
+        await page.get_by_role("textbox", name="Phone or email").fill(email)
+        await page.get_by_role("button", name="Continue").click()
+        
+        try:
+            await expect(page.locator('input[name="validateCode"]').first).to_be_visible()
+            otp = email_handler.read_otp_code() if not TESTING_FLOW else "123456"
+            await page.locator('input[name="validateCode"]').first.fill(str(otp))
+            # Wait sign in to complete
+            await page.get_by_text("Please enter the magic code").wait_for(state="hidden")
+        except Exception:
+            await page.get_by_role("button", name="Join").click()
+            await expect(page.get_by_label("My settings")).to_be_visible(timeout=10_000)
+            # Force onboarding modal to pop up
+            await page.goto("https://dev.new.expensify.com:8082/onboarding/purpose")
+            await complete_onboarding(page, FIRST_NAME, LAST_NAME)
+
+async def create_workspace_and_create_tag(page: Page):
+    await page.get_by_label("My settings").click()
+    await page.get_by_test_id("InitialSettingsPage").get_by_label("Workspaces").click()
+    await page.get_by_label("New workspace").click()
+    await expect(page.get_by_test_id("WorkspaceInitialPage").get_by_text(f"{FIRST_NAME} {LAST_NAME}'s Workspace")).to_be_visible()
+    await page.get_by_label("More features").click()
+    await page.get_by_label("Classify costs and track").click()
+    await page.get_by_label("Tags").click()
+    await page.get_by_role("button", name="Add tag").click()
+    await page.get_by_role("textbox", name="Name").click()
+    await page.get_by_role("textbox", name="Name").fill("California")
+    await page.get_by_role("button", name="Save").click()
+    await page.get_by_test_id("WorkspaceTagsPage").get_by_role("button", name="Settings").click()
+    await page.get_by_label("Tag", exact=True).click()
+    await page.get_by_role("textbox", name="Custom tag name").click()
+    await page.get_by_role("textbox", name="Custom tag name").fill("State")
+    await page.get_by_role("button", name="Save").click()
+    await page.get_by_label("Members must tag all expenses").click()
+    await page.get_by_test_id("WorkspaceTagsSettingsPage").get_by_label("Back").click()
+    await page.get_by_label("Back").click()
+    await page.get_by_label("Inbox").click()
+
+@pytest.mark.asyncio(loop_scope="function")
+async def test_tag_auto_selected_in_case_of_only_one_tag(page: Page):
+    await new_dot_login(page, EXPENSIFY_EMAIL, EXPENSIFY_PASSWORD)
+
+    try:
+        # Check if a workspace exists
+        await expect(page.get_by_label("Navigates to a chat").get_by_text(f"{FIRST_NAME} {LAST_NAME}'s Workspace").first).to_be_visible()
+    except Exception:
+        # Create a workspace if does not exist
+        await create_workspace_and_create_tag(page)
+
+    await page.get_by_label("Navigates to a chat").get_by_text(f"{FIRST_NAME} {LAST_NAME}'s Workspace").first.click(timeout=10_000)
+    
+    await page.get_by_label("Create").last.click()
+    try:
+        await page.get_by_label("Create expense").click(timeout=5000)
+    except Exception:
+        await page.get_by_label("Submit expense").click(timeout=5000)
+    await page.get_by_label("Manual").click()
+    await page.get_by_placeholder("0").click()
+    await page.get_by_placeholder("0").fill("1")
+    await page.locator("#numPadContainerView").get_by_role("button", name="Next").click()
+    # The text 'required' should not be visible
+    await expect(page.get_by_role("menuitem", name="State").get_by_text("Required")).not_to_be_visible()
+    # 'California' should be visible
+    await expect(page.get_by_label("California")).to_be_visible()

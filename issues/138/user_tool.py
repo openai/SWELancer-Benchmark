@@ -1,116 +1,101 @@
-import sys, os
-
-base_path = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
-sys.path.insert(0, base_path)
-
-import time
-import pytest
-from playwright.sync_api import sync_playwright, expect
-from playwright.sync_api._context_manager import PlaywrightContextManager
-from playwright._impl._browser import Browser
-from playwright._impl._page import Page
+import re
+from playwright.sync_api import sync_playwright
 from utils.trace_cleaner import trace_cleaner
 
 
+# Expensify app URL
+EXPENSIFY_URL = "https://dev.new.expensify.com:8082/"
 
-def generate_random_email() -> str:
-    timestamp = int(time.time())
+# Email login credentials
+EMAIL_USERNAME = "naturesv057+52198_1@gmail.com"
 
-    return "t56826807+1733398137@gmail.com"
-
-
-
-def login_user(
-    playwright: PlaywrightContextManager, first_name: str, last_name: str
-) -> tuple[Browser, Page, str]:
-    browser = playwright.chromium.launch(
-        channel="chrome",
-        headless=True,
+def launch_browser(pw, device=None, geolocation=None):
+    """
+    Launch the browser.
+    """
+    browser = pw.chromium.launch(
+        headless=False,
+        proxy={"server": "http://127.0.0.1:8080/"},
         args=[
             "--ignore-certificate-errors",
             "--disable-web-security",
             "--disable-features=IsolateOrigins,site-per-process",
         ],
-        proxy={"server": "http://localhost:8080"},
-        slow_mo=500,
+        slow_mo=500
     )
-    context = browser.new_context(
-        viewport={"width": 360, "height": 640},
-        user_agent="Mozilla/5.0 (Linux; Android 10; Mobile; rv:68.0) Gecko/68.0 Firefox/68.0",
-    )
+    context_args = {}
+    if device:
+        context_args.update(pw.devices[device])
+    if geolocation:
+        context_args["geolocation"] = geolocation
+        context_args["permissions"] = ["geolocation"]
+    context = browser.new_context(**context_args)
     page = context.new_page()
-    user_email = generate_random_email()
-
-    page.goto("https://dev.new.expensify.com:8082/")
-    page.locator('input[type="email"]').fill(user_email)
-    page.locator('button[tabindex="0"]').click()
-    page.wait_for_timeout(1000)
-
-    try:
-        page.locator('button[tabindex="0"]').click()
-        page.wait_for_timeout(1000)
-    except Exception:
-        pass
-
-    expect(page.locator("text=What do you want to do today?")).to_be_visible()
-    page.wait_for_timeout(1000)
-
-    page.locator("text='Manage my team's expenses'").click()
-    page.get_by_role("button", name="Continue").click()
-    time.sleep(1)
-
-    return browser, page, user_email
+    return browser, context, page
 
 
+def login_user(page):
+    """
+    Login to the Expensify app and complete the onboarding.
+    """
+    # Open the Expensify app
+    page.goto(EXPENSIFY_URL)
 
-def create_profile(page: Page, first_name: str, last_name: str) -> None:
-    page.locator('input[name="fwork"]').fill("Turingg")
-    page.get_by_role("button", name="Continue").last.click()
-    time.sleep(1)
-
-    page.locator('input[name="fname"]').fill(first_name)
-    page.locator('input[name="lname"]').fill(last_name)
-    page.get_by_role("button", name="Continue").last.click()
-    page.wait_for_timeout(1000)
-
-
-
-def check_you(page: Page) -> None:
-    page.locator(
-        'button[aria-label="Start chat (Floating action)"][tabindex="0"]'
-    ).click()
-    time.sleep(1)
+    # Login user
+    page.get_by_role("textbox", name="Phone or email").fill(EMAIL_USERNAME)
+    page.locator("div", has_text="Continue").last.click()
+    
+    # Get the OTP code from the email
+    otp = "123456"
+    
+    # Enter the OTP code
+    page.keyboard.type(otp)
 
 
-    page.locator('div[aria-label="Start chat"][role="menuitem"]').click()
-    time.sleep(1)
-
-    you = page.locator('button[aria-label="Yagna Sai (you)"]')
-    assert you.is_visible()
-
-
-@pytest.mark.parametrize("first_name, last_name", [("Yagna", "Sai")])
-def test_run(first_name: str, last_name: str) -> None:
-    with sync_playwright() as playwright:
-        browser, page, user_email = login_user(playwright, first_name, last_name)
-        context = page.context
-
+def test_52198():
+    with sync_playwright() as p:
+        # Step 1: Login user
+        browser, context, page = launch_browser(p)
+        
+        # Start tracing
         context.tracing.start(screenshots=True, snapshots=True, sources=True)
-        error = None
+        
+        trace_file = "/app/expensify/user_tool/output_browser1.zip"
         try:
-            create_profile(page, first_name, last_name)
-            check_you(page)
-        except Exception as e:
-            error = e
+            login_user(page)
+            page.wait_for_timeout(5000)
+        
+            # Step 2: Reintroduce scenario
+            # Define the locators
+            locator1 = page.locator("div").filter(has_text=re.compile(r"^\.expensify-app-icon_svg__st1\{fill:#002e22\}DEV/Inbox$")).first
+            locator2 = page.get_by_test_id("2721644976521748")
+            
+            # Get bounding boxes
+            box1 = locator1.bounding_box()
+            box2 = locator2.bounding_box()
+            
+            # Ensure both elements exist
+            assert box1 is not None and box2 is not None, "One or both elements were not found on the page."
+            
+            # Calculate space between elements
+            bottom_of_locator1 = box1["y"] + box1["height"]
+            top_of_locator2 = box2["y"]
+            
+            # Compute the gap
+            gap = top_of_locator2 - bottom_of_locator1
+            
+            # Step 3: Check if the issue is resolved
+            assert gap == 12, f"Expected gap to be 12px but found {gap}px."
         finally:
-
-            context.tracing.stop(path="/app/expensify/user_tool/output_browser1.zip")
-
-            trace_cleaner("/app/expensify/user_tool/output_browser1.zip")
+            # Stop the tracing and export the trace file
+            context.tracing.stop(path=trace_file)
+            
+            # Clean the trace file
+            trace_cleaner(trace_file)
+            
+            # Close browser
             browser.close()
-        if error:
-            raise error
 
 
 if __name__ == "__main__":
-    pytest.main([__file__])
+    test_52198()

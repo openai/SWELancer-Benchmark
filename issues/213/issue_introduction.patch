@@ -1,13 +1,51 @@
-diff --git a/src/pages/iou/request/step/IOURequestStepConfirmation.tsx b/src/pages/iou/request/step/IOURequestStepConfirmation.tsx
-index b08f9a6ced5..7effeba5b24 100644
---- a/src/pages/iou/request/step/IOURequestStepConfirmation.tsx
-+++ b/src/pages/iou/request/step/IOURequestStepConfirmation.tsx
-@@ -635,7 +635,7 @@ function IOURequestStepConfirmation({
-                         shouldShowSmartScanFields={isMovingTransactionFromTrackExpense ? transaction?.amount !== 0 : requestType !== CONST.IOU.REQUEST_TYPE.SCAN}
-                         action={action}
-                         payeePersonalDetails={payeePersonalDetails}
--                        shouldPlaySound={false}
-+                        shouldPlaySound={!gpsRequired}
-                         isConfirmed={isConfirmed}
-                     />
-                 </View>
+diff --git a/.npmrc b/.npmrc
+deleted file mode 100644
+index b6f27f13595..00000000000
+--- a/.npmrc
++++ /dev/null
+@@ -1 +0,0 @@
+-engine-strict=true
+diff --git a/src/components/Search/index.tsx b/src/components/Search/index.tsx
+index 9238488361b..a72ee95f3b7 100644
+--- a/src/components/Search/index.tsx
++++ b/src/components/Search/index.tsx
+@@ -1,4 +1,4 @@
+-import {useIsFocused, useNavigation} from '@react-navigation/native';
++import {useNavigation} from '@react-navigation/native';
+ import type {StackNavigationProp} from '@react-navigation/stack';
+ import React, {useCallback, useEffect, useMemo, useRef, useState} from 'react';
+ import {View} from 'react-native';
+@@ -21,7 +21,6 @@ import * as SearchActions from '@libs/actions/Search';
+ import * as DeviceCapabilities from '@libs/DeviceCapabilities';
+ import Log from '@libs/Log';
+ import memoize from '@libs/memoize';
+-import isSearchTopmostCentralPane from '@libs/Navigation/isSearchTopmostCentralPane';
+ import * as ReportUtils from '@libs/ReportUtils';
+ import * as SearchQueryUtils from '@libs/SearchQueryUtils';
+ import * as SearchUIUtils from '@libs/SearchUIUtils';
+@@ -94,7 +93,6 @@ function Search({queryJSON, onSearchListScroll, contentContainerStyle}: SearchPr
+     // eslint-disable-next-line rulesdir/prefer-shouldUseNarrowLayout-instead-of-isSmallScreenWidth
+     const {isSmallScreenWidth, isLargeScreenWidth} = useResponsiveLayout();
+     const navigation = useNavigation<StackNavigationProp<AuthScreensParamList>>();
+-    const isFocused = useIsFocused();
+     const lastSearchResultsRef = useRef<OnyxEntry<SearchResults>>();
+     const {setCurrentSearchHash, setSelectedTransactions, selectedTransactions, clearSelectedTransactions, setShouldShowStatusBarLoading, lastSearchType, setLastSearchType} =
+         useSearchContext();
+@@ -260,17 +258,6 @@ function Search({queryJSON, onSearchListScroll, contentContainerStyle}: SearchPr
+         turnOffMobileSelectionMode();
+     }, [isSearchResultsEmpty, prevIsSearchResultEmpty]);
+ 
+-    useEffect(
+-        () => () => {
+-            if (isSearchTopmostCentralPane()) {
+-                return;
+-            }
+-            clearSelectedTransactions();
+-            turnOffMobileSelectionMode();
+-        },
+-        [isFocused, clearSelectedTransactions],
+-    );
+-
+     if (shouldShowLoadingState) {
+         return (
+             <SearchRowSkeleton

@@ -1,94 +1,81 @@
-diff --git a/src/libs/actions/Policy/Policy.ts b/src/libs/actions/Policy/Policy.ts
-index 60cab178770..809b66dc92c 100644
---- a/src/libs/actions/Policy/Policy.ts
-+++ b/src/libs/actions/Policy/Policy.ts
-@@ -359,7 +359,6 @@ function deleteWorkspace(policyID: string, policyName: string) {
-         });
-     });
- 
--    const policy = getPolicy(policyID);
-     // Restore the old report stateNum and statusNum
-     const failureData: OnyxUpdate[] = [
-         {
-@@ -369,13 +368,6 @@ function deleteWorkspace(policyID: string, policyName: string) {
-                 errors: reimbursementAccount?.errors ?? null,
-             },
-         },
--        {
--            onyxMethod: Onyx.METHOD.MERGE,
--            key: `${ONYXKEYS.COLLECTION.POLICY}${policyID}`,
--            value: {
--                avatarURL: policy?.avatarURL,
--            },
--        },
-     ];
- 
-     reportsToArchive.forEach((report) => {
-diff --git a/src/pages/workspace/WorkspaceProfilePage.tsx b/src/pages/workspace/WorkspaceProfilePage.tsx
-index cbd43fd1752..8429f0a41d1 100644
---- a/src/pages/workspace/WorkspaceProfilePage.tsx
-+++ b/src/pages/workspace/WorkspaceProfilePage.tsx
-@@ -4,7 +4,7 @@ import React, {useCallback, useState} from 'react';
- import type {ImageStyle, StyleProp} from 'react-native';
- import {Image, StyleSheet, View} from 'react-native';
- import type {OnyxEntry} from 'react-native-onyx';
--import {useOnyx, withOnyx} from 'react-native-onyx';
+diff --git a/src/pages/settings/Profile/CustomStatus/StatusPage.tsx b/src/pages/settings/Profile/CustomStatus/StatusPage.tsx
+index c9858738906..26c2a909213 100644
+--- a/src/pages/settings/Profile/CustomStatus/StatusPage.tsx
++++ b/src/pages/settings/Profile/CustomStatus/StatusPage.tsx
+@@ -1,6 +1,7 @@
+ import React, {useCallback, useEffect, useMemo, useRef, useState} from 'react';
+ import {InteractionManager, View} from 'react-native';
+-import {useOnyx} from 'react-native-onyx';
++import type {OnyxEntry} from 'react-native-onyx';
 +import {withOnyx} from 'react-native-onyx';
- import Avatar from '@components/Avatar';
- import AvatarWithImagePicker from '@components/AvatarWithImagePicker';
- import Button from '@components/Button';
-@@ -55,8 +55,6 @@ function WorkspaceProfilePage({policyDraft, policy: policyProp, currencyList = {
-     const {activeWorkspaceID, setActiveWorkspaceID} = useActiveWorkspace();
-     const {canUseSpotnanaTravel} = usePermissions();
- 
--    const [currentUserAccountID = -1] = useOnyx(ONYXKEYS.SESSION, {selector: (session) => session?.accountID});
--
-     // When we create a new workspace, the policy prop will be empty on the first render. Therefore, we have to use policyDraft until policy has been set in Onyx.
-     const policy = policyDraft?.id ? policyDraft : policyProp;
-     const outputCurrency = policy?.outputCurrency ?? '';
-@@ -86,7 +84,6 @@ function WorkspaceProfilePage({policyDraft, policy: policyProp, currencyList = {
-             }),
-         );
-     const readOnly = !PolicyUtils.isPolicyAdmin(policy);
--    const isOwner = PolicyUtils.isPolicyOwner(policy, currentUserAccountID);
-     const imageStyle: StyleProp<ImageStyle> = shouldUseNarrowLayout ? [styles.mhv12, styles.mhn5, styles.mbn5] : [styles.mhv8, styles.mhn8, styles.mbn5];
-     const shouldShowAddress = !readOnly || formattedAddress;
- 
-@@ -272,15 +269,15 @@ function WorkspaceProfilePage({policyDraft, policy: policyProp, currencyList = {
-                                     onPress={onPressShare}
-                                     icon={Expensicons.QrCode}
-                                 />
--                                {isOwner && (
--                                    <Button
--                                        accessibilityLabel={translate('common.delete')}
--                                        text={translate('common.delete')}
--                                        style={[styles.ml2]}
--                                        onPress={() => setIsDeleteModalOpen(true)}
--                                        icon={Expensicons.Trashcan}
--                                    />
--                                )}
+ import type {ValueOf} from 'type-fest';
+ import EmojiPickerButtonDropdown from '@components/EmojiPicker/EmojiPickerButtonDropdown';
+ import FormProvider from '@components/Form/FormProvider';
+@@ -14,8 +15,9 @@ import MenuItemWithTopDescription from '@components/MenuItemWithTopDescription';
+ import ScreenWrapper from '@components/ScreenWrapper';
+ import Text from '@components/Text';
+ import TextInput from '@components/TextInput';
++import type {WithCurrentUserPersonalDetailsProps} from '@components/withCurrentUserPersonalDetails';
++import withCurrentUserPersonalDetails from '@components/withCurrentUserPersonalDetails';
+ import useAutoFocusInput from '@hooks/useAutoFocusInput';
+-import useCurrentUserPersonalDetails from '@hooks/useCurrentUserPersonalDetails';
+ import useLocalize from '@hooks/useLocalize';
+ import useStyleUtils from '@hooks/useStyleUtils';
+ import useTheme from '@hooks/useTheme';
+@@ -28,16 +30,21 @@ import ONYXKEYS from '@src/ONYXKEYS';
+ import ROUTES from '@src/ROUTES';
+ import SCREENS from '@src/SCREENS';
+ import INPUT_IDS from '@src/types/form/SettingsStatusSetForm';
++import type {CustomStatusDraft} from '@src/types/onyx';
 +
-+                                <Button
-+                                    accessibilityLabel={translate('common.delete')}
-+                                    text={translate('common.delete')}
-+                                    style={[styles.ml2]}
-+                                    onPress={() => setIsDeleteModalOpen(true)}
-+                                    medium
-+                                    icon={Expensicons.Trashcan}
-+                                />
-                             </View>
-                         )}
-                     </Section>
-diff --git a/src/pages/workspace/WorkspacesListPage.tsx b/src/pages/workspace/WorkspacesListPage.tsx
-index 1dd3ee4a74d..90aee403380 100755
---- a/src/pages/workspace/WorkspacesListPage.tsx
-+++ b/src/pages/workspace/WorkspacesListPage.tsx
-@@ -146,7 +146,7 @@ function WorkspacesListPage() {
-             // In such cases, let us use the available chat report ids from the policy.
-             const threeDotsMenuItems: PopoverMenuItem[] = [];
++type StatusPageOnyxProps = {
++    draftStatus: OnyxEntry<CustomStatusDraft>;
++};
++
++type StatusPageProps = StatusPageOnyxProps & WithCurrentUserPersonalDetailsProps;
  
--            if (isOwner) {
-+            if (isAdmin) {
-                 threeDotsMenuItems.push({
-                     icon: Expensicons.Trashcan,
-                     text: translate('workspace.common.delete'),
+ const initialEmoji = '💬';
+ 
+-function StatusPage() {
++function StatusPage({draftStatus, currentUserPersonalDetails}: StatusPageProps) {
+     const theme = useTheme();
+     const styles = useThemeStyles();
+     const StyleUtils = useStyleUtils();
+     const {translate} = useLocalize();
+-    const [draftStatus] = useOnyx(ONYXKEYS.CUSTOM_STATUS_DRAFT);
+-    const currentUserPersonalDetails = useCurrentUserPersonalDetails();
+     const formRef = useRef<FormRef>(null);
+     const [brickRoadIndicator, setBrickRoadIndicator] = useState<ValueOf<typeof CONST.BRICK_ROAD_INDICATOR_STATUS>>();
+     const currentUserEmojiCode = currentUserPersonalDetails?.status?.emojiCode ?? '';
+@@ -90,9 +97,6 @@ function StatusPage() {
+     const navigateBackToPreviousScreen = useCallback(() => Navigation.goBack(), []);
+     const updateStatus = useCallback(
+         ({emojiCode, statusText}: FormOnyxValues<typeof ONYXKEYS.FORMS.SETTINGS_STATUS_SET_FORM>) => {
+-            if (navigateBackToPreviousScreenTask.current) {
+-                return;
+-            }
+             // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing
+             const clearAfterTime = draftClearAfter || currentUserClearAfter || CONST.CUSTOM_STATUS_TYPES.NEVER;
+             const isValid = DateUtils.isTimeAtLeastOneMinuteInFuture({dateTimeString: clearAfterTime});
+@@ -114,9 +118,6 @@ function StatusPage() {
+     );
+ 
+     const clearStatus = () => {
+-        if (navigateBackToPreviousScreenTask.current) {
+-            return;
+-        }
+         User.clearCustomStatus();
+         User.updateDraftCustomStatus({
+             text: '',
+@@ -228,4 +229,10 @@ function StatusPage() {
+ 
+ StatusPage.displayName = 'StatusPage';
+ 
+-export default StatusPage;
++export default withCurrentUserPersonalDetails(
++    withOnyx<StatusPageProps, StatusPageOnyxProps>({
++        draftStatus: {
++            key: () => ONYXKEYS.CUSTOM_STATUS_DRAFT,
++        },
++    })(StatusPage),
++);

@@ -1,0 +1,59 @@
+diff --git a/src/pages/workspace/tags/WorkspaceTagsPage.tsx b/src/pages/workspace/tags/WorkspaceTagsPage.tsx
+index ffdfdead759..a8062a1b3d8 100644
+--- a/src/pages/workspace/tags/WorkspaceTagsPage.tsx
++++ b/src/pages/workspace/tags/WorkspaceTagsPage.tsx
+@@ -292,8 +292,7 @@ function WorkspaceTagsPage({route}: WorkspaceTagsPageProps) {
+         );
+     };
+ 
+-    const hasVisibleTags = tagList.some((tag) => tag.pendingAction !== CONST.RED_BRICK_ROAD_PENDING_ACTION.DELETE || isOffline);
+-
++    
+     const threeDotsMenuItems = useMemo(() => {
+         const menuItems: PopoverMenuItem[] = [
+             {
+@@ -309,7 +308,7 @@ function WorkspaceTagsPage({route}: WorkspaceTagsPageProps) {
+             },
+         ];
+ 
+-        if (hasVisibleTags) {
++        if (tagList.length !== 0) {
+             menuItems.push({
+                 icon: Expensicons.Download,
+                 text: translate('spreadsheet.downloadCSV'),
+@@ -328,7 +327,7 @@ function WorkspaceTagsPage({route}: WorkspaceTagsPageProps) {
+         }
+ 
+         return menuItems;
+-    }, [translate, hasVisibleTags, isOffline, policyID]);
++    }, [translate, tagList, isOffline, policyID]);
+ 
+     const getHeaderText = () => (
+         <View style={[styles.ph5, styles.pb5, styles.pt3, shouldUseNarrowLayout ? styles.workspaceSectionMobile : styles.workspaceSection]}>
+@@ -393,7 +392,7 @@ function WorkspaceTagsPage({route}: WorkspaceTagsPageProps) {
+                     cancelText={translate('common.cancel')}
+                     danger
+                 />
+-                {(!shouldUseNarrowLayout || !hasVisibleTags || isLoading) && getHeaderText()}
++                {(!shouldUseNarrowLayout || tagList.length === 0 || isLoading) && getHeaderText()}
+                 {isLoading && (
+                     <ActivityIndicator
+                         size={CONST.ACTIVITY_INDICATOR_SIZE.LARGE}
+@@ -401,7 +400,7 @@ function WorkspaceTagsPage({route}: WorkspaceTagsPageProps) {
+                         color={theme.spinner}
+                     />
+                 )}
+-                {!hasVisibleTags && !isLoading && (
++                {tagList.length === 0 && !isLoading && (
+                     <EmptyStateComponent
+                         SkeletonComponent={TableListItemSkeleton}
+                         headerMediaType={CONST.EMPTY_STATE_MEDIA.ANIMATION}
+@@ -413,7 +412,7 @@ function WorkspaceTagsPage({route}: WorkspaceTagsPageProps) {
+                         headerContentStyles={styles.emptyStateFolderWebStyles}
+                     />
+                 )}
+-                {hasVisibleTags && !isLoading && (
++                {tagList.length !== 0 && !isLoading && (
+                     <SelectionListWithModal
+                         canSelectMultiple={canSelectMultiple}
+                         turnOnSelectionModeOnLongPress={!isMultiLevelTags}

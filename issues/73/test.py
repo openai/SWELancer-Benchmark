@@ -1,243 +1,241 @@
-import sys, os
-
-base_path = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
-sys.path.insert(0, base_path)
-
-import re
-import time
-import email
-import pytest
+import os
 import random
-import imaplib
-from playwright._impl._page import Page
-from playwright.sync_api import sync_playwright, expect
+import string
+
+import pytest
+from playwright.async_api import Page, TimeoutError, async_playwright, expect
+
+EMAIL_USERNAME = "xecuycismfsga"
+EMAIL_ALIAS = "vuha2kun"
+USER_EMAIL = f"{EMAIL_USERNAME}+{EMAIL_ALIAS}@gmail.com"
+PASSWORD = "uwgb zzoc cofa kaaq"
+SLOW_MO: int | None = 500
+PROXY_URL = os.getenv("PROXY_URL")
+WORKSPACE_NAME = "5jvnxtxT"
 
 
-BASE_EMAIL = "testerfreelancer555+28943@gmail.com"
-PASSWORD = "snct ajbr yadx kwlq"
+async def get_magic_code(
+    page: Page, user_email: str = USER_EMAIL, password: str = PASSWORD
+):
+    return "123456"
 
 
-class EmailHandler:
-    def __init__(self, email_address, password):
+async def create_user(page: Page, firstname: str = "User", lastname: str = EMAIL_ALIAS):
+    await page.get_by_role("button", name="Join").click()
 
-        if not self._validate_email(email_address):
-            raise ValueError("Invalid email address format.")
-        self.original_email = email_address
-        self.password = password
-
-
-        random_suffix = random.randint(1000, 9999)
-        current_timestamp = int(time.time())
-        random_suffix = f"{current_timestamp}{random_suffix}"
-        self.new_email = self._generate_new_email(email_address, random_suffix)
-
-    def _validate_email(self, email_address):
-
-        return bool(re.match(r"[^@]+@[^@]+\.[^@]+", email_address))
-
-    def _generate_new_email(self, email_address, suffix):
-
-        username, domain = "testerfreelancer@gmail.com".split('@')
-        return f"{username}+{suffix}@{domain}"
-
-    def get_new_email_address(self):
-
-        return self.new_email
-
-    def get_email_address(self):
-
-        return self.original_email
-
-    def check_for_otp(self, page, target=False):
-
-        if not target:
-            target = self.original_email
-        try:
-            tries = 1
-            limit_tries = 5
-            while tries <= limit_tries:
-                mail = imaplib.IMAP4_SSL("imap.gmail.com")
-                mail.login(self.original_email, self.password)
-                mail.select("inbox")
+    # Update profile
+    await page.get_by_text("Track and budget expenses").click()
+    await page.get_by_role("textbox", name="First name").fill(firstname)
+    await page.get_by_role("textbox", name="Last name").fill(lastname)
+    await page.get_by_role("button", name="Continue").click()
 
 
-                status, messages = mail.search(None, "UNSEEN")
-                if status != "OK":
-                    print("No unread emails found.")
+async def login(page: Page):
+    # get current timestamp
+    magic_code = await get_magic_code(page)
 
-                email_ids = messages[0].split()
+    if magic_code is None:
+        raise ValueError("Failed to retrieve magic code")
 
-                email_ids = email_ids[::-1]  # Reverse order to process latest first
-
-
-                for email_id in email_ids:
-
-                    status, msg_data = mail.fetch(email_id, '(RFC822)')
-                    if status != "OK":
-                        print("Error fetching email.")
-                        continue
-
-                    for response_part in msg_data:
-                        if isinstance(response_part, tuple):
-                            msg = email.message_from_bytes(response_part[1])
+    await page.get_by_role("textbox").fill(magic_code)
 
 
-                            if msg["To"] == target:
+async def login_or_create_user(
+    page: Page,
+    firstname: str = "User",
+    lastname: str = EMAIL_ALIAS,
+    user_email: str = USER_EMAIL,
+):
+    await page.goto("https://dev.new.expensify.com:8082/")
+    await page.get_by_test_id("username").fill(user_email)
+    await page.get_by_role("button", name="Continue").click()
 
-                                otp_code = self._extract_otp_from_email(msg)
-                                if otp_code:
+    try:
+        await page.get_by_role("button", name="Join").wait_for(
+            state="visible", timeout=2000
+        )
+        await create_user(page, firstname=firstname, lastname=lastname)
+    except TimeoutError:
+        await login(page)
 
-                                    mail.store(email_id, '+FLAGS', '\\Deleted')
-                                    mail.expunge()  # Permanently removes deleted emails from the mailbox
-
-
-                                    mail.close()
-                                    mail.logout()
-                                    return otp_code
-                tries += 1
-                page.wait_for_timeout(1000)
-
-
-            mail.close()
-            mail.logout()
-            print("No OTP found in unread emails.")
-            return None
-
-        except imaplib.IMAP4.error as error:
-            print(error)
-            print("Failed to connect to Gmail. Please check your email address or password.")
-            return None
-
-    def _extract_otp_from_email(self, msg):
-
-        if msg.is_multipart():
-            for part in msg.walk():
-                if part.get_content_type() == "text/plain":
-                    email_body = part.get_payload(decode=True).decode()
-                    otp_code = self._extract_otp(email_body)
-                    if otp_code:
-                        return otp_code
-        else:
-            email_body = msg.get_payload(decode=True).decode()
-            otp_code = self._extract_otp(email_body)
-            if otp_code:
-                return otp_code
-        return None
-
-    def _extract_otp(self, text):
-
-        match = re.search(r"\b\d{6}\b", text)
-        return match.group(0) if match else None
-
-    def clear_inbox(self):
-        """
-        Delete all existing messages from the Inbox.
-        """
-        print("Deleting all existing messages from the email inbox")
-        with imaplib.IMAP4_SSL(host="imap.gmail.com") as imap:
-            imap.login(self.original_email, self.password)
-            imap.select("inbox")
-            imap.store("1:*", "+FLAGS", "\\Deleted")
-            imap.expunge()
-            imap.close()
+    await page.get_by_label("Inbox").wait_for(state="visible", timeout=10000)
 
 
-@pytest.fixture
-def setup_playwright():
+async def create_workspace(page: Page, workspace_name: str = WORKSPACE_NAME):
+    """
+    Create a workspace if it does not already exist
+    """
+    await page.get_by_label("My settings").click()
+    await page.get_by_test_id("InitialSettingsPage").get_by_label("Workspaces").click()
 
-    playwright = sync_playwright().start()
-    browser = playwright.chromium.launch(
-        headless=True, args=["--ignore-certificate-errors", '--disable-web-security',
-        '--disable-features=IsolateOrigins,site-per-process']
+    try:
+        await (
+            page.locator('button[aria-label="row"]')
+            .filter(has_text=workspace_name)
+            .last.click(timeout=3000)
+        )
+    except TimeoutError:
+        await page.get_by_label("New workspace").last.click()
+
+        await (
+            page.get_by_test_id("WorkspacePageWithSections")
+            .get_by_text("Workspace name", exact=True)
+            .click()
+        )
+        name_input = page.get_by_role("textbox", name="Name")
+        await name_input.clear()
+        await name_input.type(workspace_name, delay=200)
+        await page.get_by_role("button", name="Save").click()
+
+
+def generate_random_string(length: int = 8) -> str:
+    return "".join(random.choices(string.ascii_letters + string.digits, k=length))
+
+
+def generate_random_number(minimum=1, maximum=1000):
+    return random.randint(minimum, maximum)
+
+
+async def submit_expense(page: Page, workspace_name: str = WORKSPACE_NAME):
+    workspace_chat = (
+        page.get_by_text("Submit expenses using your workspace chat below:")
+        .locator("xpath=following-sibling::div[1]")
+        .get_by_label(workspace_name)
     )
-    context = browser.new_context()
-    yield context  # Yield the page object to the test function
-    browser.close()
-    playwright.stop()
+    await workspace_chat.click()
+
+    await page.get_by_label("Create").last.click()
+    await page.get_by_text("Submit expense", exact=True).click()
+    await page.get_by_label("Manual").click()
+    await page.get_by_placeholder("0").fill(str(generate_random_number()))
+    await (
+        page.locator("#numPadContainerView").get_by_role("button", name="Next").click()
+    )
+    await page.get_by_label("Show more").click()
+    await page.get_by_text("Tax exempt (0%)").wait_for(state="visible", timeout=3000)
+
+    await page.get_by_role("menuitem", name="Category").click()
+    await page.get_by_label("Advertising").click()
+    await expect(page.get_by_text("Tax Rate A (5.5%)")).to_be_visible()
 
 
-
-def login_user(page: Page, account: EmailHandler):
-
-    user_email = account.get_email_address()
-    page.goto("https://dev.new.expensify.com:8082/")
-    account.clear_inbox()
-    page.locator('input[type="email"]').fill(user_email)
-    page.locator('button[tabindex="0"]').click()
-
-    try:
-        expect(page.get_by_role("button", name="Sign in")).to_be_visible()
-        page.get_by_test_id("validateCode").fill("123456")
-    except Exception as error:
-        print(error)
-        page.get_by_role("button", name="Join").click()
+async def close_button_if_present(page: Page):
+    """
+    Occasionally, there is a close button that prevents any clicks on the page as
+    it covers most of the screen. This button cannot be seen visually.
+    """
+    close_button = page.locator('button[aria-label="Close"]')
+    if await close_button.is_visible():
+        await close_button.click()
 
 
-def create_a_new_workspace(page):
-
-    page.get_by_label("My settings").click()
-
-    page.get_by_test_id("InitialSettingsPage").get_by_label("Workspaces").get_by_text("Workspaces").click()
-
-    page.wait_for_timeout(
-        3000)  # Waiting the page to load because the loading page has two buttons which might cause an exception because none of them work
-    try:
-        page.get_by_label("New workspace").click()
-    except:
-        page.get_by_label("New workspace").first.click()  # In case there is no workspace yet
+async def enable_rules(page: Page):
+    await page.get_by_label("More features").click()
+    rules = page.get_by_label("Require receipts, flag high spend, and more.")
+    if not await rules.is_checked():
+        await rules.click()
 
     try:
-        return page.get_by_label("Test User's Workspace").inner_text().split('\n')[1]
-    except:
-        return page.get_by_label("Test User's Workspace").last.inner_text().split('\n')[1]
+        await page.get_by_role("button", name="Upgrade").click(timeout=3000)
+        await page.get_by_role("button", name="Got it, thanks").click()
+    except TimeoutError:
+        pass
 
 
-def access_target_workspace_chat(page, chat_name):
-    page.get_by_label("Back").first.click()
-    page.get_by_label("Inbox").click()
+async def enable_taxes(page: Page):
+    await page.get_by_label("More features").click()
+    taxes = page.get_by_role("switch", name="Document and reclaim eligible")
+
+    if not await taxes.is_checked():
+        await taxes.click()
+
+
+def generate_locator_id(name: str) -> str:
+    # Remove any leading/trailing whitespace and replace internal spaces with underscores
+    cleaned_name = name.strip().replace(" ", "_")
+    # Convert to uppercase
+    return f"#id_{cleaned_name.upper()}"
+
+
+async def add_tax_rate(page: Page, name: str, amount: float):
     try:
-        expect(page.locator("#root")).not_to_contain_text("Say hello!")
-        expect(page.get_by_label("Chat welcome message")).not_to_contain_text("Welcome to #admins!")
-        page.get_by_test_id("DisplayNamesWithTooltip").filter(has_text=re.compile(rf"^{chat_name}$")).last.click()
-    except:
-        page.get_by_test_id("DisplayNamesWithTooltip").filter(has_text=re.compile(rf"^{chat_name}$")).first.click()
+        await page.locator(generate_locator_id(name)).wait_for(
+            state="visible", timeout=2000
+        )
+    except TimeoutError:
+        await page.get_by_role("button", name="Add rate").click()
+        await page.get_by_role("menuitem", name="Name Required").click()
+        await page.get_by_role("textbox", name="Name").fill(name)
+        await (
+            page.get_by_test_id("TextSelectorModal")
+            .get_by_role("button", name="Save")
+            .click()
+        )
+        await page.get_by_role("menuitem", name="Value Required").click()
+        await page.get_by_role("textbox", name="0").fill(str(amount))
+        await (
+            page.get_by_test_id("AmountSelectorModal")
+            .get_by_role("button", name="Save")
+            .click()
+        )
+        await page.get_by_role("button", name="Save").click()
 
 
-def submit_invalid_expense(page):
-    page.get_by_label("Create").last.click()
-    page.get_by_text("Submit expense", exact=True).click()
-    page.get_by_label("Distance").click()
-    page.get_by_test_id("IOURequestStartPage").get_by_role("button", name="Start").click()
-    page.get_by_test_id("IOURequestStepWaypoint").get_by_role("textbox").fill("abc")  # Inputting invalid location
-    page.get_by_role("button", name="Save").click()
-    page.get_by_role("button", name="Stop").click()
-    page.get_by_test_id("IOURequestStepWaypoint").get_by_role("textbox").fill("def")  # Inputting invalid location
-    page.get_by_role("button", name="Save").click()
-    page.get_by_role("button", name="Next").nth(1).click()
-    page.get_by_role("button", name="Submit expense").click()
+async def add_new_tax_rates(page: Page):
+    await page.get_by_role("menuitem", name="Taxes").click()
+
+    rates = {"Tax Rate A": 5.5, "Tax Rate B": 7.2}
+
+    for name, amount in rates.items():
+        await add_tax_rate(page, name, amount)
 
 
-@pytest.mark.parametrize("first_name, last_name", [("Test", "User")])
-def test_selected_highlight(setup_playwright, first_name, last_name):
-    context = setup_playwright
-    account = EmailHandler(email_address=BASE_EMAIL, password=PASSWORD)
-    user_email = account.get_email_address()
+async def add_rate_to_category(page: Page):
+    await page.get_by_role("menuitem", name="Categories").click()
+
+    await page.locator("#Advertising").click()
+    await page.get_by_text("Default tax rate").click()
+    await page.get_by_role("button", name="Tax Rate A • 5.5%").click()
+    await (
+        page.get_by_test_id("CategorySettingsPage")
+        .get_by_role("button", name="Back")
+        .click()
+    )
 
 
-    page = context.new_page()
-    login_user(page, account)
+@pytest.mark.asyncio(scope="session")
+async def test_scroll_to_comments():
+    async with async_playwright() as p:
+        browser = await p.chromium.launch(
+            proxy={"server": "http://localhost:8080"},
+            headless=False,
+            args=[
+                "--no-sandbox",
+                "--disable-dev-shm-usage",
+                "--ignore-certificate-errors",
+                "--disable-web-security",
+                "--disable-features=IsolateOrigins,site-per-process",
+            ],
+            slow_mo=SLOW_MO,
+            channel="chromium",
+        )
+        context = await browser.new_context()
+        page = await context.new_page()
 
+        # admin login
+        await login_or_create_user(page)
+        await close_button_if_present(page)
 
-    workspace_name = create_a_new_workspace(page)
+        await create_workspace(page)
 
+        await enable_rules(page)
+        await enable_taxes(page)
+        await add_new_tax_rates(page)
+        await add_rate_to_category(page)
 
-    access_target_workspace_chat(page, workspace_name)
+        await submit_expense(page)
 
-
-    page.get_by_label("Test User's Workspace").click()
-
-    page.get_by_test_id("ReportDetailsPage").get_by_text("Settings").click()
-
-    page.get_by_text("Notify me about new messages").click()
-    selected_option = page.get_by_test_id("selection-list").get_by_label("Immediately")
-    expect(selected_option).to_have_css("background-color", "rgba(0, 0, 0, 0)")
+        # Close all tabs and browser
+        await page.close()
+        await context.close()
+        await browser.close()

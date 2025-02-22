@@ -1,107 +1,83 @@
-import sys, os
-
-base_path = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
-sys.path.insert(0, base_path)
-
-import pytest
-from playwright.sync_api import sync_playwright, expect
-from playwright.sync_api._context_manager import PlaywrightContextManager
-from playwright._impl._browser import Browser
-from playwright._impl._page import Page
-
-EMAIL = "t1533148@gmail.com" # for example test+1234@gmail.com
-PASSWORD = "logb hzkg pkfk kskg" # it will be something like "sdib pxop ovyl uawy"
+import time
+import re
+from playwright.sync_api import sync_playwright, expect, Page
 
 
+def get_test_user_info(seed=None, first_name=None, last_name=None):
+    if first_name is None:
+        first_name = "D"
 
-def signup_user(page, user_email, first_name, last_name) -> tuple[Page, str, str, str]:
-    page.goto('https://127.0.0.1:8082/')
-    page.locator('input[type="email"]').fill(user_email)
-    page.locator('button[tabindex="0"]').click()
-    page.wait_for_timeout(2000)
+    if last_name is None:
+        last_name = "C"
+
+    if seed is None:
+        seed = time.time()
+    email = f"{seed}@e.co"
     
-    otp = '123456'
-    page.locator('input[name="validateCode"]').fill(otp)
-    page.wait_for_timeout(2000)
-
-        
-
-def run_test(page: Page) -> None:
-    page.get_by_label("Start chat (Floating action)").click()
-    page.wait_for_timeout(1000)
-    page.get_by_text("Start chat").click()
-    page.wait_for_timeout(1000)
-    page.get_by_test_id("selection-list-text-input").fill("a@a.com")
-    page.wait_for_timeout(1000)
-    page.get_by_role("button", name="Add to group").click()
-    page.wait_for_timeout(1000)
-    page.get_by_role("button", name="Next").click()
-    page.wait_for_timeout(1000)
-    page.get_by_role("button", name="Start group").click()
-    page.wait_for_timeout(1000)
-    page.get_by_role("textbox").fill("Hello message 1")
-    page.wait_for_timeout(3000)
-    page.get_by_label("Send").click()
-    page.wait_for_timeout(3000)
-    page.get_by_role("textbox").fill("Hello message 2")
-    page.wait_for_timeout(1000)
-    page.get_by_label("Send").click()
-    page.wait_for_timeout(2000)
+    return {
+        "email": email,
+        "first_name": first_name,
+        "last_name": last_name,
+    }
 
 
-    page.locator('button[aria-label*="Ak, Hidden"][role="button"]').nth(-1).click()
-    page.wait_for_timeout(3000)
-    page.get_by_label("Members").click()
-    page.wait_for_timeout(1000)
-    page.get_by_label("Hidden").nth(-1).click()
-    page.wait_for_timeout(1000)
-    page.get_by_role("button", name="Remove from group").click()
-    page.wait_for_timeout(1000)
-    page.get_by_role("button", name="Remove", exact=True).click()
-    page.wait_for_timeout(1000)
+def login_user(page: Page, user_info):
+    page.goto('https://dev.new.expensify.com:8082/')
+    page.wait_for_load_state('load')
+
+    page.get_by_test_id("username").fill(user_info["email"])
+    page.get_by_role("button", name="Continue").click()
+    page.get_by_role("button", name="Join").click()
 
 
-    page.get_by_test_id("ReportParticipantsPage").get_by_label("Back").click()
-    page.wait_for_timeout(1000)
-    page.get_by_label("Leave").click()
-    page.wait_for_timeout(1000)
-    page.get_by_role("button", name="Leave").click()
-    page.wait_for_timeout(1000)
-    page.get_by_role("button", name="Back", exact=True).click()
+def onboarding_user(page: Page, user_info: dict[str, str]):
+    expect(page.get_by_text("What do you want to do today?")).to_be_visible(timeout=30000)
+    
+    # Select 'Track and budget expenses' in onboarding page and click Continue
+    activity_text = "Track and budget expenses"
+    page.get_by_label(activity_text).click()
+    page.get_by_role("button", name="Continue").click()
 
-    page.wait_for_timeout(3000)
-
-    is_main_page_visible = bool(page.get_by_label("Workspaces").is_visible())
-
-
-    is_error_visible = page.locator("text=Hmm... it's not hereYou don't").is_visible()
-    if (is_error_visible):
-        raise AssertionError("Error message was visible, test failed.")
-    elif (is_main_page_visible!=True):
-        raise AssertionError("Screen is loading for too long.")
-    else:
-        print("Test passed: Error message was not visible.")
+    # Enter first name, last name and click continue
+    page.get_by_role("textbox", name="First name").fill(user_info["first_name"])
+    page.get_by_role("textbox", name="Last name").fill(user_info["last_name"])
+    page.get_by_role("button", name="Continue").last.click()
 
 
-@pytest.mark.parametrize("first_name, last_name", [("AK", "Test")])
-def test_expensify(first_name: str, last_name: str) -> None:
+def test_issue_51028():
     with sync_playwright() as p:
-        browser = p.chromium.launch(channel='chrome', headless=True, slow_mo=1000,
-            proxy = {"server": "http://127.0.0.1:8080/"},
-            args=[
-            "--ignore-certificate-errors",
-            "--disable-web-security", 
-            "--disable-features=IsolateOrigins,site-per-process"
-        ])
-        context_args = {}
-        context_args["geolocation"] = {"latitude": 37.7749, "longitude": 122.4194}
-        context_args["permissions"] = ["geolocation"]
-        context_args["viewport"] = {"width": 375, "height": 550}
-        context_args["ignore_https_errors"] = True
-
-        context = browser.new_context(**context_args)
+        # Launch chromium in mobile emulation (Android) mode
+        browser = p.chromium.launch(headless = False, args = ["--no-sandbox", "--disable-dev-shm-usage", "--ignore-certificate-errors", "--disable-web-security", "--disable-features=IsolateOrigins,site-per-process"], channel = "chromium")
+        
+        # Ensure context uses device emulation
+        context = browser.new_context()
+        
         page = context.new_page()
-        signup_user(page, EMAIL, first_name, last_name)
-        run_test(page)
 
+        user_info = get_test_user_info(seed=123456, first_name="Alice")
+        
+        # Login
+        login_user(page, user_info)
+        onboarding_user(page, user_info)
+        
+        # Search and filter functionality
+        page.get_by_label("Search").click()
+        page.get_by_role("button", name="Filters").click()
+        page.get_by_text("Report ID").click()
+        page.get_by_role("textbox", name="Report ID").fill("1234")
+        page.get_by_role("button", name="Save").click()
+        page.get_by_role("button", name="Save search").click()
+        
+        # Navigate to saved searches and delete one
+        page.get_by_label("More").click()
+        page.get_by_test_id("SearchPageBottomTab").get_by_text("Saved").click()
+        page.get_by_label("More").click()
+        page.get_by_text("Delete").click()
+        page.get_by_role("button", name="Delete").click()
+        
+        # Verify that the saved search is not visible anymore
+        assert not (page.get_by_text("Saved")).is_visible(), "The saved text appears for a couple of seconds after the filter was deleted"
+
+        # ---------------------
+        context.close()
         browser.close()

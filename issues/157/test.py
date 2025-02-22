@@ -1,216 +1,165 @@
-import sys, os
-
-base_path = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
-sys.path.insert(0, base_path)
-
-import re
+import os
 import random
+import re
 import string
 
-from imaplib import IMAP4_SSL
-import email
-from email.header import decode_header
+import pytest
+from playwright.async_api import Page, TimeoutError, async_playwright
 
-from playwright.sync_api import sync_playwright, expect, Browser, Page
-from playwright.sync_api._context_manager import PlaywrightContextManager
-
-
-URL = "https://dev.new.expensify.com:8082/"
-
-IMAP_SERVER = "imap.gmail.com"
-MAX_TRIES = 2
-
-USERNAME = "doorsqueaky@gmail.com"
-PASSWORD = "eabcahqraatorpvt"
+EMAIL_USERNAME = "xecuycismfsga"
+EMAIL_ALIAS = "l3rb8ruz"
+USER_EMAIL = f"{EMAIL_USERNAME}+{EMAIL_ALIAS}@gmail.com"
+PASSWORD = "uwgb zzoc cofa kaaq"
+SLOW_MO: int | None = 500
+PROXY_URL = os.getenv("PROXY_URL")
 
 
-def login_to_email(email: str=USERNAME, password: str=PASSWORD):
+def generate_random_string(length=6, case="lower"):
+    if case == "lower":
+        characters = string.ascii_lowercase
+    elif case == "upper":
+        characters = string.ascii_uppercase
+    elif case == "mixed":
+        characters = string.ascii_letters
+    else:
+        raise ValueError("Case must be 'lower', 'upper', or 'mixed'")
 
-    imap = IMAP4_SSL(IMAP_SERVER)
-    imap.LOGIN(email, password)
-
-    return imap
-
-
-def logout_email(imap: IMAP4_SSL):
-    imap.logout()
-
-
-def clear_inbox(imap: IMAP4_SSL):
-
-    imap.select("inbox")
-
-
-    status, messages = imap.search(None, 'ALL')
-
-
-    email_ids = messages[0].split()
-
-
-    for email_id in email_ids:
-
-        imap.store(email_id, "+FLAGS", "\\Deleted")
-
-
-    imap.expunge()
-
-
-def generate_random_string(length: int) -> str:
-
-    random_string = ''.join(random.choice(string.ascii_letters) for i in range(length))
+    random_string = "".join(random.choice(characters) for _ in range(length))
     return random_string
 
 
-def get_otp(imap: IMAP4_SSL):
-
-    imap.select("inbox")  # Use "inbox" or other folder name
-    
-
-    status, messages = imap.search(None, 'ALL')
+async def get_magic_code(
+    page: Page, user_email: str = USER_EMAIL, password: str = PASSWORD
+):
+    return "123456"
 
 
-    email_ids = messages[0].split()
+async def create_user(page: Page, firstname: str = "User", lastname: str = EMAIL_ALIAS):
+    await page.get_by_role("button", name="Join").click()
+
+    # Update profile
+    await page.get_by_text("Track and budget expenses").click()
+    await page.get_by_role("textbox", name="First name").fill(firstname)
+    await page.get_by_role("textbox", name="Last name").fill(lastname)
+    await page.get_by_role("button", name="Continue").click()
 
 
-    for email_id in email_ids:
+async def login(page: Page):
+    # get current timestamp
+    magic_code = await get_magic_code(page)
 
-        status, msg_data = imap.fetch(email_id, "(RFC822)")
+    if magic_code is None:
+        raise ValueError("Failed to retrieve magic code")
 
-
-        for response_part in msg_data:
-            if isinstance(response_part, tuple):
-                msg = email.message_from_bytes(response_part[1])
-
-
-                subject, encoding = decode_header(msg["Subject"])[0]
-                if isinstance(subject, bytes):
-                    subject = subject.decode(encoding if encoding else "utf-8")
-
-                r = re.search(r"Expensify magic sign-in code:.*", subject, re.IGNORECASE)
-                if not r:
-                    return
+    await page.get_by_role("textbox").fill(magic_code)
 
 
-                temp = subject.split(":")
-                otp_code = temp[-1].strip()
+async def login_or_create_user(
+    page: Page,
+    firstname: str = "User",
+    lastname: str = EMAIL_ALIAS,
+    user_email: str = USER_EMAIL,
+):
+    await page.goto("https://dev.new.expensify.com:8082/")
+    await page.get_by_test_id("username").fill(user_email)
+    await page.get_by_role("button", name="Continue").click()
 
-                return otp_code
+    try:
+        await page.get_by_role("button", name="Join").wait_for(
+            state="visible", timeout=2000
+        )
+        await create_user(page, firstname=firstname, lastname=lastname)
+    except TimeoutError:
+        await login(page)
 
-    return None
-
-
-def launch_app(pw: PlaywrightContextManager, headless: bool=False) -> tuple[Browser, Page]:
-    """
-    Launch the Expensify app.
-    """
-    browser = pw.chromium.launch(headless=headless, args=["--disable-web-security", "--disable-features=IsolateOrigins,site-per-process"])
-    page = browser.new_page()
-    return browser, page
-
-
-def login(page: Page, imap: IMAP4_SSL, email: str=USERNAME):
-    """
-    Login to the Expensify app and complete the onboarding.
-    """
-
-    page.goto(URL)
-    
-
-    page.get_by_role("textbox", name="Phone or email").fill(email)
-    page.locator("div:nth-child(3) > div:nth-child(2) > div > div").first.click()
-    
-
-    otp = None
-    tries = 0
-
-    while not otp and tries < MAX_TRIES:
-        otp = get_otp(imap)
-        tries += 1
-        page.wait_for_timeout(3000)
-
-    if not otp:
-        otp = "123456"
+    await page.get_by_label("Inbox").wait_for(state="visible", timeout=10000)
 
 
-    page.locator('input[name="validateCode"]').fill(otp) 
-    try: 
-        page.locator("div").filter(has_text=re.compile(r"^Sign in$")).nth(1).click(timeout=1000)
-    except:
-        pass
+@pytest.mark.asyncio
+async def test_search_bar_spacing():
+    async with async_playwright() as p:
+        browser = await p.chromium.launch(
+            proxy={"server": PROXY_URL} if PROXY_URL else None,
+            headless=False,
+            args=[
+                "--no-sandbox",
+                "--disable-dev-shm-usage",
+                "--ignore-certificate-errors",
+                "--disable-web-security",
+                "--disable-features=IsolateOrigins,site-per-process",
+            ],
+            slow_mo=SLOW_MO,
+        )
 
+        iphone = p.devices["iPhone 14"]
+        context = await browser.new_context(**iphone)
+        page = await context.new_page()
 
-def cleanup(browser: Browser, page: Page) -> None:
-    page.wait_for_timeout(1000)
-    browser.close()
+        email_alias = generate_random_string()
+        user_email = f"{EMAIL_USERNAME}+{email_alias}@gmail.com"
 
+        await login_or_create_user(page, lastname=email_alias, user_email=user_email)
 
-def create_workspace(page: Page) -> str:
+        try:
+            # Navigate back to LHN if inside Concierge chat
+            await page.get_by_text(
+                "Hey there, I'm Concierge! If you have any"
+            ).wait_for(state="visible", timeout=2000)
+            await page.get_by_label("Back").first.click()
+        except TimeoutError:
+            pass
 
-    page.locator('button[aria-label="My settings"]').click()
+        await page.get_by_label("Start chat (Floating action)").click()
+        await page.get_by_label("New workspace").click()
+        await page.go_back()
 
+        workspace_name = re.compile(r"User .*'s Workspace")
+        workspace_chat_button = page.locator(
+            'button[aria-label="Navigates to a chat"]', has_text=workspace_name
+        )
 
-    page.locator('div[aria-label="Workspaces"][role="menuitem"]').click()
-    page.locator('button[aria-label="New workspace"]').first.click()
+        await workspace_chat_button.wait_for(state="visible", timeout=3000)
+        workspace_box = await workspace_chat_button.bounding_box()
 
+        assert (
+            workspace_box is not None
+        ), f"Workspace chat button with text '{workspace_name}' has no bounding box."
 
-    page.locator(r'div[role="menuitem"]', has_text="Name").last.click()
+        personal_chat_button = page.locator(
+            'button[aria-label="Navigates to a chat"]',
+            has_text=re.compile(r"User .* (you)"),
+        )
 
+        await personal_chat_button.wait_for(state="visible", timeout=3000)
 
-    input_field = page.locator('input[aria-label="Name"]')
-    input_field.clear()
+        personal_chat_box = await personal_chat_button.bounding_box()
 
-    workspace_name = generate_random_string(3) + " Workspace"
-    input_field.fill(workspace_name)
-    page.get_by_role('button', name="Save").click()
+        assert (
+            personal_chat_box is not None
+        ), f"Personal chat button with text 'User {email_alias} (you)' has no bounding box."
 
+        assert (
+            workspace_box != personal_chat_box
+        ), "The bounding boxes of the workspace and personal chat buttons are the same."
 
-    page.locator('button[aria-label="Back"]').click()
-    page.locator('button[aria-label="Inbox"]').click()
+        concierge_chat_button = page.locator(
+            'button[aria-label="Navigates to a chat"]',
+            has_text="Concierge",
+        )
 
-    return workspace_name
+        await concierge_chat_button.wait_for(state="visible", timeout=3000)
 
+        concierge_chat_box = await concierge_chat_button.bounding_box()
 
-def switch_workspace(page: Page, workspace_name: str):
+        assert (
+            concierge_chat_box is not None
+        ), "Concierge chat button has no bounding box."
 
-    page.locator('button[aria-label="Workspaces"]').click()
-    page.locator(f'button[aria-label="{workspace_name}"]').last.click()
+        assert (
+            workspace_box != concierge_chat_box
+        ), "The bounding boxes of the workspace and concierge chat buttons are the same."
 
-
-    title_inbox = page.get_by_text("Inbox").first
-    inbox_parent = title_inbox.locator('..')
-    title_workspace = inbox_parent.filter(has_text=f"{workspace_name}")
-    expect(title_workspace).to_be_visible()
-
-
-def check_title_post_reload(page: Page, workspace_name: str):
-
-    page.reload()
-
-
-    title_inbox = page.get_by_text("Inbox").first
-    inbox_parent = title_inbox.locator('..')
-    title_workspace = inbox_parent.filter(has_text=f"{workspace_name}")
-    expect(title_workspace).to_be_visible()
-
-
-def test_workspace_switch_on_reload():
-    """
-    Demonstrate the Expensify app email login verification.
-    """
-    with sync_playwright() as pw:
-
-        browser, page = launch_app(pw)
-        imap = login_to_email()
-        clear_inbox(imap)
-        login(page, imap, USERNAME)
-
-        workspace_name = create_workspace(page)
-        switch_workspace(page, workspace_name)
-        check_title_post_reload(page, workspace_name)
-
-
-        cleanup(browser, page)
-        logout_email(imap)
-
-
-
+        # Close all tabs and browser
+        await page.close()
+        await context.close()
+        await browser.close()

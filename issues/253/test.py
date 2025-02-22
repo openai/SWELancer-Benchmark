@@ -4,134 +4,155 @@ base_path = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
 sys.path.insert(0, base_path)
 
 import time
+import imaplib
+import email
+import re
+import os
+from email.header import decode_header
 from playwright.sync_api import sync_playwright, expect
-import time 
+import numpy as np
+from PIL import Image
+import io
 
-static_email = "totherandomuser+40121580@gmail.com"
+GMAIL_NAME = "testerbro7077"
+GMAIL_APP_PASSWORD = "xqxz mmcb tvkn lpgp"
 
-def login(p, if_phone=False, first_name="John", last_name="Cena"):
+def get_test_user_info(seed=None, first_name=None, last_name=None):
+    if first_name is None:
+        first_name = "Yagan"
 
-    browser = p.chromium.launch(headless=True, slow_mo=1000, args=["--disable-web-security", "--disable-features=IsolateOrigins,site-per-process"])
+    if last_name is None:
+        last_name = "Sai"
 
-    if if_phone:
-        phone = p.devices['iPhone 12 Pro']
-        context = browser.new_context(**phone)
-    else:
-        context = browser.new_context()
+    email = f"{GMAIL_NAME}+{seed}@gmail.com" if seed is not None else f"{GMAIL_NAME}@gmail.com"
+    return {"email": email, "password": GMAIL_APP_PASSWORD, "first_name": first_name, "last_name": last_name}
 
-    page = context.new_page()
+def get_magic_code(user_email, password, retries=5, delay=5):
+    imap = imaplib.IMAP4_SSL("imap.gmail.com")
+    imap.login(user_email, password)
 
-    page.goto('https://dev.new.expensify.com:8082/') 
+    for _ in range(retries):
+        imap.select("inbox")
+        status, messages = imap.search(None, '(UNSEEN SUBJECT "Expensify magic sign-in code:")')
 
-    phone_or_email_input = page.locator('input[type="email"]')
-    expect(phone_or_email_input).to_be_visible()
-    phone_or_email_input.fill(static_email)
+        if status == "OK":
+            email_ids = messages[0].split()
+            print(email_ids)
 
+            if email_ids:
+                latest_email_id = email_ids[-1]
+                status, msg_data = imap.fetch(latest_email_id, "(RFC822)")
 
-    page.get_by_role("button", name="Continue").click()
-    page.get_by_role("button", name="Join").click()
-    page.get_by_role("button", name="Join").wait_for(state="hidden")
-    
-    expect(page.locator("text=What do you want to do today?")).to_be_visible(timeout=50000)
+                for response_part in msg_data:
+                    if isinstance(response_part, tuple):
+                        msg = email.message_from_bytes(response_part[1])
+                        subject, encoding = decode_header(msg["Subject"])[0]
+                        if isinstance(subject, bytes):
+                            subject = subject.decode(encoding or "utf-8")
+
+                        match = re.search(r"Expensify magic sign-in code: (\d+)", subject)
+                        if match:
+                            code = match.group(1)
+                            imap.logout()
+                            return code
+            else:
+                print("No unread emails found with the subject. Retrying...")
+        else:
+            print("Failed to retrieve emails. Retrying...")
+
+        time.sleep(delay)
+
+    imap.logout()
+    print("Max retries reached. Email not found.")
+    return None
+
+def select_activity(page, first_name, last_name, activity_text):
+    expect(page.get_by_text("What do you want to do today?")).to_be_visible()
+    page.get_by_label(activity_text).click()
+    page.get_by_role("textbox", name="First name").fill(first_name)
+    page.get_by_role("textbox", name="Last name").fill(last_name)
+    page.get_by_role("button", name="Continue").last.click()
+
+def login_user(page, user_info, activity_text="Track and budget expenses"):
+    page.goto('https://dev.new.expensify.com:8082/')
+    page.wait_for_load_state('load')
 
     try:
-
-        page.locator("text='Track and budget expenses'").click()
-        page.wait_for_timeout(1000)
-
-
-
-        first_name_input = page.locator('input[name="fname"]')
-        expect(first_name_input).to_be_visible()
-        first_name_input.fill(first_name)  
-        first_name_input = page.locator('input[name="lname"]')  
-        expect(first_name_input).to_be_visible()
-        first_name_input.fill(last_name)  
-
-
-
-        continue_button = page.locator('button[data-tag="pressable"][tabindex="0"]', has_text="Continue")
-        expect(continue_button).to_be_visible()
-        continue_button.click()
+        expect(page.get_by_label("Inbox")).to_be_visible(timeout=3000)
+        return
     except:
         pass
 
-    return browser, page
+    page.get_by_test_id("username").fill(user_info["email"])
+    page.get_by_role("button", name="Continue").click()
 
+    join_button = page.get_by_role("button", name="Join")
+    validate_code_input = page.locator('input[data-testid="validateCode"]')
+    expect(join_button.or_(validate_code_input)).to_be_visible()
 
-def test():
+    if join_button.is_visible():
+        join_button.click(timeout=3000)
+    else:
+        magic_code = "123456" #get_magic_code(user_info["email"], user_info["password"], retries=6, delay=5)
+        print(f"Magic code: {magic_code}")
+        validate_code_input.fill(magic_code)
+
+    page.wait_for_timeout(3000)
+
+    select_activity_dialog = page.get_by_text("What do you want to do today?")
+    if select_activity_dialog.count() > 0:
+        select_activity(page, user_info["first_name"], user_info["last_name"], activity_text)
+
+def chech_bg_color(page):
+    page.get_by_label("My settings").click()
+    page.wait_for_timeout(1000)
+    page.get_by_text("Preferences").click()
+    page.wait_for_timeout(1000)
+    if page.get_by_text("Dark").is_visible():
+        pass
+    else:
+        page.get_by_text("Theme").click()
+        page.get_by_label("Dark").click()
+
+    page.get_by_test_id("CustomBottomTabNavigator").get_by_label("Search").click()
+    page.get_by_role("button", name="Outstanding").click()
+    checkbox = page.get_by_role("checkbox").nth(3)
+    aria_checked = checkbox.get_attribute("aria-checked")
+    page.wait_for_timeout(500)
+
+    if aria_checked == "false":
+        checkbox.click()
+    else:
+        checkbox.click()
+        page.wait_for_timeout(500)
+        checkbox.click()
+
+    page.wait_for_timeout(1000)
+    page.mouse.click(0.5, 0.5)
+
+    page.wait_for_timeout(1000)
+    view_button = page.get_by_role("button", name="View", exact=True).nth(2)
+    container = view_button.locator("..").locator("..").locator("..").locator("..")
+    background_color = container.evaluate("element => getComputedStyle(element).backgroundColor")
+
+    expected_background_color = "rgb(26, 61, 50)"
+    assert background_color == expected_background_color, "Expected background UI change did not occur"
+
+def test_login():
     with sync_playwright() as p:
+        browser = p.chromium.launch(headless=True, args=[
+        "--disable-web-security",
+        "--disable-features=IsolateOrigins,site-per-process",
+        "--ignore-certificate-errors"
+    ])
+        userA_info = get_test_user_info(seed=1, first_name="Yagna")
+        contextA = browser.new_context()
+        pageA = contextA.new_page()
 
+        login_user(pageA, userA_info)
+        chech_bg_color(pageA)
 
-        browser, page = login(p, True)
+        pageA.close()
+        contextA.close()
+        browser.close()
 
-
-        page.get_by_label("Back").last.click()
-        page.get_by_label("Close").last.click()
-
-
-        plus_icon = page.locator('button[aria-label="Start chat (Floating action)"]')
-        expect(plus_icon).to_be_visible()
-        plus_icon.click()
-
-
-        new_workspace_button = page.locator('div[aria-label="New workspace"]')
-        expect(new_workspace_button).to_be_visible()
-        new_workspace_button.click()
-        page.get_by_text("Members").click()
-        page.get_by_role("button", name="Invite member").click()
-        page.get_by_test_id("selection-list-text-input").click()
-        page.get_by_test_id("selection-list-text-input").fill("totherandomuser@gmail.com")
-        page.wait_for_timeout(2000)
-        page.get_by_text("totherandomuser@gmail.com").last.click()
-
-        page.get_by_role("button", name="Next").click()
-        page.get_by_test_id("WorkspaceInviteMessagePage").get_by_role("button", name="Invite").click()
-        page.get_by_test_id("WorkspaceMembersPage").get_by_label("Back").last.click()
-        page.get_by_label("Back").last.click()
-        page.wait_for_timeout(1000)
-        page.get_by_label("Back").last.click()
-        page.wait_for_timeout(1000)
-        page.get_by_label("Inbox").click()
-        page.wait_for_timeout(1000)
-
-
-        user_chat = page.locator('button[aria-label="Navigates to a chat"]', has_text="Deepak Dhaka").last
-        expect(user_chat).to_be_visible(timeout=5000)
-        user_chat.click()
-
-
-        page.get_by_label("Create").click()
-        page.get_by_text("Assign task").click()
-        page.get_by_role("textbox", name="Title").click()
-        page.get_by_role("textbox", name="Title").fill("task1")
-        page.wait_for_timeout(1000)
-        page.get_by_role("button", name="Next").click()
-        page.get_by_role("button", name="Confirm task").click()
-        page.wait_for_timeout(1000)
-
-
-        page.get_by_role("button", name="Task").last.click()
-        page.wait_for_timeout(1000)
-        task_container = page.locator('div[data-testid="DisplayNamesWithTooltip"]', has_text="task1") # page.locator('div.css-view-175oi2r', has_text='task1').first
-        expect(task_container).to_be_visible(timeout=5000)
-        task_container.click()
-
-        page.locator('[data-selection-scrapper-hidden-element="false"]', has_text="Delete").click()
-        page.locator('button[data-tag="pressable"]', has_text="Delete").click()
-
-        delete_detected = False
-        count_f = 0
-        for _ in range(50):  # Try up to 50 times
-
-            count = page.locator('[data-testid="DisplayNamesWithTooltip"]', has_text="[Deleted task]").count()
-            if count > 0:
-                print(f"Detected '[Deleted task]' {count} time(s) in page content!")
-                count_f += count
-                delete_detected = True
-            page.wait_for_timeout(10)  # Wait for 100 milliseconds before the next retry
-
-        if not delete_detected:
-            print("Delete text was not detected after retries.")
-
-        assert count_f == 0, "[Deleted task] text has been found, It should not be there ideally!!"

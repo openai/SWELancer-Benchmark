@@ -4,146 +4,152 @@ base_path = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
 sys.path.insert(0, base_path)
 
 import time
-from playwright.sync_api import sync_playwright, expect
-from playwright.sync_api._context_manager import PlaywrightContextManager
-from playwright._impl._browser import Browser
-from playwright._impl._page import Page
+
+from playwright.sync_api import TimeoutError, expect, sync_playwright
+
+
+EXPENSIFY_URL = "https://dev.new.expensify.com:8082/"
+EMAIL = "t1533148@gmail.com" # for example test+1234@gmail.com
+PASSWORD = "logb hzkg pkfk kskg" # it will be something like "sdib pxop ovyl uawy"
 
 
 
 def generate_random_email():
-    return f"expensifyapp97+0090@gmail.com"
+    timestamp = int(time.time())
+    return "t1533148+173350934@gmail.com"
 
 
-def login_user(p: PlaywrightContextManager, first_name="Milan", last_name="T") -> tuple[Browser, Page, str]:
+def login_user(page, email, first_name="John", last_name="Doe"):
+    """
+    Log into the Expensify app.
+    """
 
+    page.goto(EXPENSIFY_URL)
 
-    proxy = {"server": "http://127.0.0.1:8080/"}
-    args = ["--disable-web-security", "--disable-features=IsolateOrigins,site-per-process"]
+    page.get_by_test_id("username").fill(email)
+    page.get_by_role("button", name="Continue").click()
 
-    browser = p.chromium.launch(headless=True, args=args, proxy=proxy)
-    page = browser.new_page()
-    user_email = generate_random_email()
+    try:
+        expect(page.get_by_test_id("SignInPage").get_by_test_id("validateCode")).to_be_visible(timeout=5000)
+    except AssertionError:
 
+        page.get_by_test_id("SignInPage").get_by_role("button", name="Join").click()
+    else:
 
-    page.goto('https://dev.new.expensify.com:8082/') 
+        otp_code = '123456'
+        page.get_by_test_id("SignInPage").get_by_test_id("validateCode").fill(otp_code)
+        page.get_by_test_id("SignInPage").get_by_role("button", name="Sign in").click()
 
-
-    page.locator('input[type="email"]').fill(user_email)
-    page.locator('button[tabindex="0"]').click()
-    page.wait_for_timeout(2000) 
-
-
-    try: 
-        page.locator('button[tabindex="0"]').click() 
-        time.sleep(4)
-    except Exception:
+    try:
+        expect(page.get_by_text("What do you want to do today?")).to_be_visible(timeout=5000)
+    except AssertionError:
         pass
+    else:
+
+        page.get_by_label("Track and budget expenses").click()
+        page.get_by_role("textbox", name="First name").fill(first_name)
+        page.get_by_role("textbox", name="Last name").fill(last_name)
+        page.get_by_role("button", name="Continue").click()
+
+        try:
+            page.get_by_role("button", name="Back").first.click(timeout=3000)
+        except (AssertionError, TimeoutError):
+            pass
+
+    try:
+        page.get_by_role("button", name="Close").click(timeout=3000)
+    except (AssertionError, TimeoutError):
+        pass
+
+    page.wait_for_timeout(5000)
+
+
+def test_user_current_location_is_not_shown_under_recent_destinations_for_distance_expense_request():
+    """
+    Verify that user's current location is not shown under recent destinations while creating a distance expense request.
+    """
+    with sync_playwright() as p:
+
+        browser = p.chromium.launch(headless=True, slow_mo = 500,
+            proxy = {"server": "http://127.0.0.1:8080/"},
+            args=[
+            "--ignore-certificate-errors",
+            "--disable-web-security", 
+            "--disable-features=IsolateOrigins,site-per-process"
+        ])
+        geolocation = {"longitude": 41.890221, "latitude": 12.492348}
+        context_args = {}
+        context_args["geolocation"] = geolocation
+        context_args["permissions"] = ["geolocation"]
+        context_args["ignore_https_errors"] = True
+        context = browser.new_context(**context_args)
+        page = context.new_page()
+        page.wait_for_timeout(1000)
+        email = generate_random_email()
+        first_name = "Fname"
+        last_name = "Lname"
+        login_user(page, email, first_name=first_name, last_name=last_name)
+
+
+        page.get_by_role("button", name="My settings").click()
+        page.get_by_test_id("InitialSettingsPage").get_by_role("menuitem", name="Workspaces", exact=True).click()
+        page.get_by_test_id("WorkspacesListPage").get_by_role("button", name="New workspace").first.click()
+
+
+        texts = page.get_by_test_id("WorkspacePageWithSections").get_by_role("menuitem").all_inner_texts()
+        workspace_name = texts[0].split("\n")[-1]
+
+
+        page.get_by_test_id("WorkspaceInitialPage").get_by_role("button", name="Back").click()
+        page.get_by_role("button", name="Inbox", exact=True).click()
+        page.get_by_test_id("BaseSidebarScreen").get_by_text(workspace_name, exact=True).click()
+
+
+        page.get_by_test_id("report-actions-view-wrapper").get_by_role("button", name="Create", exact=True).click()
+        page.get_by_role("menuitem", name="Submit expense", exact=True).click()
+        page.get_by_test_id("IOURequestStartPage").get_by_role("button", name="Distance", exact=True).click()
+        page.get_by_test_id("IOURequestStartPage").get_by_role("menuitem", name="Start", exact=True).click()
+        page.wait_for_timeout(1000)
+        page.get_by_test_id("IOURequestStepWaypoint").get_by_label("Use current location", exact=True).click()
+        page.wait_for_timeout(10000)
+        page.get_by_test_id("IOURequestStartPage").get_by_role("menuitem", name="Stop", exact=True).click()
+        page.wait_for_timeout(1000)
+        page.get_by_test_id("IOURequestStepWaypoint").get_by_role("textbox").fill("Germany")
+        page.wait_for_timeout(1000)
+        page.get_by_test_id("IOURequestStepWaypoint").get_by_text("Germany", exact=True).nth(1).click()
+        page.wait_for_timeout(15000)
+        page.get_by_test_id("IOURequestStartPage").get_by_role("button", name="Next", exact=True).last.click()
+        page.get_by_test_id("IOURequestStepConfirmation").get_by_role("button", name="Submit", exact=False).click()
+
+
+
+        page.reload()
+        page.wait_for_load_state("domcontentloaded")
+        page.wait_for_timeout(3000)
+
+
+        page.get_by_test_id("report-actions-view-wrapper").get_by_role("button", name="Create", exact=True).click()
+        page.get_by_role("menuitem", name="Submit expense", exact=True).click()
+        page.get_by_test_id("IOURequestStartPage").get_by_role("button", name="Distance", exact=True).click()
+        page.get_by_test_id("IOURequestStartPage").get_by_role("menuitem", name="Start", exact=True).click()
+
+
+        expect(
+            page.get_by_test_id("IOURequestStepWaypoint").get_by_text("Recent destinations", exact=True)
+        ).to_be_visible(timeout=5000)
+
+
+        page.wait_for_timeout(3000)
     
 
-    if page.locator("text='What do you want to do today?'").count() == 1:
-            
 
-        page.locator("text='Track and budget expenses'").click()
-        page.get_by_role("button", name="Continue").click()
-        page.wait_for_timeout(2000) 
-
-
-        page.locator('input[name="fname"]').fill(first_name)
-        page.locator('input[name="lname"]').fill(last_name)
-        page.get_by_role("button", name="Continue").last.click()
-        page.wait_for_timeout(2000) 
-    else:
-        page.locator('button[aria-label="My settings"]').click()
-        page.get_by_label(user_email).first.click()
-        page.get_by_role("textbox", name="First name").click()
-        page.get_by_role("textbox", name="First name").fill(first_name)
-        page.get_by_role("textbox", name="Last name").click()
-        page.get_by_role("textbox", name="Last name").fill(last_name)
-        page.get_by_role("button", name="Save").click()
-        page.locator('button[aria-label="Inbox"]').click()
-
-    return browser, page, user_email
+        current_location = f"Lat: {geolocation['latitude']} Lng: {geolocation['longitude']}"
+        assert_message = "The user current location must not be shown under recent destinations"
+        expect(
+            page.get_by_test_id("IOURequestStepWaypoint").get_by_text(current_location, exact=True),
+            assert_message,
+        ).not_to_be_visible()
 
 
-def test_gmail_user_pay():
-    with sync_playwright() as p:
-        
-        test_email = f"expensifyapp9988775511@gmail.com"
-        
-
-        browser, page, user_email = login_user(p)
-
-
-        plus_icon = page.locator('button[aria-label="Start chat (Floating action)"]')
-        expect(plus_icon).to_be_visible()
-        plus_icon.click()
-        page.wait_for_timeout(2000) 
-
-        start_chat = page.locator('div[aria-label="Start chat"]')
-        expect(start_chat).to_be_visible()
-        start_chat.click()
-        page.wait_for_timeout(2000) 
-        
-        
-
-        search_email = page.locator('input[aria-label="Name, email, or phone number"]')
-        expect(search_email).to_be_visible()
-        search_email.fill(test_email)
-        page.wait_for_timeout(2000)
-        search_email.click()
-        page.wait_for_timeout(2000)
-        
-        select_email = page.locator(f'button[aria-label="{test_email}"]')
-        expect(select_email).to_be_visible()
-        select_email.click()
-        page.wait_for_timeout(4000)
-        
-
-        create_pay_expense = page.locator('button[aria-label="Create"]').last
-        expect(create_pay_expense).to_be_visible()
-        create_pay_expense.click()
-        
-        pay_expense = f'Pay {test_email}'
-        pay = page.get_by_text(pay_expense)
-        pay.click()
-        page.wait_for_timeout(2000)
-        
-
-        currency = page.locator('button[aria-label="Select a currency"]')
-        expect(currency).to_be_visible()
-        currency.click()
-        
-        search_currency = page.locator('input[aria-label="Search"]')
-        search_currency.fill('USD')
-        choose_usd = page.locator('button[aria-label="USD - $"]')
-        expect(choose_usd).to_be_visible()
-        choose_usd.click()
-        
-        
-
-        amount = page.locator('input[placeholder="0"]')
-        expect(amount).to_be_visible()
-        amount.fill('100')
-        
-
-        next_button = page.locator('button[data-listener="Enter"]', has_text="Next")
-        expect(next_button).to_be_visible()
-        next_button.click()
-        page.wait_for_timeout(2000)
-        
-        pay_with_expensify = page.locator('button[data-listener="Enter"]', has_text="Pay with Expensify")
-        expect(pay_with_expensify).to_be_visible()
-        pay_with_expensify.click()
-        page.wait_for_timeout(2000)
-        
-
-        not_here_page = page.get_by_text("Oops, this page cannot be found")
-        
-        if not_here_page.is_visible():
-            assert False, 'Not here page opens when Gmail user Pay with Expensify'
-        else:
-            assert True, 'Not here page does not open when Gmail user Pay with Expensify'
-
-        page.wait_for_timeout(3000)        
+        context.close()
         browser.close()

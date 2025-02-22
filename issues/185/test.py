@@ -1,113 +1,141 @@
-import sys, os
-
-base_path = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
-sys.path.insert(0, base_path)
-
-from playwright.sync_api import sync_playwright, expect
-
-site_url = "https://dev.new.expensify.com:8082/"
-primary_email = "freelanceapptest@gmail.com"
+import re
+import time
+import email
+import imaplib
+from email.header import decode_header
+from playwright.sync_api import sync_playwright, expect, Browser, Page
+from playwright.sync_api._context_manager import PlaywrightContextManager
 
 
-mobile_browser = True
-device_name = "Pixel 7"
+URL = 'https://dev.new.expensify.com:8082/'
+
+IMAP_SERVER = "imap.gmail.com"
+MAX_TRIES = 30
 
 
-def generate_email():
-    timestamp = "89994947122"
-    return f"{primary_email.split('@')[0]}+{timestamp}@{primary_email.split('@')[1]}"
+# Utility to generate a random email
+def generate_random_email() -> str:
+    timestamp = int(time.time())
+    return f"brianmuneneturing+{timestamp}@gmail.com"
 
+USER_EMAIL = "brianmuneneturing+6776@gmail.com"
+PASSWORD = "zukqdnszutrrlhhl" 
 
-def create_new_account_and_login(page, first_name, last_name):
-    user_email = generate_email()
-    page.goto(site_url)
-    
+def get_magic_code(user_email=USER_EMAIL, password=PASSWORD, retries=5, delay=20):
+    imap = imaplib.IMAP4_SSL("imap.gmail.com")
+    imap.login(user_email, password)
 
-    phone_or_email_input = page.locator('input[type="email"]')
-    expect(phone_or_email_input).to_be_visible()
-    phone_or_email_input.fill(user_email)
-    page.wait_for_timeout(1000)
+    for _ in range(retries):
+        imap.select("inbox")
+        status, messages = imap.search(None, '(UNSEEN SUBJECT "Expensify magic sign-in code:")')
 
+        if status == "OK":
+            email_ids = messages[0].split()
 
-    continue_button = page.locator('button[tabindex="0"]')
-    expect(continue_button).to_be_visible()
-    continue_button.click()
-    page.wait_for_timeout(1000)
+            if email_ids:
+                latest_email_id = email_ids[-1]
+                status, msg_data = imap.fetch(latest_email_id, "(RFC822)")
 
+                for response_part in msg_data:
+                    if isinstance(response_part, tuple):
+                        msg = email.message_from_bytes(response_part[1])
+                        subject, encoding = decode_header(msg["Subject"])[0]
+                        if isinstance(subject, bytes):
+                            subject = subject.decode(encoding or "utf-8")
 
-    try:
-        print("Clicking the join button again if needed")
-        expect(continue_button).to_be_visible()
-        continue_button.click()
-    except Exception as e:
-        pass
+                        match = re.search(r"Expensify magic sign-in code: (\d+)", subject)
+                        if match:
+                            code = match.group(1)
+                            imap.logout()
+                            return code
+            else:
+                print("No unread emails found with the subject. Retrying...")
+        else:
+            print("Failed to retrieve emails. Retrying...")
+        time.sleep(delay)
 
+    imap.logout()
+    print("Max retries reached. Email not found.")
+    return None
 
-    page.locator("text='Track and budget expenses'").click()
-    page.wait_for_timeout(1000)
-    page.locator('input[name="fname"]').fill(first_name)
-    page.locator('input[name="lname"]').fill(last_name)
-    page.get_by_role("button", name="Continue").last.click()
-    page.wait_for_timeout(1000)
-    page.get_by_label("Close").click()
-
-    return user_email
-
-
-def test_workspace_settings():
-    first_name = "Sujil"
-    last_name = "Devkota"
-
-    with sync_playwright() as p:
-
-        browser = p.chromium.launch(
+def login_user(p: PlaywrightContextManager, first_name="", last_name="") -> tuple[Browser, Page, str]:
+    # Launch chromium and open new page
+    browser = p.chromium.launch(
             channel="chrome",
-            headless=True,
+            headless=False,
             args=[
                 "--ignore-certificate-errors",
                 "--disable-web-security",
                 "--disable-features=IsolateOrigins,site-per-process"
             ],
             proxy={"server": "http://localhost:8080"},
-            slow_mo=1000
-            )
+            slow_mo=500
+        )
+    page = browser.new_page()
+    
 
-        if mobile_browser:
+    # Step 1: Open expensify url
+    page.goto(URL)
 
-            mobile_device = p.devices[device_name]
+    # Step 2: Enter email and click continue
+    page.locator('input[type="email"]').fill(USER_EMAIL)
+    page.locator('button[tabindex="0"]').click()
+    page.wait_for_timeout(1000)
+
+    # Step 3: Click join button
+    try: 
+        # page.locator('button[tabindex="0"]').click() 
+        page.get_by_role("button", name="Join").click()
+        page.wait_for_timeout(3000)
+    except Exception:
+        # otp = get_magic_code()
+        otp = "123456"
+        page.get_by_test_id("validateCode").fill(otp)
+        page.wait_for_timeout(2000)
+
+    if page.locator("text=What do you want to do today?").count() > 0:
+        expect(page.locator("text=What do you want to do today?")).to_be_visible()
             
-
-            context = browser.new_context(**mobile_device)
-            page = context.new_page()
-        else:
-            page = browser.new_page()
-
-
-        user_email = create_new_account_and_login(page, first_name, last_name)
-
-
-        button_search = page.locator('button[aria-label="Search"]')
-        expect(button_search).to_be_visible()
-        button_search.click()
+        # Step 4: Select 'Track and budget expenses' in onboarding page and click Continue
+        page.locator("text='Track and budget expenses'").click()
+        page.get_by_role("button", name="Continue").click()
         page.wait_for_timeout(1000)
 
-
-        search_icon = page.locator('div[aria-label="Search"] svg')
-        expect(search_icon).to_be_visible()
-        search_icon.click()
+        # Step 5: Enter first name, last name and click continue
+        page.locator('input[name="fname"]').fill(first_name)
+        page.locator('input[name="lname"]').fill(last_name)
+        page.get_by_role("button", name="Continue").last.click()
         page.wait_for_timeout(1000)
 
-
-        search_input = page.locator('input')
-        expect(search_input).to_be_visible()
-        search_input.fill("Random message")
-        page.keyboard.press("Enter")
-        page.wait_for_timeout(1000)
+    return browser, page
 
 
-        svg_elements = page.locator("svg[height='108']")
-        assert svg_elements.count() > 1, "The SVG elements are not set to correct height"
+def test_table_row_caret_removed():
+    with sync_playwright() as p:
 
+        browser, page = login_user(p, first_name="User", last_name="A")
 
+        page.get_by_label("My settings").click()
+        page.get_by_test_id("InitialSettingsPage").get_by_label("Workspaces").get_by_text("Workspaces").click()
+        page.get_by_label("row").click()
+        page.get_by_text("Members").click()
+        page.get_by_label("Back").click()
+        page.get_by_test_id("CustomBottomTabNavigator").get_by_label("Search").click()
+        page.get_by_label("My settings").click()
+        page.get_by_test_id("InitialSettingsPage").get_by_label("Workspaces").get_by_text("Workspaces").click()
+        page.get_by_role("button", name="row").click()
+
+        # Click on categories to check whether the caret is visible
+        page.get_by_text("Categories").click()
+        
+        category_locator = page.query_selector(f'button[aria-label="Advertising"][role="button"] svg')
+        assert not category_locator, "> is visible in categories"
+        
+        page.get_by_text("Tags").click()
+
+        svg_element_tags = page.query_selector(f'button[aria-label="Hello"][role="button"] svg')
+        assert not svg_element_tags, "> is visible in tags"
+
+        
+        page.close()
         browser.close()
-

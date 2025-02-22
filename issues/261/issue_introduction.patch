@@ -1,15 +1,22 @@
-diff --git a/src/libs/actions/IOU.ts b/src/libs/actions/IOU.ts
-index 7ce9b9dfb27..7ea6d2005e3 100644
---- a/src/libs/actions/IOU.ts
-+++ b/src/libs/actions/IOU.ts
-@@ -2468,7 +2468,10 @@ function calculateDiffAmount(
-         // Add the diff to the total if we change the currency from a different currency to the currency of the IOU report
-         return updatedAmount;
-     }
--
-+    if (updatedCurrency !== iouReport?.currency && currentCurrency === iouReport?.currency) {
-+        return -updatedAmount;
-+    }
-     if (updatedCurrency === iouReport?.currency && updatedAmount !== currentAmount) {
-         // Calculate the diff between the updated amount and the current amount if we change the amount and the currency of the transaction is the currency of the report
-         return updatedAmount - currentAmount;
+diff --git a/src/pages/ConciergePage.tsx b/src/pages/ConciergePage.tsx
+index 46f17e76c08..99d92325c56 100644
+--- a/src/pages/ConciergePage.tsx
++++ b/src/pages/ConciergePage.tsx
+@@ -49,12 +49,12 @@ function ConciergePage({session}: ConciergePageProps) {
+         }
+     });
+ 
+-    useEffect(() => {
+-        isUnmounted.current = false;
+-        return () => {
++    useEffect(
++        () => () => {
+             isUnmounted.current = true;
+-        };
+-    }, []);
++        },
++        [],
++    );
+ 
+     return (
+         <ScreenWrapper testID={ConciergePage.displayName}>

@@ -1,116 +1,187 @@
-import time
-import pytest
-from playwright.sync_api import sync_playwright, Page
+import imaplib
+import email
+import re
+from email.header import decode_header
+from playwright.sync_api import sync_playwright, expect
+
+GMAIL_NAME = "nomandevtur+54955.2"
+GMAIL_APP_PASSWORD = "tpye xlsj axyq nltq"
 
 
-def generate_random_email():
-    return "t56826807+1739441022@gmail.com"
+def get_test_user_info(seed = None, first_name = None, last_name = None):
+    if first_name is None:
+        first_name = GMAIL_NAME
+
+    if last_name is None:
+        last_name = ""
+
+    email = f"{GMAIL_NAME}+{seed}@gmail.com" if seed is not None else f"{GMAIL_NAME}@gmail.com"
+    
+    return {"email": email, "password": GMAIL_APP_PASSWORD, "first_name": first_name, "last_name": last_name}
+
+def delete_email_inbox(user_email, password, retries=5, delay=10):
+    imap = imaplib.IMAP4_SSL("imap.gmail.com")
+    imap.login(user_email, password)
 
 
-@pytest.fixture
-def setup_playwright():
-    playwright = sync_playwright().start()
-
-    browser = playwright.chromium.launch(
-        headless=False,
-        args=[
-            "--ignore-certificate-errors",
-            "--disable-web-security",
-            "--disable-features=IsolateOrigins,site-per-process",
-        ],
-        proxy={"server": "http://localhost:8080"},
-        slow_mo=500,
-    )
-    context = browser.new_context()
-    page = context.new_page()
-
-    yield page
-
-    # Cleanup: close browsers and stop Playwright
-    browser.close()
-    playwright.stop()
+    # Select inbox and delete all emails
+    imap.select("inbox")
+    status, all_emails = imap.search(None, "ALL")
+    if status == "OK":
+        for email_id in all_emails[0].split():
+            imap.store(email_id, "+FLAGS", "\\Deleted")
+        imap.expunge()
 
 
-def login_user(page: Page, email: str):
-    page.goto("https://dev.new.expensify.com:8082/")
-    page.locator('input[type="email"]').fill(email)
-    page.locator("button", has_text="Continue").click()
-    page.locator("button", has_text="Join").click()
+def get_magic_code(user_email, password, retries=5, delay=5):
+    # Connect to the server
+    imap = imaplib.IMAP4_SSL("imap.gmail.com")
+    imap.login(user_email, password)
+
+    for _ in range(retries):
+        imap.select("inbox")
+        status, messages = imap.search(None, '(UNSEEN SUBJECT "Expensify magic sign-in code:")')
+
+        if status == "OK":
+            email_ids = messages[0].split()
+            print(email_ids)
+
+            if email_ids:
+                latest_email_id = email_ids[-1]
+                status, msg_data = imap.fetch(latest_email_id, "(RFC822)")
+
+                for response_part in msg_data:
+                    if isinstance(response_part, tuple):
+                        msg = email.message_from_bytes(response_part[1])
+                        subject, encoding = decode_header(msg["Subject"])[0]
+                        if isinstance(subject, bytes):
+                            subject = subject.decode(encoding or "utf-8")
+
+                        # Search for the magic code in the subject
+                        match = re.search(r"Expensify magic sign-in code: (\d+)", subject)
+                        if match:
+                            code = match.group(1)
+                            imap.logout()
+                            return code
+            else:
+                print("No unread emails found with the subject. Retrying...")
+        else:
+            print("Failed to retrieve emails. Retrying...")
+
+    
+
+    imap.logout()
+    print("Max retries reached. Email not found.")
+    return None
 
 
-def complete_onboarding(page: Page, first_name: str, last_name: str = ""):
-    page.locator("text='Track and budget expenses'").click()
-    page.locator('input[name="fname"]').fill(first_name)
-    page.locator('input[name="lname"]').fill(last_name)
+def select_activity(page, first_name, last_name, activity_text):
+    
+    # Select activity in onboarding page and click Continue
+    page.get_by_label(activity_text).click()
+
+    # Enter first name, last name and click continue
+    page.get_by_role("textbox", name="First name").fill(first_name)
+    page.get_by_role("textbox", name="Last name").fill(last_name)
     page.get_by_role("button", name="Continue").last.click()
 
 
-def invite_workspace_member(page: Page, member_email: str, member_name: str):
-    page.locator('div[aria-label="Members"]').click()
-    page.locator("button", has_text="Invite member").click()
-    page.locator('input[aria-label="Name, email, or phone number"]').fill(member_email)
-    page.locator("button", has_text=member_name).last.click()
-    page.locator('button[data-listener="Enter"]', has_text="Next").click()
-    page.locator('button[data-listener="Enter"]', has_text="Invite").click()
+def login_user(page, user_info, activity_text="Track and budget expenses"):
+    # Clear cookies, local storage, and session storage
+    page.context.clear_cookies()
+
+    page.goto('https://dev.new.expensify.com:8082/')
+    page.wait_for_load_state('load')
+
+    page.get_by_test_id("username").fill(user_info["email"])
+    page.get_by_role("button", name="Continue").click()
+
+    join_button = page.get_by_role("button", name="Join")
+    validate_code_input = page.locator('input[data-testid="validateCode"]')
+
+    page.wait_for_timeout(5000)
+    if (join_button.is_visible()):
+        join_button.click(timeout=3000)
+    else:
+        # magic_code = get_magic_code(user_info["email"], user_info["password"], retries=6, delay=5)
+
+        # if magic_code is None:
+        #     #Retrying again
+        #     page.locator(f"span:has-text('Didn't receive a magic code?')").first.click()
+        #     magic_code = get_magic_code(user_info["email"], user_info["password"], retries=6, delay=5)
+        magic_code = "123456"
+        print(f"Magic code: {magic_code}")
+        validate_code_input.fill(magic_code)
+
+    page.wait_for_timeout(3000)
+
+    select_activity_dialog = page.get_by_text("What do you want to do today?")
+    if select_activity_dialog.count() > 0:
+        select_activity(page, user_info["first_name"], user_info["last_name"], activity_text)
 
 
-def test(setup_playwright):
-    page = setup_playwright
+def launch_app(pw, headless=False, device=None, geolocation=None):
+    browser = pw.chromium.launch(headless = headless, 
+                                proxy = {"server": "http://127.0.0.1:8080/"}, slow_mo = 1000,
+                                args=[
+                                    "--ignore-certificate-errors",
+                                    "--disable-web-security", 
+                                    "--disable-features=IsolateOrigins,site-per-process"
+                                    ]
+                            )
 
-    email_user, name_user = generate_random_email(), "User A"
-    email_approver, name_approver = "t56826807+13@gmail.com", "Employee"
+    context_args = {"viewport": {"width": 1024, "height": 640}}
+    if device:
+        context_args.update(pw.devices[device])
+    if geolocation:
+        context_args["geolocation"] = geolocation
+        context_args["permissions"] = ["geolocation"]
+    context = browser.new_context(**context_args)
+    page = context.new_page()
+    return browser, context, page
 
-    login_user(page, email_user)
+    
+def test_54955():
+    with sync_playwright() as p:
+        
+        user_info = get_test_user_info()
 
-    complete_onboarding(page, name_user)
+        delete_email_inbox(user_info["email"], user_info["password"], retries=6, delay=5)
 
-    # Create new workspace
-    page.locator('button[aria-label="Workspaces"]').click()
-    (
-        page.get_by_test_id("WorkspaceSwitcherPage")
-        .get_by_role("button", name="New workspace")
-        .click()
-    )
+        browser, context, page = launch_app(p)
+        login_user(page, user_info)
 
-    invite_workspace_member(page, email_approver, name_approver)
+        page.wait_for_timeout(3000)
 
-    # Enable Workflows
-    page.locator('div[aria-label="More features"]').click()
-    page.locator(
-        'button[aria-label="Configure how spend is approved and paid."]'
-    ).click()
+        page.get_by_label("My settings").click()
+        page.wait_for_timeout(1000)
+        page.get_by_role("menuitem", name="Profile").click()
+        page.wait_for_timeout(1000)
+        page.get_by_text("Preferences").click()
+        page.wait_for_timeout(1000)
+        page.get_by_text("English").click()
+        page.wait_for_timeout(1000)
+        page.get_by_label("Spanish").click()
+        page.wait_for_timeout(1000)
+        page.get_by_label("Espacios de trabajo").click()
+        page.wait_for_timeout(1000)
+        page.locator("text=Predeterminado").hover()
+        page.wait_for_timeout(1000)
+                
+        # Locate the tooltip
+        tooltip_locator = page.locator("span:has-text('Los recibos enviados a receipts@expensify.com aparecerán en este espacio de trabajo.')")
 
-    # Enable Approvals
-    page.locator('div[aria-label="Workflows"]').click()
-    approvals_button = page.locator(
-        'button[aria-label="Require additional approval before authorizing a payment."]'
-    )
-    if not approvals_button.is_checked():
-        approvals_button.click()
+        # Get the parent `<div>` above the `<span>`
+        div_locator = tooltip_locator.locator("xpath=ancestor::div[1]")
+        # Wait until the tooltip is visible
+        div_locator.wait_for(state="visible", timeout=5000)
 
-    # Modify Approvals
-    page.locator('button[aria-label="Add approvals"]').click()
-    page.get_by_test_id("WorkspaceWorkflowsApprovalsEditPage").get_by_text(
-        "Approver", exact=True
-    ).click()
-    page.get_by_test_id("WorkspaceWorkflowsApprovalsApproverPage").get_by_label(
-        name_approver
-    ).click()
-    page.get_by_role("button", name="Save").click()
-    page.locator('div[data-tag="pressable"]', has_text="Additional Approver").click()
+        webkit_line_clamp_value = div_locator.evaluate("""
+            el => window.getComputedStyle(el).getPropertyValue('-webkit-line-clamp')
+        """)
 
-    # Upgrade Account
-    page.locator("button", has_text="Upgrade").click()
-    page.locator("button", has_text="Got it, thanks").click()
-
-    # Grab the approver field
-    approver_field = (
-        page.get_by_test_id("WorkspaceWorkflowsApprovalsEditPage")
-        .get_by_text("Approver", exact=True)
-        .locator("..")
-        .first
-    )
-
-    assert name_approver in approver_field.inner_text(), (
-        "Approver field has been reset after upgrade!"
-    )
+        assert webkit_line_clamp_value == "4", f"Test failed! Tooltip is truncated"
+        
+        page.wait_for_timeout(3000)
+        page.close()
+        browser.close()

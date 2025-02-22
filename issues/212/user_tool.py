@@ -3,93 +3,133 @@ import sys, os
 base_path = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
 sys.path.insert(0, base_path)
 
+import email
+import imaplib
+import random
+import re
+import time
 from playwright.sync_api import sync_playwright, expect
 from utils.trace_cleaner import trace_cleaner
 
-def generate_random_email():
-    timestamp = 234234
-    return f"expensify31+{timestamp}@gmail.com"
 
-def login_user(page, email) -> None:
-    phone_or_email_input = page.locator('input[type="email"]')
-    expect(phone_or_email_input).to_be_visible()
-    phone_or_email_input.fill(email)
-    continue_button = page.get_by_role("button", name="Continue")
-    continue_button.click()
-    page.wait_for_timeout(5000)
+NEWDOT_URL = "https://dev.new.expensify.com:8082/"
+OLDDOT_URL = "http://localhost:9000/"
+EMAIL = "ikhanle001+34@gmail.com"
+PASSWORD = "dzcr knad otxp bsuz"
 
+class IMAPOTPExtractor:
+    def __init__(self, email_address, password):
+        if not self._validate_email(email_address):
+            raise ValueError("Invalid email address format.")
+        self.original_email = email_address
+        self.password = password
 
-    if not page.get_by_role("button", name="Join").is_visible():
-        magic_code = "123456"
-        if magic_code:
-            validate_code_input = page.locator('input[data-testid="validateCode"]')
-            expect(validate_code_input).to_be_visible()
-            validate_code_input.fill(magic_code)
-            page.wait_for_timeout(5000)
+        random_suffix = random.randint(1000, 9999)
+        current_timestamp = int(time.time())
+        random_suffix = f"{current_timestamp}{random_suffix}"
 
-def reproduce_scenario(page1, page2) -> None:
+    def _validate_email(self, email_address):
+        return bool(re.match(r"[^@]+@[^@]+\.[^@]+", email_address))
 
-    page1.get_by_label("My settings").click()
-    page1.get_by_label("Preferences").click()
-    page1.get_by_label("English").get_by_role("img").click()
-    page1.get_by_label("Spanish").click()
-    page1.wait_for_timeout(5000)
+    def set_new_email(self, email):
+        self.new_email = email
 
-
-    assert page2.get_by_text("Este es tu espacio personal").is_visible()
-
-def test_spanish_on_lhn() -> None:
-    with sync_playwright() as playwright:
-        browser1 = playwright.chromium.launch(
-            headless=True,
-            slow_mo=1000,
-            args=[
-                '--disable-web-security',
-                '--disable-features=IsolateOrigins,site-per-process',
-                '--proxy-server=http://localhost:8080',
-            ]
-        )
-        context1 = browser1.new_context(ignore_https_errors=True)
-        page1 = context1.new_page()
-
-        browser2 = playwright.chromium.launch(
-            headless=True,
-            slow_mo=1000,
-            args=[
-                '--disable-web-security',
-                '--disable-features=IsolateOrigins,site-per-process',
-                '--proxy-server=http://localhost:8080',
-            ]
-        )
-        context2 = browser2.new_context(ignore_https_errors=True)
-        page2 = context2.new_page()
-
-
-        context1.tracing.start(screenshots=True, snapshots=True, sources=True)
-        context2.tracing.start(screenshots=True, snapshots=True, sources=True)
-
+    def check_for_otp(self):
         try:
-            page1.goto("https://dev.new.expensify.com:8082/")
-            email = generate_random_email()
-            login_user(page1, email)
+            mail = imaplib.IMAP4_SSL("imap.gmail.com")
+            mail.login(self.original_email, self.password)
+            mail.select("inbox")
 
-            page2.goto("https://dev.new.expensify.com:8082/")
-            login_user(page2, email)
+            status, messages = mail.search(None, "UNSEEN")
+            if status != "OK":
+                return None
 
-            reproduce_scenario(page1, page2)
+            email_ids = messages[0].split()
+            email_ids = email_ids[::-1]
+
+            for email_id in email_ids:
+                status, msg_data = mail.fetch(email_id, '(RFC822)')
+                if status != "OK":
+                    continue
+
+                for response_part in msg_data:
+                    if isinstance(response_part, tuple):
+                        msg = email.message_from_bytes(response_part[1])
+
+                        if self.new_email in msg["To"]:
+                            otp_code = self._extract_otp_from_email(msg)
+                            if otp_code:
+                                mail.store(email_id, '+FLAGS', '\\Deleted')
+                                mail.expunge()
+                                mail.close()
+                                mail.logout()
+                                return otp_code
+
+            mail.close()
+            mail.logout()
+            return None
+
+        except imaplib.IMAP4.error:
+            return None
+
+    def _extract_otp_from_email(self, msg):
+        if msg.is_multipart():
+            for part in msg.walk():
+                if part.get_content_type() == "text/plain":
+                    email_body = part.get_payload(decode=True).decode()
+                    otp_code = self._extract_otp(email_body)
+                    if otp_code:
+                        return otp_code
+        else:
+            email_body = msg.get_payload(decode=True).decode()
+            otp_code = self._extract_otp(email_body)
+            if otp_code:
+                return otp_code
+        return None
+
+    def _extract_otp(self, text):
+        match = re.search(r"\b\d{6}\b", text)
+        return match.group(0) if match else None
+
+
+gmail_account_helper = IMAPOTPExtractor(EMAIL, PASSWORD)
+
+def test_50064():
+    with sync_playwright() as p:
+        browser = p.chromium.launch(headless=True, args=[
+            '--disable-web-security',
+            '--disable-features=IsolateOrigins,site-per-process'
+        ])
+
+        context = browser.new_context(ignore_https_errors=True)
+        try:
+
+            context.tracing.start(title="test_50064", screenshots=True, snapshots=True)
+
+            page1 = context.new_page()
+            email = EMAIL
+            page1.goto(NEWDOT_URL)
+            page1.get_by_test_id("username").fill(email)
+            page1.get_by_test_id("username").press("Enter")
+
+            otp = "123456"
+            page1.locator('input[data-testid="validateCode"]').fill(otp)
+            page1.wait_for_timeout(4000)
+
+            page2 = context.new_page()
+            page2.goto(NEWDOT_URL)
+            page1.wait_for_timeout(4000)
+            page2.get_by_label("Track and budget expenses").click()
+            expect(page2).to_have_url(re.compile(".*/onboarding/personal-details.*"))
+
         except Exception as e:
-
-            raise e
+            print("An error occurred:", e)
+            raise
         finally:
 
-            context1.tracing.stop(path="/app/expensify/user_tool/output_browser1.zip")
+            context.tracing.stop(path="/app/expensify/user_tool/output_browser1.zip")
+
             trace_cleaner("/app/expensify/user_tool/output_browser1.zip")
 
-            context2.tracing.stop(path="/app/expensify/user_tool/output_browser2.zip")
-            trace_cleaner("/app/expensify/user_tool/output_browser2.zip")
-
-
-            context1.close()
-            browser1.close()
-            context2.close()
-            browser2.close()
+            context.close()
+            browser.close()

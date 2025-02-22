@@ -1,112 +1,152 @@
-import sys, os
+from playwright.sync_api import TimeoutError, expect, sync_playwright
+from utils.trace_cleaner import trace_cleaner
 
-base_path = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
-sys.path.insert(0, base_path)
+# Expensify app URL
+EXPENSIFY_URL = "https://dev.new.expensify.com:8082/"
 
-from playwright.sync_api import sync_playwright, expect
-from playwright.sync_api._context_manager import PlaywrightContextManager
-from playwright._impl._browser import Browser
-from playwright._impl._page import Page
+# Email login credentials
+EMAIL_USERNAME = "expensifytesting1@gmail.com"
+EMAIL_PASSWORD = "redx tbmr hzpc rbzr"
 
-
-def generate_random_email():
-    return f"freelanceapptest+643895@gmail.com"
-
+# Email username postfix
+EMAIL_USERNAME_POSTFIX = "52923.3"
 
 
-def login_user(page: Page, first_name="A", last_name="Khan") -> str:
-    user_email = generate_random_email()
+def generate_user_email(user_id=None):
+    """
+    Generate an email address for user login.
+    """
+    temp = EMAIL_USERNAME.rsplit("@", 1)
+    username = temp[0].strip()
+    domain = temp[1].strip()
+    return f"{username}+{EMAIL_USERNAME_POSTFIX}{user_id or ''}@{domain}"
 
 
-    page.goto('https://dev.new.expensify.com:8082/')
+def launch_browser(pw, headless=False, device=None, permissions=None, geolocation=None):
+    """
+    Launch the browser.
+    """
+    browser = pw.chromium.launch(
+        channel="chrome",
+        headless=headless,
+        args=[
+            "--ignore-certificate-errors",
+            "--disable-web-security",
+            "--disable-features=IsolateOrigins,site-per-process",
+        ],
+        slow_mo=1000,
+    )
+    context_args = {"permissions": permissions or []}
+    if device:
+        context_args.update(pw.devices[device])
+    if geolocation:
+        context_args["geolocation"] = geolocation
+        context_args["permissions"].append("geolocation")
+    context = browser.new_context(**context_args)
+    page = context.new_page()
+    return browser, context, page
 
 
-    page.locator('input[type="email"]').fill(user_email)
-    page.locator('button[tabindex="0"]').click()
-    page.wait_for_timeout(1000)
-
-
+def login_user(page, user_email, first_name="John", last_name="Doe"):
+    """
+    Log into the Expensify app.
+    """
+    # Open the Expensify app
+    page.goto(EXPENSIFY_URL)
+    # Login user
+    page.get_by_test_id("username").fill(user_email)
+    page.get_by_role("button", name="Continue").click()
+    # Check if OTP is required for the login
     try:
-        page.locator('button[tabindex="0"]').click()
-        page.wait_for_timeout(1000)
-    except Exception:
+        expect(page.get_by_test_id("SignInPage").get_by_test_id("validateCode")).to_be_visible(timeout=7000)
+    except (AssertionError, TimeoutError):
+        # If not required, expect the join button to appear and click the button
+        page.get_by_test_id("SignInPage").get_by_role("button", name="Join").click()
+    else:
+        # Get the OTP and complete verification
+        otp_code = "123456"
+        page.get_by_test_id("SignInPage").get_by_test_id("validateCode").fill(otp_code)
+        try:
+            page.get_by_test_id("SignInPage").get_by_role("button", name="Sign in").click(timeout=2000)
+        except (AssertionError, TimeoutError):
+            pass
+    # Check if onboarding is required
+    try:
+        expect(page.get_by_text("What do you want to do today?")).to_be_visible(timeout=5000)
+    except (AssertionError, TimeoutError):
+        pass
+    else:
+        # Complete the onboarding
+        page.get_by_label("Track and budget expenses").click()
+        page.get_by_role("button", name="Continue").first.click()
+        page.get_by_role("textbox", name="First name").fill(first_name)
+        page.get_by_role("textbox", name="Last name").fill(last_name)
+        page.get_by_role("button", name="Continue").last.click()
+    # Dismiss get started dialog if appears
+    try:
+        page.get_by_role("button", name="Get started").click(timeout=3000)
+    except (AssertionError, TimeoutError):
+        pass
+    # Expect the main screen to appear
+    expect(page.get_by_test_id("BaseSidebarScreen")).to_be_visible(timeout=7000)
+    # Close the info message if appears
+    try:
+        page.get_by_role("button", name="Close").click(timeout=2000)
+    except (AssertionError, TimeoutError):
         pass
 
 
-    page.locator("text='Track and budget expenses'").click()
-    page.get_by_role("button", name="Continue").click()
-    page.wait_for_timeout(1000)
-
-
-    page.locator('input[name="fname"]').fill(first_name)
-    page.locator('input[name="lname"]').fill(last_name)
-    page.get_by_role("button", name="Continue").last.click()
-    page.wait_for_timeout(1000)
-
-    return user_email
-
-
-
-
-def set_default_currency(page: Page, search_text: str, currency: str) -> None:
-
-    default_currency_button = page.locator('div[role="menuitem"]').get_by_text("Default currency")
-    expect(default_currency_button).to_be_visible()
-    default_currency_button.click()
-
-
-    input_currency = page.locator('input[aria-label="Default currency"]')
-    input_currency.fill(search_text)
-    expect(page.get_by_test_id("WorkspaceProfileCurrencyPage")).to_contain_text(currency)
-
-
-
-
-def check_currency_in_workspace_chat(page: Page) -> None:
-
-    plus_icon = page.locator('button[aria-label="Start chat (Floating action)"]')
-    expect(plus_icon).to_be_visible()
-    plus_icon.click()
-
-
-    new_workspace_button = page.locator('div[aria-label="New workspace"]')
-    expect(new_workspace_button).to_be_visible()
-    new_workspace_button.click()
-
-
-    set_default_currency(page, 'rupee', "INR - ₹")
-
-
-def test_currency_search():
-    from utils.trace_cleaner import trace_cleaner
-    trace_path = "/app/expensify/user_tool/output_browser1.zip"
-
-    with sync_playwright() as p:
-        browser = None
-        context = None
+def test_search_query():
+    """
+    Verify that the search query will not change on switching status.
+    """
+    with sync_playwright() as pw:
+        # Login user
+        user_email = generate_user_email()
+        browser, context, page = launch_browser(pw)
+        # Start tracing before running test steps
+        context.tracing.start(screenshots=True, snapshots=True, sources=True)
         try:
+            login_user(page, user_email)
 
-            browser = p.chromium.launch(headless=True, args=[
-                "--disable-web-security",
-                "--disable-features=IsolateOrigins,site-per-process"
-            ])
-            context = browser.new_context()
-            context.tracing.start(screenshots=True, snapshots=True, sources=True)
-            page = context.new_page()
+            # Go to search
+            page.get_by_test_id("CustomBottomTabNavigator").get_by_role("button", name="Reports").click()
+            # Close the info message if it appears
+            try:
+                page.get_by_role("button", name="Close").click(timeout=4000)
+            except (AssertionError, TimeoutError):
+                pass
 
+            # Set search filter and view results
+            search_term = "https://google.com/"
+            page.get_by_test_id("Search").get_by_role("button", name="Filters").click()
+            page.get_by_test_id("SearchAdvancedFiltersPage").get_by_role("menuitem", name="Has Keywords").click()
+            page.get_by_test_id("SearchFiltersKeywordPage").get_by_role("textbox", name="Keyword").fill(search_term)
+            page.get_by_test_id("SearchFiltersKeywordPage").get_by_role("button", name="Save").click()
+            page.get_by_test_id("SearchAdvancedFiltersPage").get_by_role("button", name="View results").click()
 
-            _ = login_user(page)
+            # Read the search query
+            search_query = page.get_by_test_id("Search").get_by_role("textbox", name="Search for something").input_value()
+            search_query = search_query.split(" ")[-1]
 
+            # Switch status multiple times
+            page.get_by_test_id("Search").get_by_role("button", name="Approved").click()
+            page.get_by_test_id("Search").get_by_role("button", name="Outstanding").click()
+            page.get_by_test_id("Search").get_by_role("button", name="Drafts").click()
+            page.get_by_test_id("Search").get_by_role("button", name="All").click()
 
-            check_currency_in_workspace_chat(page)
+            # Read the search query again
+            search_query_1 = page.get_by_test_id("Search").get_by_role("textbox", name="Search for something").input_value()
+            search_query_1 = search_query_1.split(" ")[-1]
 
-        except Exception as e:
-
-            raise e
+            # Verify that the search query has not changed
+            assert search_query == search_query_1, "Search query must not change on switching status"
         finally:
+            # Stop tracing and export the trace file
+            context.tracing.stop(path="/app/expensify/user_tool/output_browser1.zip")
+            trace_cleaner("/app/expensify/user_tool/output_browser1.zip")
+            browser.close()
 
-            if context:
-                context.tracing.stop(path=trace_path)
-            trace_cleaner(trace_path)
-            if browser:
-                browser.close()
+
+if __name__ == "__main__":
+    test_search_query()

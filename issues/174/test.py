@@ -1,90 +1,81 @@
-import sys, os
-
-base_path = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
-sys.path.insert(0, base_path)
-
+import re
+import os
 import time
+import numpy as np
+from PIL import Image
 from playwright.sync_api import sync_playwright, expect
-from playwright.sync_api._context_manager import PlaywrightContextManager
-from playwright._impl._browser import Browser
-from playwright._impl._page import Page
 
+# Expensify app URL
+NEWDOT_URL = "https://dev.new.expensify.com:8082"
+OLDDOT_URL = "http://127.0.0.1:9000/"
+GMAIL = "biruktassew21@gmail.com"
 
+def generate_new_email(email_address=GMAIL):
+        # Add random number suffix to the email before the "@" symbol
+        username, domain = email_address.split('@')
+        timestamp = int(time.time() * 1_000_000)
+        return f"{username}+{timestamp}@{domain}"
 
-def generate_random_email():
-    timestamp = int(time.time())
-    return f"milan.thummar-{timestamp}@gmail.com"
+def signup_user(page, email, first_name="Test", last_name="User"):
+    page.get_by_role("textbox", name="Phone or email").fill(email)
+    page.get_by_role("button", name="Continue").click()
+    page.get_by_role("button", name="Join").click()
 
-
-def login_user(p: PlaywrightContextManager, first_name="Milan", last_name="T") -> tuple[Browser, Page, str]:
-
-
-    browser = p.chromium.launch(channel="chrome",
-        headless=True,
-        args=[
-            "--disable-web-security",
-            "--disable-features=IsolateOrigins,site-per-process"
-        ])
-
-    page = browser.new_page()
-    user_email = generate_random_email()
-
-
-    page.goto('https://dev.new.expensify.com:8082/') 
-
-
-    page.locator('input[type="email"]').fill(user_email)
-    page.locator('button[tabindex="0"]').click()
-    page.wait_for_timeout(5000)
-
-
-    page.locator('button[tabindex="0"]').click() 
-    page.wait_for_timeout(10000)
+    page.wait_for_selector('text="What do you want to do today?"')
+    expect(page.locator("text=What do you want to do today?")).to_be_visible()
     
+    page.get_by_label("Track and budget expenses").click()
+    page.get_by_role("button", name="Continue").click()
 
-    try:    
-        expect(page.locator("text=What do you want to do today?")).to_be_visible()
+    page.fill('input[name="fname"]', first_name)
+    page.fill('input[name="lname"]', last_name)
+    page.get_by_role("button", name="Continue").last.click()
 
-        page.locator("text='Track and budget expenses'").click()
-        page.get_by_role("button", name="Continue").click()
-        page.wait_for_timeout(1000)
-
-
-        page.locator('input[name="fname"]').fill(first_name)
-        page.locator('input[name="lname"]').fill(last_name)
-        page.get_by_role("button", name="Continue").last.click()
-        page.wait_for_timeout(1000)
-    except Exception as err:
-        pass
-
-    return browser, page, user_email
+    page.wait_for_timeout(2000)
 
 
-def test_settings_header_style():
-    with sync_playwright() as p:
-
-        browser, page, user_email = login_user(p)
-
-
-        my_settings_button = page.locator('button[aria-label="My settings"]')
-        expect(my_settings_button).to_be_visible()
-        my_settings_button.click()
-        page.wait_for_timeout(1000)
-
-        workspace_settings_button = page.locator('div[aria-label="Workspaces"][role="menuitem"]')
-        expect(workspace_settings_button).to_be_visible()
-        workspace_settings_button.click()
-        page.wait_for_timeout(1000)
+def create_workspace(page):
+    # create a workspace and go to its chat
+    page.get_by_label("My settings").click()
+    page.get_by_test_id("InitialSettingsPage").get_by_label("Workspaces").get_by_text("Workspaces").click()
+    page.get_by_label("New workspace").first.click()
 
 
-        rocket_icon = page.locator("div:nth-child(4) > div:nth-child(2) > div:nth-child(2) > div > div > div > div > div > div > div > div > div:nth-child(2) > div > div > svg")
-        expect(rocket_icon).to_be_visible()
+def test_horizontal_divider_visibility():
+    with sync_playwright() as pw:
+        
+        email_address = 'biruktassew21+1739518540770268@gmail.com'
 
+        # Launch the app
+        browser = pw.chromium.launch(
+            channel="chrome",
+            headless=False,
+            args=[
+                "--ignore-certificate-errors",
+                "--disable-web-security",
+                "--disable-features=IsolateOrigins,site-per-process"
+            ],
+            proxy={"server": "http://localhost:8080"},
+            slow_mo=500
+        )
+        
+        page = browser.new_page()
+        page.goto(NEWDOT_URL)
+    
+        # signup user
+        signup_user(page, email_address)
 
-        h1_styled_title = page.locator('div[style*="font-size: 22px;"]', has_text="Create a workspace")
-        expect(h1_styled_title).to_be_visible()
+        # Create workspace
+        create_workspace(page)
+        
+        # Navigate to categories settings
+        page.get_by_text("Categories").click()
+        page.get_by_test_id("WorkspaceCategoriesPage").get_by_role("button", name="Settings").click()
 
-        page.wait_for_timeout(2000)
+        # Assert if the horizontal devider exist
+        divider = page.locator("div[style*='height: 1px'][style*='background-color: rgb(230, 225, 218)'][style*='margin: 24px 20px']")
+        expect(divider).to_be_visible()
 
+        # Close the browser
         browser.close()
 
