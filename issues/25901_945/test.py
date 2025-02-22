@@ -21,9 +21,6 @@ async def test_issue_25901():
         launch_args=["--disable-web-security", "--disable-features=IsolateOrigins, site-per-process"],
     )
 
-
-
-
     if not await check_if_logged_in(page=page, url=NEW_DOT_URL):
         await page.get_by_test_id("username").fill(EMAIL)
         await page.get_by_role("button", name="Continue").click()
