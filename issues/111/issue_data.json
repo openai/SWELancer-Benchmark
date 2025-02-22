@@ -1,0 +1,6 @@
+{
+    "price": 500.0,
+    "title": "[HOLD for payment 2024-03-07] [$500] Web- Split - Tooltip shows email instead of display name when hovering over counter in split preview",
+    "issue_repo_steps": "Action performed: 1. Split bill with at least 5 people with display name\r\n2. Hover over counter on the split preview\n\nExpected result: The tooltip shows the display name for participants that have a display name\n\nActual result: None",
+    "_issue_id": "33740_736"
+}

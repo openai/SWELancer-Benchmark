@@ -1,5 +1,0 @@
-{
-    "price": 8000.0,
-    "title": "[Paid] [$8000] zip /postcode validation error message not displayed for entering `,` on the Home address screen",
-    "issue_repo_steps": "Action performed: 1. go to Settings > profile> personal details >Home address\r\n2.  type the zip /postcode  as  ,\n\nExpected result: it should show validation error message\n\nActual result: None"
-}

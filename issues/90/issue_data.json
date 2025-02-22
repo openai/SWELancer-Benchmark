@@ -1,0 +1,6 @@
+{
+    "price": 500.0,
+    "title": "[HOLD for payment 2023-11-02] [$500] Thread - Newly created thread report in Room remains in LHN if it is not commented on",
+    "issue_repo_steps": "Action performed: 1. Go to https://staging.new.expensify.com/\r\n2. Log in with any account.\r\n3. On LHN, click on any Room and send a message.\r\n4. Create a thread, don't comment.\r\n5. Go back to LHN.\n\nExpected result: The newly created thread does not appear.\n\nActual result: None",
+    "_issue_id": "29851_717"
+}

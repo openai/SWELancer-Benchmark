@@ -1,0 +1,6 @@
+{
+    "price": 250.0,
+    "title": "[HOLD for payment 2024-07-26] [$250] Putting an expense on hold causes the `Duplicate` message to show in the transaction preview",
+    "issue_repo_steps": "Action performed: Have user A submit several expenses to user B on a Collect workspace\r\nAs user B, manually hold one of the expenses which is also a duplicate expense\n\nExpected result: The dot separator pattern shows `Hold`\n\nActual result: None",
+    "_issue_id": "44509_397"
+}
