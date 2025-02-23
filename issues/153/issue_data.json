@@ -1,0 +1,6 @@
+{
+    "price": 500.0,
+    "title": "[HOLD for payment 2023-10-20] [$500] Setting - Menu Item can not click but still show pointer cursor",
+    "issue_repo_steps": "Action performed: 1. Setting => Share code\r\n2. Click \"Copy URL to clipboard\"\r\n3. Observe the copied message appear, hover over it and see can not click but the pointer cursor appear\n\nExpected result: It should be the default cursor\n\nActual result: None",
+    "_issue_id": "28565_1001"
+}

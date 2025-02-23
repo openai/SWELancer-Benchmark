@@ -1,0 +1,46 @@
+diff --git a/src/libs/SelectionScraper/index.ts b/src/libs/SelectionScraper/index.ts
+index 88726aa633b..b4dd0de8cc3 100644
+--- a/src/libs/SelectionScraper/index.ts
++++ b/src/libs/SelectionScraper/index.ts
+@@ -149,6 +149,22 @@ const replaceNodes = (dom: Node, isChildOfEditorElement: boolean): Node => {
+     } as Element & DataNode;
+ };
+ 
++/**
++ * @param html - HTML string to preprocess
++ * @returns Preprocessed HTML string
++ */
++const preprocessMarkdownHeader = (html: string): string => {
++    return html.replace(/(<h1[^>]*>)(#?)([^<]*<\/h1>)/g, (match, openTag, hash, rest) => {
++        if (!hash) {
++            return `${openTag}#\n${rest}`;
++        }
++        if (hash && !rest.startsWith('\n')) {
++            return `${openTag}${hash}\n${rest}`;
++        }
++        return match;
++    });
++};
++
+ /**
+  * Resolves the current selection to values and produces clean HTML.
+  */
+@@ -156,13 +172,12 @@ const getCurrentSelection: GetCurrentSelection = () => {
+     const domRepresentation = parseDocument(getHTMLOfSelection());
+     domRepresentation.children = domRepresentation.children.map((item) => replaceNodes(item, false));
+ 
+-    // Newline characters need to be removed here because the HTML could contain both newlines and <br> tags, and when
+-    // <br> tags are converted later to markdown, it creates duplicate newline characters. This means that when the content
+-    // is pasted, there are extra newlines in the content that we want to avoid.
+-    const newHtml = render(domRepresentation).replace(/<br>\n/g, '<br>');
++    let newHtml = render(domRepresentation).replace(/<br>\n/g, '<br>');
++    newHtml = preprocessMarkdownHeader(newHtml);
++    
+     return newHtml || '';
+ };
+ 
+ export default {
+     getCurrentSelection,
+-};
++};
+\ No newline at end of file

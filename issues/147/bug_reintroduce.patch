@@ -1,0 +1,51 @@
+diff --git a/src/components/SelectionList/BaseSelectionList.tsx b/src/components/SelectionList/BaseSelectionList.tsx
+index 197c64b99a2..7cbc739d282 100644
+--- a/src/components/SelectionList/BaseSelectionList.tsx
++++ b/src/components/SelectionList/BaseSelectionList.tsx
+@@ -1,6 +1,7 @@
+ import {useFocusEffect, useIsFocused} from '@react-navigation/native';
+ import isEmpty from 'lodash/isEmpty';
+ import type {ForwardedRef} from 'react';
++import lodashGet from 'lodash/get';
+ import React, {forwardRef, useCallback, useEffect, useImperativeHandle, useMemo, useRef, useState} from 'react';
+ import type {LayoutChangeEvent, SectionList as RNSectionList, TextInput as RNTextInput, SectionListData, SectionListRenderItemInfo} from 'react-native';
+ import {View} from 'react-native';
+@@ -241,22 +242,28 @@ function BaseSelectionList<TItem extends ListItem>(
+      * @param index - the index of the item to scroll to
+      * @param animated - whether to animate the scroll
+      */
+-    const scrollToIndex = useCallback(
+-        (index: number, animated = true) => {
+-            const item = flattenedSections.allOptions[index];
+ 
+-            if (!listRef.current || !item) {
+-                return;
+-            }
++    const scrollToIndex = useCallback((index, animated = true) => {
++        const item = flattenedSections.allOptions[index];
+ 
+-            const itemIndex = item.index ?? -1;
+-            const sectionIndex = item.sectionIndex ?? -1;
++        if (!listRef.current || !item) {
++            return;
++        }
+ 
+-            listRef.current.scrollToLocation({sectionIndex, itemIndex, animated, viewOffset: variables.contentHeaderHeight});
++        const itemIndex = item.index ?? -1;
++        const sectionIndex = item.sectionIndex ?? -1;
++
++        let adjustedSectionIndex = sectionIndex;
++        for (let i = 0; i < sectionIndex; i++) {
++                if (isEmpty(lodashGet(sections, `[${i}].data`))) {
++                    adjustedSectionIndex--;
++                }
++            }
++        listRef.current.scrollToLocation({sectionIndex: adjustedSectionIndex, itemIndex, animated, viewOffset: variables.contentHeaderHeight});
+         },
+ 
+         // eslint-disable-next-line react-compiler/react-compiler, react-hooks/exhaustive-deps
+-        [flattenedSections.allOptions],
++        []
+     );
+ 
+     const [disabledArrowKeyIndexes, setDisabledArrowKeyIndexes] = useState(flattenedSections.disabledArrowKeyOptionsIndexes);

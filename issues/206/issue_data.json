@@ -1,0 +1,6 @@
+{
+    "price": 1000.0,
+    "title": "[HOLD for payment 2023-06-21] [$1000]  'Link sent!' message is not dynamically updated when changing language preference",
+    "issue_repo_steps": "Action performed: 1. Add a secondary login account, and leave it unverified\r\n2. Open new tab\r\n3. Navigate to sign in page\r\n4. Enter the unverified email address\r\n5. Click on Unlink button\r\n6. Verify that 'Link sent!' message is displayed\r\n7. Scroll down, and select Spanish as a language preference\n\nExpected result: None\n\nActual result: None",
+    "_issue_id": "18827_741"
+}

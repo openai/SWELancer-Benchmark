@@ -1,0 +1,120 @@
+diff --git a/src/components/HeaderWithBackButton/index.tsx b/src/components/HeaderWithBackButton/index.tsx
+index eb04ad5540e..3153ded7fac 100755
+--- a/src/components/HeaderWithBackButton/index.tsx
++++ b/src/components/HeaderWithBackButton/index.tsx
+@@ -60,7 +60,6 @@ function HeaderWithBackButton({
+     children = null,
+     shouldOverlayDots = false,
+     shouldOverlay = false,
+-    shouldNavigateToTopMostReport = false,
+     shouldDisplaySearchRouter = false,
+     progressBarPercentage,
+     style,
+@@ -154,12 +153,7 @@ function HeaderWithBackButton({
+                                 if (isKeyboardShown) {
+                                     Keyboard.dismiss();
+                                 }
+-                                const topmostReportId = Navigation.getTopmostReportId();
+-                                if (shouldNavigateToTopMostReport && topmostReportId) {
+-                                    Navigation.navigate(ROUTES.REPORT_WITH_ID.getRoute(topmostReportId));
+-                                } else {
+-                                    onBackButtonPress();
+-                                }
++                                onBackButtonPress();
+                             }}
+                             style={[styles.touchableButtonImage]}
+                             role={CONST.ROLE.BUTTON}
+diff --git a/src/components/HeaderWithBackButton/types.ts b/src/components/HeaderWithBackButton/types.ts
+index ef480a3a927..344965cb31f 100644
+--- a/src/components/HeaderWithBackButton/types.ts
++++ b/src/components/HeaderWithBackButton/types.ts
+@@ -113,9 +113,6 @@ type HeaderWithBackButtonProps = Partial<ChildrenProps> & {
+     /** Single execution function to prevent concurrent navigation actions */
+     singleExecution?: <T extends unknown[]>(action: Action<T>) => Action<T>;
+ 
+-    /** Whether we should navigate to report page when the route have a topMostReport  */
+-    shouldNavigateToTopMostReport?: boolean;
+-
+     /** The fill color for the icon. Can be hex, rgb, rgba, or valid react-native named color such as 'red' or 'blue'. */
+     iconFill?: string;
+ 
+diff --git a/src/pages/FlagCommentPage.tsx b/src/pages/FlagCommentPage.tsx
+index c87dda8e13c..24203461090 100644
+--- a/src/pages/FlagCommentPage.tsx
++++ b/src/pages/FlagCommentPage.tsx
+@@ -1,5 +1,5 @@
+ import type {StackScreenProps} from '@react-navigation/stack';
+-import React, {useCallback} from 'react';
++import React, {useCallback, useState, useEffect} from 'react';
+ import {View} from 'react-native';
+ import type {OnyxEntry} from 'react-native-onyx';
+ import type {SvgProps} from 'react-native-svg';
+@@ -54,6 +54,7 @@ function getReportID(route: FlagCommentPageNavigationProps['route']) {
+ }
+ 
+ function FlagCommentPage({parentReportAction, route, report, parentReport, reportActions}: FlagCommentPageProps) {
++    const [hasPageReloaded, setHasPageReloaded] = useState(false);
+     const styles = useThemeStyles();
+     const {translate} = useLocalize();
+ 
+@@ -152,6 +153,36 @@ function FlagCommentPage({parentReportAction, route, report, parentReport, repor
+         />
+     ));
+ 
++    useEffect(() => {
++        const checkIfReloaded = () => {
++            const hasLoaded = sessionStorage.getItem('hasLoaded');
++            if (!hasLoaded) {
++                // First load
++                sessionStorage.setItem('hasLoaded', 'true');
++            } else {
++                // Page has been reloaded
++                setHasPageReloaded(true);
++            }
++        };
++
++        checkIfReloaded();
++
++        return () => {
++            // Clean up
++            sessionStorage.removeItem('hasLoaded');
++        };
++    }, []);
++
++    const handleBackPress = useCallback(() => {
++        if (hasPageReloaded) {
++            Navigation.resetToHome();
++        } else {
++            Navigation.goBack();
++        }
++        setHasPageReloaded(false);
++    }, [hasPageReloaded]);
++
++
+     return (
+         <ScreenWrapper
+             includeSafeAreaPaddingBottom={false}
+@@ -161,7 +192,7 @@ function FlagCommentPage({parentReportAction, route, report, parentReport, repor
+                 <FullPageNotFoundView shouldShow={!ReportUtils.shouldShowFlagComment(getActionToFlag(), report)}>
+                     <HeaderWithBackButton
+                         title={translate('reportActionContextMenu.flagAsOffensive')}
+-                        onBackButtonPress={() => Navigation.goBack(route.params.backTo)}
++                        onBackButtonPress={handleBackPress}
+                     />
+                     <ScrollView
+                         contentContainerStyle={safeAreaPaddingBottomStyle}
+diff --git a/src/pages/ReportDetailsPage.tsx b/src/pages/ReportDetailsPage.tsx
+index 195c14698f7..ee6394b0e3e 100644
+--- a/src/pages/ReportDetailsPage.tsx
++++ b/src/pages/ReportDetailsPage.tsx
+@@ -741,7 +741,9 @@ function ReportDetailsPage({policies, report, route}: ReportDetailsPageProps) {
+             <FullPageNotFoundView shouldShow={isEmptyObject(report)}>
+                 <HeaderWithBackButton
+                     title={translate('common.details')}
+-                    onBackButtonPress={() => Navigation.goBack(backTo)}
++                    onBackButtonPress={() => {
++                        Navigation.goBack();
++                    }}
+                 />
+                 <ScrollView style={[styles.flex1]}>
+                     <View style={[styles.reportDetailsTitleContainer, styles.pb0]}>

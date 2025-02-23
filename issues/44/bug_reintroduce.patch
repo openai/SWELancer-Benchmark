@@ -1,0 +1,204 @@
+diff --git a/src/ONYXKEYS.ts b/src/ONYXKEYS.ts
+index cb8bf2fdb5d..621341fc866 100755
+--- a/src/ONYXKEYS.ts
++++ b/src/ONYXKEYS.ts
+@@ -666,8 +666,6 @@ const ONYXKEYS = {
+         SEARCH_ADVANCED_FILTERS_FORM_DRAFT: 'searchAdvancedFiltersFormDraft',
+         SEARCH_SAVED_SEARCH_RENAME_FORM: 'searchSavedSearchRenameForm',
+         SEARCH_SAVED_SEARCH_RENAME_FORM_DRAFT: 'searchSavedSearchRenameFormDraft',
+-        TEXT_PICKER_MODAL_FORM: 'textPickerModalForm',
+-        TEXT_PICKER_MODAL_FORM_DRAFT: 'textPickerModalFormDraft',
+         RULES_CUSTOM_NAME_MODAL_FORM: 'rulesCustomNameModalForm',
+         RULES_CUSTOM_NAME_MODAL_FORM_DRAFT: 'rulesCustomNameModalFormDraft',
+         RULES_AUTO_APPROVE_REPORTS_UNDER_MODAL_FORM: 'rulesAutoApproveReportsUnderModalForm',
+@@ -772,7 +770,6 @@ type OnyxFormValuesMapping = {
+     [ONYXKEYS.FORMS.NETSUITE_CUSTOM_FORM_ID_FORM]: FormTypes.NetSuiteCustomFormIDForm;
+     [ONYXKEYS.FORMS.SAGE_INTACCT_DIMENSION_TYPE_FORM]: FormTypes.SageIntacctDimensionForm;
+     [ONYXKEYS.FORMS.SEARCH_ADVANCED_FILTERS_FORM]: FormTypes.SearchAdvancedFiltersForm;
+-    [ONYXKEYS.FORMS.TEXT_PICKER_MODAL_FORM]: FormTypes.TextPickerModalForm;
+     [ONYXKEYS.FORMS.RULES_CUSTOM_NAME_MODAL_FORM]: FormTypes.RulesCustomNameModalForm;
+     [ONYXKEYS.FORMS.RULES_AUTO_APPROVE_REPORTS_UNDER_MODAL_FORM]: FormTypes.RulesAutoApproveReportsUnderModalForm;
+     [ONYXKEYS.FORMS.RULES_RANDOM_REPORT_AUDIT_MODAL_FORM]: FormTypes.RulesRandomReportAuditModalForm;
+diff --git a/src/components/TextPicker/TextSelectorModal.tsx b/src/components/TextPicker/TextSelectorModal.tsx
+index ad3561b0ba2..bea95df3dbf 100644
+--- a/src/components/TextPicker/TextSelectorModal.tsx
++++ b/src/components/TextPicker/TextSelectorModal.tsx
+@@ -1,19 +1,18 @@
+ import {useFocusEffect} from '@react-navigation/native';
+ import React, {useCallback, useEffect, useRef, useState} from 'react';
+-import type {TextInput as TextInputType} from 'react-native';
+ import {Keyboard, View} from 'react-native';
+-import FormProvider from '@components/Form/FormProvider';
+-import InputWrapper from '@components/Form/InputWrapper';
++import type {TextInput as TextInputType} from 'react-native';
++import Button from '@components/Button';
+ import HeaderWithBackButton from '@components/HeaderWithBackButton';
+ import Modal from '@components/Modal';
+ import ScreenWrapper from '@components/ScreenWrapper';
++import ScrollView from '@components/ScrollView';
+ import Text from '@components/Text';
+ import TextInput from '@components/TextInput';
+ import type {BaseTextInputRef} from '@components/TextInput/BaseTextInput/types';
+ import useLocalize from '@hooks/useLocalize';
+ import useThemeStyles from '@hooks/useThemeStyles';
+ import CONST from '@src/CONST';
+-import ONYXKEYS from '@src/ONYXKEYS';
+ import type {TextSelectorModalProps} from './types';
+ import usePaddingStyle from './usePaddingStyle';
+ 
+@@ -28,10 +27,6 @@ function TextSelectorModal({value, description = '', subtitle, onValueSelected,
+     const inputValueRef = useRef(value);
+     const focusTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+ 
+-    const inputCallbackRef = (ref: BaseTextInputRef | null) => {
+-        inputRef.current = ref;
+-    };
+-
+     const hide = useCallback(() => {
+         onClose();
+         if (shouldClearOnClose) {
+@@ -39,16 +34,6 @@ function TextSelectorModal({value, description = '', subtitle, onValueSelected,
+         }
+     }, [onClose, shouldClearOnClose]);
+ 
+-    // In TextPicker, when the modal is hidden, it is not completely unmounted, so when it is shown again, the currentValue is not updated with the value prop.
+-    // Therefore, we need to update the currentValue with the value prop when the modal is shown. This is done once when the modal is shown again.
+-    useEffect(() => {
+-        if (!isVisible) {
+-            return;
+-        }
+-        setValue(value);
+-        // eslint-disable-next-line react-compiler/react-compiler, react-hooks/exhaustive-deps
+-    }, [isVisible]);
+-
+     useEffect(() => {
+         inputValueRef.current = currentValue;
+     }, [currentValue]);
+@@ -91,30 +76,36 @@ function TextSelectorModal({value, description = '', subtitle, onValueSelected,
+                     title={description}
+                     onBackButtonPress={hide}
+                 />
+-                <FormProvider
+-                    formID={ONYXKEYS.FORMS.TEXT_PICKER_MODAL_FORM}
+-                    onSubmit={(data) => {
+-                        Keyboard.dismiss();
+-                        onValueSelected?.(data[rest.inputID ?? ''] ?? '');
+-                    }}
+-                    submitButtonText={translate('common.save')}
+-                    style={[styles.mh5, styles.flex1]}
+-                    enabledWhenOffline
++                <ScrollView
++                    contentContainerStyle={[styles.flex1, styles.mh5, styles.mb5]}
++                    keyboardShouldPersistTaps="handled"
+                 >
+                     <View style={styles.pb4}>{!!subtitle && <Text style={[styles.sidebarLinkText, styles.optionAlternateText]}>{subtitle}</Text>}</View>
+-                    {!!rest.inputID && (
+-                        <InputWrapper
+-                            ref={inputCallbackRef}
+-                            InputComponent={TextInput}
+-                            maxLength={CONST.CATEGORY_NAME_LIMIT}
+-                            value={currentValue}
+-                            onValueChange={(changedValue) => setValue(changedValue.toString())}
++                    <View style={styles.flex1}>
++                        <TextInput
+                             // eslint-disable-next-line react/jsx-props-no-spreading
+                             {...rest}
+-                            inputID={rest.inputID}
++                            value={currentValue}
++                            onInputChange={setValue}
++                            ref={(ref) => {
++                                if (!ref) {
++                                    return;
++                                }
++                                inputRef.current = ref;
++                            }}
+                         />
+-                    )}
+-                </FormProvider>
++                    </View>
++                    <Button
++                        success
++                        large
++                        pressOnEnter
++                        text={translate('common.save')}
++                        onPress={() => {
++                            Keyboard.dismiss();
++                            onValueSelected?.(currentValue ?? '');
++                        }}
++                    />
++                </ScrollView>
+             </ScreenWrapper>
+         </Modal>
+     );
+diff --git a/src/pages/workspace/reportFields/CreateReportFieldsPage.tsx b/src/pages/workspace/reportFields/CreateReportFieldsPage.tsx
+index 79be1022da3..2228e8b6ce2 100644
+--- a/src/pages/workspace/reportFields/CreateReportFieldsPage.tsx
++++ b/src/pages/workspace/reportFields/CreateReportFieldsPage.tsx
+@@ -90,8 +90,6 @@ function CreateReportFieldsPage({
+         ReportField.setInitialCreateReportFieldsForm();
+     }, []);
+ 
+-    const [modal] = useOnyx(ONYXKEYS.MODAL);
+-
+     return (
+         <AccessOrNotFoundWrapper
+             accessVariants={[CONST.POLICY.ACCESS_VARIANTS.ADMIN, CONST.POLICY.ACCESS_VARIANTS.PAID]}
+@@ -118,7 +116,6 @@ function CreateReportFieldsPage({
+                     submitButtonText={translate('common.save')}
+                     enabledWhenOffline
+                     shouldValidateOnBlur={false}
+-                    disablePressOnEnter={!!modal?.isVisible}
+                 >
+                     {({inputValues}) => (
+                         <View style={styles.mhn5}>
+diff --git a/src/pages/workspace/taxes/WorkspaceCreateTaxPage.tsx b/src/pages/workspace/taxes/WorkspaceCreateTaxPage.tsx
+index 4a31f7d16b1..4bc1bcc1fcf 100644
+--- a/src/pages/workspace/taxes/WorkspaceCreateTaxPage.tsx
++++ b/src/pages/workspace/taxes/WorkspaceCreateTaxPage.tsx
+@@ -1,7 +1,6 @@
+ import type {StackScreenProps} from '@react-navigation/stack';
+ import React, {useCallback} from 'react';
+ import {View} from 'react-native';
+-import {useOnyx} from 'react-native-onyx';
+ import AmountPicker from '@components/AmountPicker';
+ import FullPageNotFoundView from '@components/BlockingViews/FullPageNotFoundView';
+ import FormProvider from '@components/Form/FormProvider';
+@@ -36,7 +35,6 @@ function WorkspaceCreateTaxPage({
+ }: WorkspaceCreateTaxPageProps) {
+     const styles = useThemeStyles();
+     const {translate} = useLocalize();
+-    const [modal] = useOnyx(ONYXKEYS.MODAL);
+ 
+     const submitForm = useCallback(
+         ({value, ...values}: FormOnyxValues<typeof ONYXKEYS.FORMS.WORKSPACE_NEW_TAX_FORM>) => {
+@@ -86,7 +84,6 @@ function WorkspaceCreateTaxPage({
+                             submitButtonText={translate('common.save')}
+                             enabledWhenOffline
+                             shouldValidateOnBlur={false}
+-                            disablePressOnEnter={!!modal?.isVisible}
+                         >
+                             <View style={styles.mhn5}>
+                                 <InputWrapper
+diff --git a/src/types/form/TextPickerModalForm.ts b/src/types/form/TextPickerModalForm.ts
+deleted file mode 100644
+index eae46c0accd..00000000000
+--- a/src/types/form/TextPickerModalForm.ts
++++ /dev/null
+@@ -1,5 +0,0 @@
+-import type Form from './Form';
+-
+-type TextPickerModalForm = Form<string, Record<string, string>>;
+-
+-export default TextPickerModalForm;
+diff --git a/src/types/form/index.ts b/src/types/form/index.ts
+index 0dce9c7c3bf..d48ac940c0f 100644
+--- a/src/types/form/index.ts
++++ b/src/types/form/index.ts
+@@ -71,7 +71,6 @@ export type {NetSuiteTokenInputForm} from './NetSuiteTokenInputForm';
+ export type {NetSuiteCustomFormIDForm} from './NetSuiteCustomFormIDForm';
+ export type {SearchAdvancedFiltersForm} from './SearchAdvancedFiltersForm';
+ export type {EditExpensifyCardLimitForm} from './EditExpensifyCardLimitForm';
+-export type {default as TextPickerModalForm} from './TextPickerModalForm';
+ export type {default as Form} from './Form';
+ export type {RulesCustomNameModalForm} from './RulesCustomNameModalForm';
+ export type {RulesAutoApproveReportsUnderModalForm} from './RulesAutoApproveReportsUnderModalForm';

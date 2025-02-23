@@ -1,0 +1,6 @@
+{
+    "price": 2000.0,
+    "title": "[HOLD for payment 2023-04-03] [$2000] URL does not show on the bottom left on hovering the social media icons in sign in page",
+    "issue_repo_steps": "Action performed: 1. open the https://staging.new.expensify.com/\r\n2. go to login page (if you are logged in please logout) and scroll\r\n3. hover mouse on the social media icons\n\nExpected result: it should show URL on bottom left same as other links\n\nActual result: None",
+    "_issue_id": "15720"
+}

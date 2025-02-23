@@ -1,0 +1,117 @@
+diff --git a/src/libs/OptionsListUtils.ts b/src/libs/OptionsListUtils.ts
+index 51db5a693f9..6da50d6bb02 100644
+--- a/src/libs/OptionsListUtils.ts
++++ b/src/libs/OptionsListUtils.ts
+@@ -210,7 +210,6 @@ type Options = {
+     recentReports: ReportUtils.OptionData[];
+     personalDetails: ReportUtils.OptionData[];
+     userToInvite: ReportUtils.OptionData | null;
+-    currentUserOption: ReportUtils.OptionData | null | undefined;
+     categoryOptions: CategoryTreeSection[];
+     tagOptions: CategorySection[];
+     taxRatesOptions: CategorySection[];
+@@ -1624,15 +1623,13 @@ function canCreateOptimisticPersonalDetailOption({
+     searchValue,
+     recentReportOptions,
+     personalDetailsOptions,
+-    currentUserOption,
+ }: {
+     searchValue: string;
+     recentReportOptions: ReportUtils.OptionData[];
+     personalDetailsOptions: ReportUtils.OptionData[];
+-    currentUserOption?: ReportUtils.OptionData | null;
+     excludeUnknownUsers: boolean;
+ }) {
+-    const noOptions = recentReportOptions.length + personalDetailsOptions.length === 0 && !currentUserOption;
++    const noOptions = recentReportOptions.length + personalDetailsOptions.length === 0;
+     const noOptionsMatchExactly = !personalDetailsOptions
+         .concat(recentReportOptions)
+         .find((option) => option.login === PhoneNumber.addSMSDomainIfPhoneNumber(searchValue ?? '').toLowerCase() || option.login === searchValue?.toLowerCase());
+@@ -1769,7 +1766,6 @@ function getOptions(
+             recentReports: [],
+             personalDetails: [],
+             userToInvite: null,
+-            currentUserOption: null,
+             categoryOptions,
+             tagOptions: [],
+             taxRatesOptions: [],
+@@ -1783,7 +1779,6 @@ function getOptions(
+             recentReports: [],
+             personalDetails: [],
+             userToInvite: null,
+-            currentUserOption: null,
+             categoryOptions: [],
+             tagOptions,
+             taxRatesOptions: [],
+@@ -1797,7 +1792,6 @@ function getOptions(
+             recentReports: [],
+             personalDetails: [],
+             userToInvite: null,
+-            currentUserOption: null,
+             categoryOptions: [],
+             tagOptions: [],
+             taxRatesOptions,
+@@ -1810,7 +1804,6 @@ function getOptions(
+             recentReports: [],
+             personalDetails: [],
+             userToInvite: null,
+-            currentUserOption: null,
+             categoryOptions: [],
+             tagOptions: [],
+             taxRatesOptions: [],
+@@ -2033,7 +2026,6 @@ function getOptions(
+         personalDetailsOptions.push(personalDetailOption);
+     }
+ 
+-    const currentUserOption = allPersonalDetailsOptions.find((personalDetailsOption) => personalDetailsOption.login === currentUserLogin);
+ 
+     let userToInvite: ReportUtils.OptionData | null = null;
+     if (
+@@ -2041,7 +2033,6 @@ function getOptions(
+             searchValue,
+             recentReportOptions,
+             personalDetailsOptions,
+-            currentUserOption,
+             excludeUnknownUsers,
+         })
+     ) {
+@@ -2074,7 +2065,6 @@ function getOptions(
+         personalDetails: personalDetailsOptions,
+         recentReports: recentReportOptions,
+         userToInvite: canInviteUser ? userToInvite : null,
+-        currentUserOption,
+         categoryOptions: [],
+         tagOptions: [],
+         taxRatesOptions: [],
+@@ -2473,15 +2463,10 @@ function filterOptions(options: Options, searchInputValue: string, config?: Filt
+         });
+         const personalDetails = filterArrayByMatch(items.personalDetails, term, (item) => uniqFast(getPersonalDetailSearchTerms(item)));
+ 
+-        const currentUserOptionSearchText = items.currentUserOption ? uniqFast(getCurrentUserSearchTerms(items.currentUserOption)).join(' ') : '';
+-
+-        const currentUserOption = isSearchStringMatch(term, currentUserOptionSearchText) ? items.currentUserOption : null;
+-
+         return {
+             recentReports: recentReports ?? [],
+             personalDetails: personalDetails ?? [],
+             userToInvite: null,
+-            currentUserOption,
+             categoryOptions: [],
+             tagOptions: [],
+             taxRatesOptions: [],
+@@ -2515,7 +2500,6 @@ function filterOptions(options: Options, searchInputValue: string, config?: Filt
+         personalDetails,
+         recentReports: orderOptions(recentReports, searchValue, {preferChatroomsOverThreads, preferPolicyExpenseChat, preferRecentExpenseReports}),
+         userToInvite,
+-        currentUserOption: matchResults.currentUserOption,
+         categoryOptions: [],
+         tagOptions: [],
+         taxRatesOptions: [],
+@@ -2531,7 +2515,6 @@ function getEmptyOptions(): Options {
+         recentReports: [],
+         personalDetails: [],
+         userToInvite: null,
+-        currentUserOption: null,
+         categoryOptions: [],
+         tagOptions: [],
+         taxRatesOptions: [],

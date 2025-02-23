@@ -1,0 +1,6 @@
+{
+    "price": 1000.0,
+    "title": "[HOLD for payment 2023-06-28] [$1000] Settings - Zip/ Pin code validation is case sensitive",
+    "issue_repo_steps": "Action performed: Action Performed:\r\n1. Open the app\r\n2. Open settings\r\n3. Open profile\r\n4. Open personal details\r\n5. Open Home address\r\n6. Change country to 'Ascension Island'\r\n7. Insert same format zip code but in lower case and observe that it throws validation error.\n\nExpected result: The Zip/ Pin code should be uppercased on the background without user noticing and then we can run the verification making the case sensitiveness irrelevant.\n\nActual result: None",
+    "_issue_id": "20569_1122"
+}

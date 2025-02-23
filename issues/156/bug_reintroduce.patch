@@ -1,0 +1,41 @@
+diff --git a/src/components/LHNOptionsList/OptionRowLHN.tsx b/src/components/LHNOptionsList/OptionRowLHN.tsx
+index 322f28aa246..3bab71e83a0 100644
+--- a/src/components/LHNOptionsList/OptionRowLHN.tsx
++++ b/src/components/LHNOptionsList/OptionRowLHN.tsx
+@@ -198,8 +198,6 @@ function OptionRowLHN({reportID, isFocused = false, onSelectRow = () => {}, opti
+                                     Performance.markStart(CONST.TIMING.OPEN_REPORT);
+ 
+                                     event?.preventDefault();
+-                                    // Enable Composer to focus on clicking the same chat after opening the context menu.
+-                                    ReportActionComposeFocusManager.focus();
+                                     onSelectRow(optionItem, popoverAnchor);
+                                 }}
+                                 onMouseDown={(event) => {
+@@ -212,13 +210,7 @@ function OptionRowLHN({reportID, isFocused = false, onSelectRow = () => {}, opti
+                                     event.preventDefault();
+                                 }}
+                                 testID={optionItem.reportID}
+-                                onSecondaryInteraction={(event) => {
+-                                    showPopover(event);
+-                                    // Ensure that we blur the composer when opening context menu, so that only one component is focused at a time
+-                                    if (DomUtils.getActiveElement()) {
+-                                        (DomUtils.getActiveElement() as HTMLElement | null)?.blur();
+-                                    }
+-                                }}
++                                onSecondaryInteraction={(event) => showPopover(event)}
+                                 withoutFocusOnSecondaryInteraction
+                                 activeOpacity={variables.pressDimValue}
+                                 opacityAnimationDuration={0}
+diff --git a/src/pages/home/report/ContextMenu/BaseReportActionContextMenu.tsx b/src/pages/home/report/ContextMenu/BaseReportActionContextMenu.tsx
+index 644adfdd66f..426786195d3 100755
+--- a/src/pages/home/report/ContextMenu/BaseReportActionContextMenu.tsx
++++ b/src/pages/home/report/ContextMenu/BaseReportActionContextMenu.tsx
+@@ -181,7 +181,7 @@ function BaseReportActionContextMenu({
+ 
+     const originalReportID = useMemo(() => ReportUtils.getOriginalReportID(reportID, reportAction), [reportID, reportAction]);
+ 
+-    const shouldEnableArrowNavigation = !isMini && (isVisible || shouldKeepOpen);
++    const shouldEnableArrowNavigation = !isMini && shouldKeepOpen;
+     let filteredContextMenuActions = ContextMenuActions.filter(
+         (contextAction) =>
+             !disabledActions.includes(contextAction) &&

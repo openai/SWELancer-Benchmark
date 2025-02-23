@@ -1,0 +1,6 @@
+{
+    "price": 2000.0,
+    "title": "[hold for app #12854] [$2000] Shows incorrect emoji while combining the manual and emoji picker selected emoji within the text",
+    "issue_repro_steps": "Action Performed: Load new.expensify.com.\nOpen a chat.\ntype Te:smile :st in the text bar.\nremove the space so the smile emoji renders inside of the word test. leave your cursor flush with the emoji.\nclick the emoji picker.\nselect an emoji.\nconfirm that the new emoji loads in between the two question mark characters. This is the bug.\nExpected Result:\nShould show both emoji adjacently after selecting the second one.\n\nActual Result:\nShows a weird emoji, and removes the original emoji, incorrectly.\n\nWorkaround:\nSelect emojis via the emoji picker.",
+    "_issue_id": "13066_1"
+}

@@ -1,0 +1,6 @@
+{
+    "price": 500.0,
+    "title": "[HOLD for payment 2023-10-25] [$500] iOS - WS Invite - Invite message link does not lead to invite message page",
+    "issue_repo_steps": "Action performed: Pre-requisite: user must be logged in, must have sent the invite message link to any workspace to any conversation.\r\n\r\n1. Go to the conversation you have sent the invite message link.\r\n2. Tap on the invite message link.\n\nExpected result: Invite message page should be displayed.\n\nActual result: None",
+    "_issue_id": "29163_589"
+}

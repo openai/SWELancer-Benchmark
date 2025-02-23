@@ -1,0 +1,74 @@
+diff --git a/src/libs/ReportUtils.ts b/src/libs/ReportUtils.ts
+index 78ebdd92751..9be20687a96 100644
+--- a/src/libs/ReportUtils.ts
++++ b/src/libs/ReportUtils.ts
+@@ -2146,13 +2146,6 @@ function getParticipantsAccountIDsForDisplay(report: OnyxEntry<Report>, shouldEx
+                 return false;
+             }
+ 
+-            if (
+-                shouldExcludeDeleted &&
+-                report?.pendingChatMembers?.findLast((member) => Number(member.accountID) === accountID)?.pendingAction === CONST.RED_BRICK_ROAD_PENDING_ACTION.DELETE
+-            ) {
+-                return false;
+-            }
+-
+             return true;
+         });
+     }
+diff --git a/src/libs/actions/Report.ts b/src/libs/actions/Report.ts
+index 0fe2bfbf8d4..9ad8139a2f2 100644
+--- a/src/libs/actions/Report.ts
++++ b/src/libs/actions/Report.ts
+@@ -2942,18 +2942,12 @@ function inviteToRoom(reportID: string, inviteeEmailsToAccountIDs: InvitedEmails
+     ];
+     optimisticData.push(...newPersonalDetailsOnyxData.optimisticData);
+ 
+-    const successPendingChatMembers = report?.pendingChatMembers
+-        ? report?.pendingChatMembers?.filter(
+-              (pendingMember) => !(inviteeAccountIDs.includes(Number(pendingMember.accountID)) && pendingMember.pendingAction === CONST.RED_BRICK_ROAD_PENDING_ACTION.DELETE),
+-          )
+-        : null;
+     const successData: OnyxUpdate[] = [
+         {
+             onyxMethod: Onyx.METHOD.MERGE,
+             key: `${ONYXKEYS.COLLECTION.REPORT}${reportID}`,
+             value: {
+-                pendingChatMembers: successPendingChatMembers,
+-                participants: newParticipantAccountCleanUp,
++                pendingChatMembers: report?.pendingChatMembers ?? null,
+             },
+         },
+     ];
+diff --git a/src/pages/InviteReportParticipantsPage.tsx b/src/pages/InviteReportParticipantsPage.tsx
+index 6a5bf6832fd..bf1f0dba34c 100644
+--- a/src/pages/InviteReportParticipantsPage.tsx
++++ b/src/pages/InviteReportParticipantsPage.tsx
+@@ -60,10 +60,7 @@ function InviteReportParticipantsPage({betas, personalDetails, report, didScreen
+     }, [debouncedSearchTerm]);
+ 
+     // Any existing participants and Expensify emails should not be eligible for invitation
+-    const excludedUsers = useMemo(
+-        () => [...PersonalDetailsUtils.getLoginsByAccountIDs(ReportUtils.getParticipantsAccountIDsForDisplay(report, false, true)), ...CONST.EXPENSIFY_EMAILS],
+-        [report],
+-    );
++    const excludedUsers = useMemo(() => [...PersonalDetailsUtils.getLoginsByAccountIDs(ReportUtils.getParticipantsAccountIDsForDisplay(report, false)), ...CONST.EXPENSIFY_EMAILS], [report]);
+ 
+     const defaultOptions = useMemo(() => {
+         if (!areOptionsInitialized) {
+diff --git a/src/pages/ReportDetailsPage.tsx b/src/pages/ReportDetailsPage.tsx
+index 195c14698f7..e998b46850b 100644
+--- a/src/pages/ReportDetailsPage.tsx
++++ b/src/pages/ReportDetailsPage.tsx
+@@ -396,11 +396,6 @@ function ReportDetailsPage({policies, report, route}: ReportDetailsPageProps) {
+                 icon: Expensicons.Exit,
+                 isAnonymousAction: true,
+                 action: () => {
+-                    if (ReportUtils.getParticipantsAccountIDsForDisplay(report, false, true).length === 1 && isRootGroupChat) {
+-                        setIsLastMemberLeavingGroupModalVisible(true);
+-                        return;
+-                    }
+-
+                     leaveChat();
+                 },
+             });

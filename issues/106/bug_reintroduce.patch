@@ -1,0 +1,44 @@
+diff --git a/src/libs/NetworkConnection.ts b/src/libs/NetworkConnection.ts
+index cb9faae31dd..d91c4702ba4 100644
+--- a/src/libs/NetworkConnection.ts
++++ b/src/libs/NetworkConnection.ts
+@@ -76,19 +76,10 @@ Onyx.connect({
+         }
+         shouldForceOffline = currentShouldForceOffline;
+         if (shouldForceOffline) {
+-            setOfflineStatus(true, 'shouldForceOffline was detected in the Onyx data');
+-            Log.info(`[NetworkStatus] Setting "offlineStatus" to "true" because user is under force offline`);
++            setOfflineStatus(true);
+         } else {
+             // If we are no longer forcing offline fetch the NetInfo to set isOffline appropriately
+-            NetInfo.fetch().then((state) => {
+-                const isInternetUnreachable = (state.isInternetReachable ?? false) === false;
+-                setOfflineStatus(isInternetUnreachable || !isServerUp, 'NetInfo checked if the internet is reachable');
+-                Log.info(
+-                    `[NetworkStatus] The force-offline mode was turned off. Getting the device network status from NetInfo. Network state: ${JSON.stringify(
+-                        state,
+-                    )}. Setting the offline status to: ${isInternetUnreachable}.`,
+-                );
+-            });
++            NetInfo.fetch().then((state) => setOfflineStatus((state.isInternetReachable ?? false) === false));
+         }
+     },
+ });
+@@ -158,15 +149,8 @@ function subscribeToNetInfo(): () => void {
+             Log.info('[NetworkConnection] Not setting offline status because shouldForceOffline = true');
+             return;
+         }
+-        setOfflineStatus(state.isInternetReachable === false || !isServerUp, 'NetInfo received a state change event');
+-        Log.info(`[NetworkStatus] NetInfo.addEventListener event coming, setting "offlineStatus" to ${!!state.isInternetReachable} with network state: ${JSON.stringify(state)}`);
+-        let networkStatus;
+-        if (!isBoolean(state.isInternetReachable)) {
+-            networkStatus = CONST.NETWORK.NETWORK_STATUS.UNKNOWN;
+-        } else {
+-            networkStatus = state.isInternetReachable ? CONST.NETWORK.NETWORK_STATUS.ONLINE : CONST.NETWORK.NETWORK_STATUS.OFFLINE;
+-        }
+-        NetworkActions.setNetWorkStatus(networkStatus);
++        setOfflineStatus(state.isInternetReachable === false);
++        setNetWorkStatus(state.isInternetReachable);
+     });
+ 
+     // Periodically recheck the network connection

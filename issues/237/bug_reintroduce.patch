@@ -1,0 +1,49 @@
+diff --git a/src/hooks/useHtmlPaste/index.ts b/src/hooks/useHtmlPaste/index.ts
+index 6199a36abdc..68de1422eef 100644
+--- a/src/hooks/useHtmlPaste/index.ts
++++ b/src/hooks/useHtmlPaste/index.ts
+@@ -64,7 +64,18 @@ const useHtmlPaste: UseHtmlPaste = (textInputRef, preHtmlPasteCallback, removeLi
+      */
+     const handlePastedHTML = useCallback(
+         (html: string) => {
+-            paste(Parser.htmlToMarkdown(html));
++            // Remove all HTML tags, decode HTML entities, and leave only plain text
++            const strippedHtml = html
++                .replace(/&lt;[^&]*&gt;/g, '')   // Remove encoded HTML tags
++                .replace(/<[^>]*>/g, '')        // Remove regular HTML tags
++                .replace(/&amp;/g, '&')         // Decode HTML entities
++                .replace(/&quot;/g, '"')
++                .replace(/&apos;/g, "'")
++                .replace(/&lt;/g, '<')
++                .replace(/&gt;/g, '>')
++                .replace(/\s*--\s*/g, ' ')      // Replace " -- " with a single space
++                .trim();
++            paste(strippedHtml);
+         },
+         [paste],
+     );
+diff --git a/src/libs/Parser.ts b/src/libs/Parser.ts
+index 9d791b1d4f7..eefd4a51cc6 100644
+--- a/src/libs/Parser.ts
++++ b/src/libs/Parser.ts
+@@ -37,7 +37,19 @@ class ExpensiMarkWithContext extends ExpensiMark {
+     }
+ 
+     htmlToText(htmlString: string, extras?: Extras): string {
+-        return super.htmlToText(htmlString, {
++        // Remove all HTML tags, decode HTML entities, and leave only plain text
++        const strippedHtml = htmlString
++            .replace(/&lt;[^&]*&gt;/g, '')   // Remove encoded HTML tags
++            .replace(/<[^>]*>/g, '')        // Remove regular HTML tags
++            .replace(/&amp;/g, '&')         // Decode HTML entities
++            .replace(/&quot;/g, '"')
++            .replace(/&apos;/g, "'")
++            .replace(/&lt;/g, '<')
++            .replace(/&gt;/g, '>')
++            .replace(/\s*--\s*/g, ' ')      // Replace " -- " with a single space
++            .trim();
++        
++        return super.htmlToText(strippedHtml, {
+             reportIDToName: extras?.reportIDToName ?? ReportConnection.getAllReportsNameMap(),
+             accountIDToName: extras?.accountIDToName ?? accountIDToNameMap,
+             cacheVideoAttributes: extras?.cacheVideoAttributes,

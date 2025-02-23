@@ -1,0 +1,6 @@
+{
+    "price": 500.0,
+    "title": "[HOLD for payment 2023-10-12] [$500] Chat - Expand button does not show if composer only contains new line",
+    "issue_repo_steps": "Action performed: Action Performed:\r\n1. Open any chat\r\n2. Add >= 3 new lines on the composer\n\nExpected result: The expand button is shown above + button\n\nActual result: None",
+    "_issue_id": "28093_799"
+}

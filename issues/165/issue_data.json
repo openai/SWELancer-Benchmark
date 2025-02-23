@@ -1,0 +1,6 @@
+{
+    "price": 500.0,
+    "title": "[C+ checklist needs completion] [$500] Web - The display name doesn't show after logout and re-visit current page",
+    "issue_repo_steps": "Action performed: 1. Go to profile => Display name\r\n2. Copy current link then logout\r\n3. Login with copied link\n\nExpected result: Display name should show\n\nActual result: None",
+    "_issue_id": "28077_782"
+}

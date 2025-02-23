@@ -1,0 +1,13 @@
+diff --git a/src/pages/workspace/accounting/xero/XeroOrganizationConfigurationPage.tsx b/src/pages/workspace/accounting/xero/XeroOrganizationConfigurationPage.tsx
+index bb49c5212fb..712352daba6 100644
+--- a/src/pages/workspace/accounting/xero/XeroOrganizationConfigurationPage.tsx
++++ b/src/pages/workspace/accounting/xero/XeroOrganizationConfigurationPage.tsx
+@@ -60,7 +60,7 @@ function XeroOrganizationConfigurationPage({
+         }
+ 
+         Xero.updateXeroTenantID(policyID, keyForList, xeroConfig?.tenantID);
+-        Navigation.goBack();
++        Navigation.goBack(ROUTES.WORKSPACE_ACCOUNTING.getRoute(policyID));
+     };
+ 
+     const listEmptyContent = useMemo(

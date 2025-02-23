@@ -1,0 +1,13 @@
+diff --git a/src/libs/OptionsListUtils.ts b/src/libs/OptionsListUtils.ts
+index 51db5a693f9..9f81189df33 100644
+--- a/src/libs/OptionsListUtils.ts
++++ b/src/libs/OptionsListUtils.ts
+@@ -2120,8 +2120,6 @@ function getShareLogOptions(options: OptionList, searchValue = '', betas: Beta[]
+         includeP2P: true,
+         forcePolicyNamePreview: true,
+         includeOwnedWorkspaceChats: true,
+-        includeSelfDM: true,
+-        includeThreads: true,
+     });
+ }
+ 

@@ -1,1 +1,0 @@
-{"price": 500.0, "title": "[HOLD for payment 2023-11-02] [$500]  The attachment's close icon is not entirely clickable on the desktop app", "issue_repo_steps": "Action performed: 1. Open any chat with an attachment\r\n2. Click on the attachment\r\n3. Hover over the left side of the close icon\n\nExpected result: None\n\nActual result: None"}

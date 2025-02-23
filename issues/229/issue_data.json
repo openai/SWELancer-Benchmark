@@ -1,0 +1,6 @@
+{
+    "price": 4000.0,
+    "title": "[$4000] Room - Room members are not displayed",
+    "issue_repo_steps": "Action performed: 1. Log in to NewDot with a High traffic account that has and owns an existing Workspace and invited members\r\n2. Click on the green + button\r\n3. Click on the \"New Room\" option\r\n4. Go to Settings\n\nExpected result: Room members should be displayed\n\nActual result: None",
+    "_issue_id": "14857"
+}

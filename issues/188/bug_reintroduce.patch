@@ -1,0 +1,445 @@
+diff --git a/src/pages/settings/Profile/PersonalDetails/AddressPage.js b/src/pages/settings/Profile/PersonalDetails/AddressPage.js
+index 886e207bf68..b26c833aee1 100644
+--- a/src/pages/settings/Profile/PersonalDetails/AddressPage.js
++++ b/src/pages/settings/Profile/PersonalDetails/AddressPage.js
+@@ -68,7 +68,6 @@ function AddressPage({privatePersonalDetails}) {
+     const zipFormat = translate('common.zipCodeExampleFormat', {zipSampleFormat});
+ 
+     const address = lodashGet(privatePersonalDetails, 'address') || {};
+-    const isLoadingPersonalDetails = lodashGet(privatePersonalDetails, 'isLoading', true);
+     const [street1, street2] = (address.street || '').split('\n');
+     const [state, setState] = useState(address.state);
+     /**
+@@ -128,6 +127,10 @@ function AddressPage({privatePersonalDetails}) {
+         setState(value);
+     };
+ 
++    if (lodashGet(privatePersonalDetails, 'isLoading', true)) {
++        return <FullscreenLoadingIndicator />;
++    }
++
+     return (
+         <ScreenWrapper includeSafeAreaPaddingBottom={false}>
+             <HeaderWithBackButton
+@@ -135,96 +138,92 @@ function AddressPage({privatePersonalDetails}) {
+                 shouldShowBackButton
+                 onBackButtonPress={() => Navigation.goBack(ROUTES.SETTINGS_PERSONAL_DETAILS)}
+             />
+-            {isLoadingPersonalDetails ? (
+-                <FullscreenLoadingIndicator style={[styles.flex1, styles.pRelative]} />
+-            ) : (
+-                <Form
+-                    style={[styles.flexGrow1, styles.mh5]}
+-                    formID={ONYXKEYS.FORMS.HOME_ADDRESS_FORM}
+-                    validate={validate}
+-                    onSubmit={updateAddress}
+-                    submitButtonText={translate('common.save')}
+-                    enabledWhenOffline
+-                >
+-                    <View>
+-                        <AddressSearch
+-                            inputID="addressLine1"
+-                            label={translate('common.addressLine', {lineNumber: 1})}
+-                            defaultValue={street1 || ''}
+-                            onValueChange={handleAddressChange}
+-                            renamedInputKeys={{
+-                                street: 'addressLine1',
+-                                street2: 'addressLine2',
+-                                city: 'city',
+-                                state: 'state',
+-                                zipCode: 'zipPostCode',
+-                                country: 'country',
+-                            }}
+-                            maxInputLength={CONST.FORM_CHARACTER_LIMIT}
+-                        />
+-                    </View>
+-                    <View style={styles.formSpaceVertical} />
+-                    <TextInput
+-                        inputID="addressLine2"
+-                        label={translate('common.addressLine', {lineNumber: 2})}
+-                        accessibilityLabel={translate('common.addressLine')}
+-                        accessibilityRole={CONST.ACCESSIBILITY_ROLE.TEXT}
+-                        defaultValue={street2 || ''}
+-                        maxLength={CONST.FORM_CHARACTER_LIMIT}
+-                        spellCheck={false}
++            <Form
++                style={[styles.flexGrow1, styles.mh5]}
++                formID={ONYXKEYS.FORMS.HOME_ADDRESS_FORM}
++                validate={validate}
++                onSubmit={updateAddress}
++                submitButtonText={translate('common.save')}
++                enabledWhenOffline
++            >
++                <View>
++                    <AddressSearch
++                        inputID="addressLine1"
++                        label={translate('common.addressLine', {lineNumber: 1})}
++                        defaultValue={street1 || ''}
++                        onValueChange={handleAddressChange}
++                        renamedInputKeys={{
++                            street: 'addressLine1',
++                            street2: 'addressLine2',
++                            city: 'city',
++                            state: 'state',
++                            zipCode: 'zipPostCode',
++                            country: 'country',
++                        }}
++                        maxInputLength={CONST.FORM_CHARACTER_LIMIT}
+                     />
+-                    <View style={styles.formSpaceVertical} />
++                </View>
++                <View style={styles.formSpaceVertical} />
++                <TextInput
++                    inputID="addressLine2"
++                    label={translate('common.addressLine', {lineNumber: 2})}
++                    accessibilityLabel={translate('common.addressLine')}
++                    accessibilityRole={CONST.ACCESSIBILITY_ROLE.TEXT}
++                    defaultValue={street2 || ''}
++                    maxLength={CONST.FORM_CHARACTER_LIMIT}
++                    spellCheck={false}
++                />
++                <View style={styles.formSpaceVertical} />
++                <View style={styles.mhn5}>
++                    <CountryPicker
++                        inputID="country"
++                        defaultValue={currentCountry}
++                        onValueChange={handleAddressChange}
++                    />
++                </View>
++                <View style={styles.formSpaceVertical} />
++                {isUSAForm ? (
+                     <View style={styles.mhn5}>
+-                        <CountryPicker
+-                            inputID="country"
+-                            defaultValue={currentCountry}
+-                            onValueChange={handleAddressChange}
+-                        />
+-                    </View>
+-                    <View style={styles.formSpaceVertical} />
+-                    {isUSAForm ? (
+-                        <View style={styles.mhn5}>
+-                            <StatePicker
+-                                inputID="state"
+-                                defaultValue={state}
+-                                onValueChange={handleAddressChange}
+-                            />
+-                        </View>
+-                    ) : (
+-                        <TextInput
++                        <StatePicker
+                             inputID="state"
+-                            label={translate('common.stateOrProvince')}
+-                            accessibilityLabel={translate('common.stateOrProvince')}
+-                            accessibilityRole={CONST.ACCESSIBILITY_ROLE.TEXT}
+-                            value={state || ''}
+-                            maxLength={CONST.FORM_CHARACTER_LIMIT}
+-                            spellCheck={false}
++                            defaultValue={state}
+                             onValueChange={handleAddressChange}
+                         />
+-                    )}
+-                    <View style={styles.formSpaceVertical} />
++                    </View>
++                ) : (
+                     <TextInput
+-                        inputID="city"
+-                        label={translate('common.city')}
+-                        accessibilityLabel={translate('common.city')}
++                        inputID="state"
++                        label={translate('common.stateOrProvince')}
++                        accessibilityLabel={translate('common.stateOrProvince')}
+                         accessibilityRole={CONST.ACCESSIBILITY_ROLE.TEXT}
+-                        defaultValue={address.city || ''}
++                        value={state || ''}
+                         maxLength={CONST.FORM_CHARACTER_LIMIT}
+                         spellCheck={false}
++                        onValueChange={handleAddressChange}
+                     />
+-                    <View style={styles.formSpaceVertical} />
+-                    <TextInput
+-                        inputID="zipPostCode"
+-                        label={translate('common.zipPostCode')}
+-                        accessibilityLabel={translate('common.zipPostCode')}
+-                        accessibilityRole={CONST.ACCESSIBILITY_ROLE.TEXT}
+-                        autoCapitalize="characters"
+-                        defaultValue={address.zip || ''}
+-                        maxLength={CONST.BANK_ACCOUNT.MAX_LENGTH.ZIP_CODE}
+-                        hint={zipFormat}
+-                    />
+-                </Form>
+-            )}
++                )}
++                <View style={styles.formSpaceVertical} />
++                <TextInput
++                    inputID="city"
++                    label={translate('common.city')}
++                    accessibilityLabel={translate('common.city')}
++                    accessibilityRole={CONST.ACCESSIBILITY_ROLE.TEXT}
++                    defaultValue={address.city || ''}
++                    maxLength={CONST.FORM_CHARACTER_LIMIT}
++                    spellCheck={false}
++                />
++                <View style={styles.formSpaceVertical} />
++                <TextInput
++                    inputID="zipPostCode"
++                    label={translate('common.zipPostCode')}
++                    accessibilityLabel={translate('common.zipPostCode')}
++                    accessibilityRole={CONST.ACCESSIBILITY_ROLE.TEXT}
++                    autoCapitalize="characters"
++                    defaultValue={address.zip || ''}
++                    maxLength={CONST.BANK_ACCOUNT.MAX_LENGTH.ZIP_CODE}
++                    hint={zipFormat}
++                />
++            </Form>
+         </ScreenWrapper>
+     );
+ }
+diff --git a/src/pages/settings/Profile/PersonalDetails/DateOfBirthPage.js b/src/pages/settings/Profile/PersonalDetails/DateOfBirthPage.js
+index 22346a48658..90c469c4e25 100644
+--- a/src/pages/settings/Profile/PersonalDetails/DateOfBirthPage.js
++++ b/src/pages/settings/Profile/PersonalDetails/DateOfBirthPage.js
+@@ -38,7 +38,6 @@ const defaultProps = {
+ 
+ function DateOfBirthPage({translate, privatePersonalDetails}) {
+     usePrivatePersonalDetails();
+-    const isLoadingPersonalDetails = lodashGet(privatePersonalDetails, 'isLoading', true);
+ 
+     /**
+      * @param {Object} values
+@@ -60,32 +59,32 @@ function DateOfBirthPage({translate, privatePersonalDetails}) {
+         return errors;
+     }, []);
+ 
++    if (lodashGet(privatePersonalDetails, 'isLoading', true)) {
++        return <FullscreenLoadingIndicator />;
++    }
++
+     return (
+         <ScreenWrapper includeSafeAreaPaddingBottom={false}>
+             <HeaderWithBackButton
+                 title={translate('common.dob')}
+                 onBackButtonPress={() => Navigation.goBack(ROUTES.SETTINGS_PERSONAL_DETAILS)}
+             />
+-            {isLoadingPersonalDetails ? (
+-                <FullscreenLoadingIndicator style={[styles.flex1, styles.pRelative]} />
+-            ) : (
+-                <Form
+-                    style={[styles.flexGrow1, styles.ph5]}
+-                    formID={ONYXKEYS.FORMS.DATE_OF_BIRTH_FORM}
+-                    validate={validate}
+-                    onSubmit={PersonalDetails.updateDateOfBirth}
+-                    submitButtonText={translate('common.save')}
+-                    enabledWhenOffline
+-                >
+-                    <NewDatePicker
+-                        inputID="dob"
+-                        label={translate('common.date')}
+-                        defaultValue={privatePersonalDetails.dob || ''}
+-                        minDate={moment().subtract(CONST.DATE_BIRTH.MAX_AGE, 'years').toDate()}
+-                        maxDate={moment().subtract(CONST.DATE_BIRTH.MIN_AGE, 'years').toDate()}
+-                    />
+-                </Form>
+-            )}
++            <Form
++                style={[styles.flexGrow1, styles.ph5]}
++                formID={ONYXKEYS.FORMS.DATE_OF_BIRTH_FORM}
++                validate={validate}
++                onSubmit={PersonalDetails.updateDateOfBirth}
++                submitButtonText={translate('common.save')}
++                enabledWhenOffline
++            >
++                <NewDatePicker
++                    inputID="dob"
++                    label={translate('common.date')}
++                    defaultValue={privatePersonalDetails.dob || ''}
++                    minDate={moment().subtract(CONST.DATE_BIRTH.MAX_AGE, 'years').toDate()}
++                    maxDate={moment().subtract(CONST.DATE_BIRTH.MIN_AGE, 'years').toDate()}
++                />
++            </Form>
+         </ScreenWrapper>
+     );
+ }
+diff --git a/src/pages/settings/Profile/PersonalDetails/LegalNamePage.js b/src/pages/settings/Profile/PersonalDetails/LegalNamePage.js
+index 0caf20a3e12..03181624731 100644
+--- a/src/pages/settings/Profile/PersonalDetails/LegalNamePage.js
++++ b/src/pages/settings/Profile/PersonalDetails/LegalNamePage.js
+@@ -47,7 +47,6 @@ function LegalNamePage(props) {
+     usePrivatePersonalDetails();
+     const legalFirstName = lodashGet(props.privatePersonalDetails, 'legalFirstName', '');
+     const legalLastName = lodashGet(props.privatePersonalDetails, 'legalLastName', '');
+-    const isLoadingPersonalDetails = lodashGet(props.privatePersonalDetails, 'isLoading', true);
+ 
+     const validate = useCallback((values) => {
+         const errors = {};
+@@ -67,6 +66,10 @@ function LegalNamePage(props) {
+         return errors;
+     }, []);
+ 
++    if (lodashGet(props.privatePersonalDetails, 'isLoading', true)) {
++        return <FullscreenLoadingIndicator />;
++    }
++
+     return (
+         <ScreenWrapper
+             includeSafeAreaPaddingBottom={false}
+@@ -76,43 +79,39 @@ function LegalNamePage(props) {
+                 title={props.translate('privatePersonalDetails.legalName')}
+                 onBackButtonPress={() => Navigation.goBack(ROUTES.SETTINGS_PERSONAL_DETAILS)}
+             />
+-            {isLoadingPersonalDetails ? (
+-                <FullscreenLoadingIndicator style={[styles.flex1, styles.pRelative]} />
+-            ) : (
+-                <Form
+-                    style={[styles.flexGrow1, styles.ph5]}
+-                    formID={ONYXKEYS.FORMS.LEGAL_NAME_FORM}
+-                    validate={validate}
+-                    onSubmit={updateLegalName}
+-                    submitButtonText={props.translate('common.save')}
+-                    enabledWhenOffline
+-                >
+-                    <View style={[styles.mb4]}>
+-                        <TextInput
+-                            inputID="legalFirstName"
+-                            name="lfname"
+-                            label={props.translate('privatePersonalDetails.legalFirstName')}
+-                            accessibilityLabel={props.translate('privatePersonalDetails.legalFirstName')}
+-                            accessibilityRole={CONST.ACCESSIBILITY_ROLE.TEXT}
+-                            defaultValue={legalFirstName}
+-                            maxLength={CONST.DISPLAY_NAME.MAX_LENGTH}
+-                            spellCheck={false}
+-                        />
+-                    </View>
+-                    <View>
+-                        <TextInput
+-                            inputID="legalLastName"
+-                            name="llname"
+-                            label={props.translate('privatePersonalDetails.legalLastName')}
+-                            accessibilityLabel={props.translate('privatePersonalDetails.legalLastName')}
+-                            accessibilityRole={CONST.ACCESSIBILITY_ROLE.TEXT}
+-                            defaultValue={legalLastName}
+-                            maxLength={CONST.DISPLAY_NAME.MAX_LENGTH}
+-                            spellCheck={false}
+-                        />
+-                    </View>
+-                </Form>
+-            )}
++            <Form
++                style={[styles.flexGrow1, styles.ph5]}
++                formID={ONYXKEYS.FORMS.LEGAL_NAME_FORM}
++                validate={validate}
++                onSubmit={updateLegalName}
++                submitButtonText={props.translate('common.save')}
++                enabledWhenOffline
++            >
++                <View style={[styles.mb4]}>
++                    <TextInput
++                        inputID="legalFirstName"
++                        name="lfname"
++                        label={props.translate('privatePersonalDetails.legalFirstName')}
++                        accessibilityLabel={props.translate('privatePersonalDetails.legalFirstName')}
++                        accessibilityRole={CONST.ACCESSIBILITY_ROLE.TEXT}
++                        defaultValue={legalFirstName}
++                        maxLength={CONST.DISPLAY_NAME.MAX_LENGTH}
++                        spellCheck={false}
++                    />
++                </View>
++                <View>
++                    <TextInput
++                        inputID="legalLastName"
++                        name="llname"
++                        label={props.translate('privatePersonalDetails.legalLastName')}
++                        accessibilityLabel={props.translate('privatePersonalDetails.legalLastName')}
++                        accessibilityRole={CONST.ACCESSIBILITY_ROLE.TEXT}
++                        defaultValue={legalLastName}
++                        maxLength={CONST.DISPLAY_NAME.MAX_LENGTH}
++                        spellCheck={false}
++                    />
++                </View>
++            </Form>
+         </ScreenWrapper>
+     );
+ }
+diff --git a/src/pages/settings/Profile/PersonalDetails/PersonalDetailsInitialPage.js b/src/pages/settings/Profile/PersonalDetails/PersonalDetailsInitialPage.js
+index e1c4f14047a..e22aeca6a3d 100644
+--- a/src/pages/settings/Profile/PersonalDetails/PersonalDetailsInitialPage.js
++++ b/src/pages/settings/Profile/PersonalDetails/PersonalDetailsInitialPage.js
+@@ -60,7 +60,6 @@ function PersonalDetailsInitialPage(props) {
+     const privateDetails = props.privatePersonalDetails || {};
+     const address = privateDetails.address || {};
+     const legalName = `${privateDetails.legalFirstName || ''} ${privateDetails.legalLastName || ''}`.trim();
+-    const isLoadingPersonalDetails = lodashGet(props.privatePersonalDetails, 'isLoading', true);
+ 
+     /**
+      * Applies common formatting to each piece of an address
+@@ -84,42 +83,42 @@ function PersonalDetailsInitialPage(props) {
+         return formattedAddress.trim().replace(/,$/, '');
+     };
+ 
++    if (lodashGet(props.privatePersonalDetails, 'isLoading', true)) {
++        return <FullscreenLoadingIndicator />;
++    }
++
+     return (
+         <ScreenWrapper>
+             <HeaderWithBackButton
+                 title={props.translate('privatePersonalDetails.personalDetails')}
+                 onBackButtonPress={() => Navigation.goBack(ROUTES.SETTINGS_PROFILE)}
+             />
+-            {isLoadingPersonalDetails ? (
+-                <FullscreenLoadingIndicator style={[styles.flex1, styles.pRelative]} />
+-            ) : (
+-                <ScrollView>
+-                    <View style={styles.flex1}>
+-                        <View style={[styles.ph5, styles.mb5]}>
+-                            <Text>{props.translate('privatePersonalDetails.privateDataMessage')}</Text>
+-                        </View>
+-                        <MenuItemWithTopDescription
+-                            title={legalName}
+-                            description={props.translate('privatePersonalDetails.legalName')}
+-                            shouldShowRightIcon
+-                            onPress={() => Navigation.navigate(ROUTES.SETTINGS_PERSONAL_DETAILS_LEGAL_NAME)}
+-                        />
+-                        <MenuItemWithTopDescription
+-                            title={privateDetails.dob || ''}
+-                            description={props.translate('common.dob')}
+-                            shouldShowRightIcon
+-                            onPress={() => Navigation.navigate(ROUTES.SETTINGS_PERSONAL_DETAILS_DATE_OF_BIRTH)}
+-                            titleStyle={[styles.flex1]}
+-                        />
+-                        <MenuItemWithTopDescription
+-                            title={getFormattedAddress()}
+-                            description={props.translate('privatePersonalDetails.homeAddress')}
+-                            shouldShowRightIcon
+-                            onPress={() => Navigation.navigate(ROUTES.SETTINGS_PERSONAL_DETAILS_ADDRESS)}
+-                        />
++            <ScrollView>
++                <View style={styles.flex1}>
++                    <View style={[styles.ph5, styles.mb5]}>
++                        <Text>{props.translate('privatePersonalDetails.privateDataMessage')}</Text>
+                     </View>
+-                </ScrollView>
+-            )}
++                    <MenuItemWithTopDescription
++                        title={legalName}
++                        description={props.translate('privatePersonalDetails.legalName')}
++                        shouldShowRightIcon
++                        onPress={() => Navigation.navigate(ROUTES.SETTINGS_PERSONAL_DETAILS_LEGAL_NAME)}
++                    />
++                    <MenuItemWithTopDescription
++                        title={privateDetails.dob || ''}
++                        description={props.translate('common.dob')}
++                        shouldShowRightIcon
++                        onPress={() => Navigation.navigate(ROUTES.SETTINGS_PERSONAL_DETAILS_DATE_OF_BIRTH)}
++                        titleStyle={[styles.flex1]}
++                    />
++                    <MenuItemWithTopDescription
++                        title={getFormattedAddress()}
++                        description={props.translate('privatePersonalDetails.homeAddress')}
++                        shouldShowRightIcon
++                        onPress={() => Navigation.navigate(ROUTES.SETTINGS_PERSONAL_DETAILS_ADDRESS)}
++                    />
++                </View>
++            </ScrollView>
+         </ScreenWrapper>
+     );
+ }

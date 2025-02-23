@@ -1,0 +1,27 @@
+diff --git a/src/components/MoneyRequestConfirmationListFooter.tsx b/src/components/MoneyRequestConfirmationListFooter.tsx
+index e6b957f16b6..555d8e72f4f 100644
+--- a/src/components/MoneyRequestConfirmationListFooter.tsx
++++ b/src/components/MoneyRequestConfirmationListFooter.tsx
+@@ -409,7 +409,6 @@ function MoneyRequestConfirmationListFooter({
+                     brickRoadIndicator={shouldDisplayMerchantError ? CONST.BRICK_ROAD_INDICATOR_STATUS.ERROR : undefined}
+                     errorText={shouldDisplayMerchantError ? translate('common.error.fieldRequired') : ''}
+                     rightLabel={isMerchantRequired && !shouldDisplayMerchantError ? translate('common.required') : ''}
+-                    numberOfLinesTitle={2}
+                 />
+             ),
+             shouldShow: shouldShowMerchant,
+diff --git a/src/components/ReportActionItem/MoneyRequestView.tsx b/src/components/ReportActionItem/MoneyRequestView.tsx
+index 549fd55ac1b..04f2bc3997d 100644
+--- a/src/components/ReportActionItem/MoneyRequestView.tsx
++++ b/src/components/ReportActionItem/MoneyRequestView.tsx
+@@ -614,10 +614,8 @@ function MoneyRequestView({report, shouldShowAnimatedBackground, readonly = fals
+                                     ),
+                                 )
+                             }
+-                            wrapperStyle={[styles.taskDescriptionMenuItem]}
+                             brickRoadIndicator={getErrorForField('merchant') ? CONST.BRICK_ROAD_INDICATOR_STATUS.ERROR : undefined}
+                             errorText={getErrorForField('merchant')}
+-                            numberOfLinesTitle={0}
+                         />
+                     </OfflineWithFeedback>
+                 )}

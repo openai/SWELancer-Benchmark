@@ -1,5 +1,0 @@
-{
-    "price": 2000.0,
-    "title": "[HOLD for payment 2022-11-02] [$2000] Render Emoji when typed with emoji code",
-    "issue_repo_steps": "Action performed: 1. Go to the chat\r\n2. Enter `:smile:`\n\nExpected result: - It should've rendered a smiley. Reference screencast from Slack.\r\nhttps://user-images.githubusercontent.com/3069065/127681715-a265df2f-2a63-4b64-a45a-f577edbbd600.mp4\n\nActual result: None"
-}

@@ -1,0 +1,46 @@
+diff --git a/src/hooks/useCopySelectionHelper.ts b/src/hooks/useCopySelectionHelper.ts
+index 9bcb9b8b013..39dc8644701 100644
+--- a/src/hooks/useCopySelectionHelper.ts
++++ b/src/hooks/useCopySelectionHelper.ts
+@@ -10,11 +10,12 @@ function copySelectionToClipboard() {
+     if (!selection) {
+         return;
+     }
++    const selectionWithoutLineBreaks = selection.replace(/\n/g, '');
+     if (!Clipboard.canSetHtml()) {
+-        Clipboard.setString(Parser.htmlToMarkdown(selection));
++        Clipboard.setString(Parser.htmlToMarkdown(selectionWithoutLineBreaks));
+         return;
+     }
+-    Clipboard.setHtml(selection, Parser.htmlToText(selection));
++    Clipboard.setHtml(selectionWithoutLineBreaks, Parser.htmlToText(selectionWithoutLineBreaks));
+ }
+ 
+ export default function useCopySelectionHelper() {
+diff --git a/src/libs/SelectionScraper/index.ts b/src/libs/SelectionScraper/index.ts
+index 060cbc613ac..cacf6783e24 100644
+--- a/src/libs/SelectionScraper/index.ts
++++ b/src/libs/SelectionScraper/index.ts
+@@ -154,14 +154,14 @@ const replaceNodes = (dom: Node, isChildOfEditorElement: boolean): Node => {
+  * Resolves the current selection to values and produces clean HTML.
+  */
+ const getCurrentSelection: GetCurrentSelection = () => {
+-    const domRepresentation = parseDocument(getHTMLOfSelection());
+-    domRepresentation.children = domRepresentation.children.map((item) => replaceNodes(item, false));
+-
+-    // Newline characters need to be removed here because the HTML could contain both newlines and <br> tags, and when
+-    // <br> tags are converted later to markdown, it creates duplicate newline characters. This means that when the content
+-    // is pasted, there are extra newlines in the content that we want to avoid.
+-    const newHtml = render(domRepresentation).replace(/<br>\n/g, '<br>');
+-    return newHtml || '';
++    const htmlSelection = getHTMLOfSelection();
++    const cleanedSelection = htmlSelection
++        .replace(/\n/g, '')           // Remove all newline characters
++        .replace(/\s+/g, ' ')         // Replace multiple whitespaces with single space
++        .replace(/<br\s*\/?>/gi, '')  // Remove all <br> tags
++        .trim();                      // Remove leading/trailing whitespace
++
++    return cleanedSelection || '';
+ };
+ 
+ export default {

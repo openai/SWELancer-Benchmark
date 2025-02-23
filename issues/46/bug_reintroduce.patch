@@ -1,0 +1,22 @@
+diff --git a/src/libs/actions/Policy/Tag.ts b/src/libs/actions/Policy/Tag.ts
+index 9628b6ceda7..49c98375df1 100644
+--- a/src/libs/actions/Policy/Tag.ts
++++ b/src/libs/actions/Policy/Tag.ts
+@@ -398,7 +398,7 @@ function deletePolicyTags(policyID: string, tagsToDelete: string[]) {
+ }
+ 
+ function clearPolicyTagErrors(policyID: string, tagName: string, tagListIndex: number) {
+-    const tagListName = PolicyUtils.getTagListName(allPolicyTags?.[`${ONYXKEYS.COLLECTION.POLICY_TAGS}${policyID}`], tagListIndex);
++    const tagListName = Object.keys(allPolicyTags?.[`${ONYXKEYS.COLLECTION.POLICY_TAGS}${policyID}`] ?? {})[tagListIndex];
+     const tag = allPolicyTags?.[`${ONYXKEYS.COLLECTION.POLICY_TAGS}${policyID}`]?.[tagListName].tags?.[tagName];
+     if (!tag) {
+         return;
+@@ -851,7 +851,7 @@ function setPolicyTagsRequired(policyID: string, requiresTag: boolean, tagListIn
+ }
+ 
+ function setPolicyTagGLCode(policyID: string, tagName: string, tagListIndex: number, glCode: string) {
+-    const tagListName = PolicyUtils.getTagListName(allPolicyTags?.[`${ONYXKEYS.COLLECTION.POLICY_TAGS}${policyID}`], tagListIndex);
++    const tagListName = Object.keys(allPolicyTags?.[`${ONYXKEYS.COLLECTION.POLICY_TAGS}${policyID}`] ?? {})[tagListIndex];
+     const policyTagToUpdate = allPolicyTags?.[`${ONYXKEYS.COLLECTION.POLICY_TAGS}${policyID}`]?.[tagListName]?.tags?.[tagName] ?? {};
+     const onyxData: OnyxData = {
+         optimisticData: [

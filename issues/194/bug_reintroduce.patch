@@ -1,0 +1,159 @@
+diff --git a/.npmrc b/.npmrc
+deleted file mode 100644
+index b6f27f13595..00000000000
+--- a/.npmrc
++++ /dev/null
+@@ -1 +0,0 @@
+-engine-strict=true
+diff --git a/src/ONYXKEYS.ts b/src/ONYXKEYS.ts
+index cb8bf2fdb5d..f2a6b7672b7 100755
+--- a/src/ONYXKEYS.ts
++++ b/src/ONYXKEYS.ts
+@@ -52,6 +52,8 @@ const ONYXKEYS = {
+     // keep edit message focus state
+     INPUT_FOCUSED: 'inputFocused',
+ 
++    PERSONAL_DETAILS: 'old_personalDetails',
++
+     /** Contains all the personalDetails the user has access to, keyed by accountID */
+     PERSONAL_DETAILS_LIST: 'personalDetailsList',
+ 
+@@ -863,6 +865,7 @@ type OnyxValuesMapping = {
+     [ONYXKEYS.NEW_GROUP_CHAT_DRAFT]: OnyxTypes.NewGroupChatDraft;
+     [ONYXKEYS.CUSTOM_STATUS_DRAFT]: OnyxTypes.CustomStatusDraft;
+     [ONYXKEYS.INPUT_FOCUSED]: boolean;
++    [ONYXKEYS.PERSONAL_DETAILS]: {[x: string]: OnyxTypes.PersonalDetails};
+     [ONYXKEYS.PERSONAL_DETAILS_LIST]: OnyxTypes.PersonalDetailsList;
+     [ONYXKEYS.PRIVATE_PERSONAL_DETAILS]: OnyxTypes.PrivatePersonalDetails;
+     [ONYXKEYS.PERSONAL_DETAILS_METADATA]: Record<string, OnyxTypes.PersonalDetailsMetadata>;
+diff --git a/src/components/OnyxProvider.tsx b/src/components/OnyxProvider.tsx
+index 23ddf2b0c4d..2f240ff7f54 100644
+--- a/src/components/OnyxProvider.tsx
++++ b/src/components/OnyxProvider.tsx
+@@ -7,6 +7,7 @@ import createOnyxContext from './createOnyxContext';
+ // the same key (e.g. FlatList renderItem components)
+ const [withNetwork, NetworkProvider, NetworkContext] = createOnyxContext(ONYXKEYS.NETWORK);
+ const [, PersonalDetailsProvider, , usePersonalDetails] = createOnyxContext(ONYXKEYS.PERSONAL_DETAILS_LIST);
++const [, OtherPersonalDetailsProvider, , useOtherPersonalDetails] = createOnyxContext(ONYXKEYS.PERSONAL_DETAILS);
+ const [withCurrentDate, CurrentDateProvider] = createOnyxContext(ONYXKEYS.CURRENT_DATE);
+ const [, BlockedFromConciergeProvider, , useBlockedFromConcierge] = createOnyxContext(ONYXKEYS.NVP_BLOCKED_FROM_CONCIERGE);
+ const [, BetasProvider, BetasContext, useBetas] = createOnyxContext(ONYXKEYS.BETAS);
+@@ -27,6 +28,7 @@ function OnyxProvider(props: OnyxProviderProps) {
+             components={[
+                 NetworkProvider,
+                 PersonalDetailsProvider,
++                OtherPersonalDetailsProvider,
+                 CurrentDateProvider,
+                 BlockedFromConciergeProvider,
+                 BetasProvider,
+@@ -49,6 +51,7 @@ export default OnyxProvider;
+ export {
+     withNetwork,
+     usePersonalDetails,
++    useOtherPersonalDetails,
+     withCurrentDate,
+     NetworkContext,
+     BetasContext,
+diff --git a/src/components/UserDetailsTooltip/BaseUserDetailsTooltip/index.tsx b/src/components/UserDetailsTooltip/BaseUserDetailsTooltip/index.tsx
+index c55edd9e6b1..98aebd74d6e 100644
+--- a/src/components/UserDetailsTooltip/BaseUserDetailsTooltip/index.tsx
++++ b/src/components/UserDetailsTooltip/BaseUserDetailsTooltip/index.tsx
+@@ -3,7 +3,7 @@ import React, {useCallback} from 'react';
+ import {View} from 'react-native';
+ import {useOnyx} from 'react-native-onyx';
+ import Avatar from '@components/Avatar';
+-import {usePersonalDetails} from '@components/OnyxProvider';
++import {useOtherPersonalDetails, usePersonalDetails} from '@components/OnyxProvider';
+ import Text from '@components/Text';
+ import Tooltip from '@components/Tooltip';
+ import type UserDetailsTooltipProps from '@components/UserDetailsTooltip/types';
+@@ -19,14 +19,16 @@ function BaseUserDetailsTooltip({accountID, fallbackUserDetails, icon, delegateA
+     const styles = useThemeStyles();
+     const {translate} = useLocalize();
+     const personalDetails = usePersonalDetails();
++    const otherPersonalDetails = useOtherPersonalDetails();
+     const [session] = useOnyx(ONYXKEYS.SESSION);
+     const isCurrentUserAnonymous = session?.accountID === accountID && isAnonymousUser(session);
+ 
+     const userDetails = personalDetails?.[accountID] ?? fallbackUserDetails ?? {};
++    const otherUserDetails = otherPersonalDetails?.[accountID] ?? {};
+     let userDisplayName = ReportUtils.getUserDetailTooltipText(accountID, userDetails.displayName ? userDetails.displayName.trim() : '');
+     let userLogin = !isCurrentUserAnonymous && userDetails.login?.trim() && userDetails.login !== userDetails.displayName ? Str.removeSMSDomain(userDetails.login) : '';
+ 
+-    let userAvatar = userDetails.avatar;
++    let userAvatar = otherUserDetails.avatar; // tooltip should read avatar from another source
+     let userAccountID = accountID;
+ 
+     // We replace the actor's email, name, and avatar with the Copilot manually for now. This will be improved upon when
+diff --git a/src/libs/actions/PersonalDetails.ts b/src/libs/actions/PersonalDetails.ts
+index 7fb1c9a4cc7..a8af1663419 100644
+--- a/src/libs/actions/PersonalDetails.ts
++++ b/src/libs/actions/PersonalDetails.ts
+@@ -51,6 +51,12 @@ Onyx.connect({
+     callback: (val) => (privatePersonalDetails = val),
+ });
+ 
++let personalDetails: OnyxEntry<{[x: string]: PersonalDetails}>;
++Onyx.connect({
++    key: ONYXKEYS.PERSONAL_DETAILS,
++    callback: (val) => (personalDetails = val),
++});
++
+ function updatePronouns(pronouns: string) {
+     if (!currentUserAccountID) {
+         return;
+diff --git a/src/pages/home/report/ReportActionItemSingle.tsx b/src/pages/home/report/ReportActionItemSingle.tsx
+index 91f12339ee0..5f5b9cdc9ef 100644
+--- a/src/pages/home/report/ReportActionItemSingle.tsx
++++ b/src/pages/home/report/ReportActionItemSingle.tsx
+@@ -7,7 +7,7 @@ import Avatar from '@components/Avatar';
+ import {FallbackAvatar} from '@components/Icon/Expensicons';
+ import MultipleAvatars from '@components/MultipleAvatars';
+ import OfflineWithFeedback from '@components/OfflineWithFeedback';
+-import {usePersonalDetails} from '@components/OnyxProvider';
++import {useOtherPersonalDetails, usePersonalDetails} from '@components/OnyxProvider';
+ import PressableWithoutFeedback from '@components/Pressable/PressableWithoutFeedback';
+ import SubscriptAvatar from '@components/SubscriptAvatar';
+ import Text from '@components/Text';
+@@ -83,6 +83,7 @@ function ReportActionItemSingle({
+     const StyleUtils = useStyleUtils();
+     const {translate} = useLocalize();
+     const personalDetails = usePersonalDetails() ?? CONST.EMPTY_OBJECT;
++    const otherPersonalDetails = useOtherPersonalDetails() ?? CONST.EMPTY_OBJECT;
+     const policy = usePolicy(report?.policyID);
+     const delegatePersonalDetails = personalDetails[action?.delegateAccountID ?? ''];
+     const actorAccountID = ReportUtils.getReportActionActorAccountID(action);
+@@ -101,6 +102,7 @@ function ReportActionItemSingle({
+     const ownerAccountID = iouReport?.ownerAccountID ?? action?.childOwnerAccountID;
+     const managerID = iouReport?.managerID ?? action?.childManagerAccountID;
+     let avatarSource = avatar;
++    let {avatar: tooltipAvatarSource} = otherPersonalDetails;
+     let avatarId: number | string | undefined = actorAccountID;
+ 
+     if (isWorkspaceActor) {
+@@ -161,6 +163,16 @@ function ReportActionItemSingle({
+         [avatarSource, isWorkspaceActor, primaryDisplayName, avatarId],
+     );
+ 
++    const tooltipIcon = useMemo(
++        () => ({
++            source: tooltipAvatarSource ?? FallbackAvatar,
++            type: isWorkspaceActor ? CONST.ICON_TYPE_WORKSPACE : CONST.ICON_TYPE_AVATAR,
++            name: primaryDisplayName ?? '',
++            id: avatarId,
++        }),
++        [tooltipAvatarSource, isWorkspaceActor, primaryDisplayName, avatarId],
++    );
++
+     // Since the display name for a report action message is delivered with the report history as an array of fragments
+     // we'll need to take the displayName from personal details and have it be in the same format for now. Eventually,
+     // we should stop referring to the report history items entirely for this information.
+@@ -235,7 +247,7 @@ function ReportActionItemSingle({
+                 <UserDetailsTooltip
+                     accountID={Number(actorAccountID ?? -1)}
+                     delegateAccountID={Number(action?.delegateAccountID ?? -1)}
+-                    icon={icon}
++                    icon={tooltipIcon}
+                 >
+                     <View>
+                         <Avatar

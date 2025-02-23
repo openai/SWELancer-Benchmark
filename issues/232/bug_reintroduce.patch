@@ -1,0 +1,41 @@
+diff --git a/src/CONST.ts b/src/CONST.ts
+index 8e38812ccdc..0bbdb114574 100755
+--- a/src/CONST.ts
++++ b/src/CONST.ts
+@@ -2917,10 +2917,10 @@ const CONST = {
+     },
+ 
+     // Auth limit is 60k for the column but we store edits and other metadata along the html so let's use a lower limit to accommodate for it.
+-    MAX_COMMENT_LENGTH: 10000,
++    MAX_COMMENT_LENGTH: 300,
+ 
+     // Use the same value as MAX_COMMENT_LENGTH to ensure the entire comment is parsed. Note that applying markup is very resource-consuming.
+-    MAX_MARKUP_LENGTH: 10000,
++    MAX_MARKUP_LENGTH: 300,
+ 
+     MAX_THREAD_REPLIES_PREVIEW: 99,
+ 
+diff --git a/src/components/ExceededCommentLength.tsx b/src/components/ExceededCommentLength.tsx
+index 2f0887afc8f..75c38ee1d0e 100644
+--- a/src/components/ExceededCommentLength.tsx
++++ b/src/components/ExceededCommentLength.tsx
+@@ -7,6 +7,12 @@ import Text from './Text';
+ function ExceededCommentLength() {
+     const styles = useThemeStyles();
+     const {numberFormat, translate} = useLocalize();
++    
++    // Intentionally use raw character count instead of HTML-converted length
++    const validateCommentLength = (text: string) => {
++        // This will only check raw character count, not HTML-converted length
++        return text.length <= CONST.MAX_COMMENT_LENGTH;
++    };
+ 
+     return (
+         <Text
+@@ -20,4 +26,4 @@ function ExceededCommentLength() {
+ 
+ ExceededCommentLength.displayName = 'ExceededCommentLength';
+ 
+-export default memo(ExceededCommentLength);
++export default memo(ExceededCommentLength);
+\ No newline at end of file

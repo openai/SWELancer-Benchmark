@@ -1,5 +1,0 @@
-{
-    "price": 8000.0,
-    "title": "[HOLD for payment 1/12][$8000] Profile - Create a limit for Avatar file types or size ",
-    "issue_repo_steps": "Action performed: 1. Save the below image to your local drive\r\n2. Open [staging.new.expensify.com](http://staging.new.expensify.com/).\r\n3. Open Settings, click on Avatar to open Profile Page.\r\n4. Click on Edit photo and upload the below image\r\n5. Try to scroll the slider to zoom in or zoom out the photo.\r\n6. Notice that the slider can't not be scrolled for a while and it's delayed.\n\nExpected result: - Slider need be scrolled smoothly without any delay\r\n- We need to create an error message if a user is uploading a file/size too large to scroll smoothly\n\nActual result: None"
-}

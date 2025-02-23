@@ -1,0 +1,6 @@
+{
+    "price": 1000.0,
+    "title": "[HOLD for payment 2023-06-13] [$1000] Reply text is not aligned to emoji on edit message (aligned properly without edit)",
+    "issue_repo_steps": "Action performed: 1. Open the app\r\n2. Open any report\r\n3. Hover on any message send by you, click on reply in thread and add new message in it\r\n4. Revisit the original report and add emoji reaction to it (observe that emoji reaction and '1 Reply' message is aligned vertically)\r\n5. Edit the parent message used in step 3 and observe that '1 Reply' message is not aligned to composer start as emoji reaction\n\nExpected result: None\n\nActual result: None",
+    "_issue_id": "19398_889"
+}

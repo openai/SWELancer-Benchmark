@@ -1,0 +1,12 @@
+diff --git a/src/pages/home/report/ContextMenu/PopoverReportActionContextMenu.tsx b/src/pages/home/report/ContextMenu/PopoverReportActionContextMenu.tsx
+index 1d7311ef526..e1518ca66aa 100644
+--- a/src/pages/home/report/ContextMenu/PopoverReportActionContextMenu.tsx
++++ b/src/pages/home/report/ContextMenu/PopoverReportActionContextMenu.tsx
+@@ -264,7 +264,6 @@ function PopoverReportActionContextMenu(_props: unknown, ref: ForwardedRef<Repor
+ 
+         selectionRef.current = '';
+         reportActionDraftMessageRef.current = undefined;
+-        setIsPopoverVisible(false);
+     };
+ 
+     const confirmDeleteAndHideModal = useCallback(() => {

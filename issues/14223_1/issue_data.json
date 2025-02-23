@@ -1,5 +1,0 @@
-{
-    "price": 4000.0,
-    "title": "[HOLD for payment 2023-04-12] [$4000] [Feature Request] Compose box should be accessible when opening a old chat",
-    "issue_repro_steps": "Action Performed:\nGo to NewDot\nOpen any report that you have previously chatted with, but haven\u2019t for quite some time\nExpected Result:\nThe compose box is accessible and a message can be typed even while the skeleton UI loads\n\nActual Result:\nThe compose box is blocked until the skeleton UI loads. Clicking it does nothing, even though you can see it.\n\nWorkaround:\nunknown"
-}

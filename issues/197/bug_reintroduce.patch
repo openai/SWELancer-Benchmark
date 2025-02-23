@@ -1,0 +1,47 @@
+diff --git a/src/pages/home/report/ReportActionItem.tsx b/src/pages/home/report/ReportActionItem.tsx
+index 33664e2a416..ae88ffe8f1e 100644
+--- a/src/pages/home/report/ReportActionItem.tsx
++++ b/src/pages/home/report/ReportActionItem.tsx
+@@ -751,7 +751,6 @@ function ReportActionItem({
+                 ?.split(',')
+                 .map((accountID) => Number(accountID))
+                 .filter((accountID): accountID is number => typeof accountID === 'number') ?? [];
+-        const draftMessageRightAlign = draftMessage !== undefined ? styles.chatItemReactionsDraftRight : {};
+ 
+         return (
+             <>
+@@ -762,7 +761,7 @@ function ReportActionItem({
+                     </View>
+                 )}
+                 {!ReportActionsUtils.isMessageDeleted(action) && (
+-                    <View style={draftMessageRightAlign}>
++                    <View style={draftMessage !== undefined ? styles.chatItemReactionsDraftRight : {}}>
+                         <ReportActionItemEmojiReactions
+                             reportAction={action}
+                             emojiReactions={emojiReactions}
+@@ -784,16 +783,15 @@ function ReportActionItem({
+                 )}
+ 
+                 {shouldDisplayThreadReplies && (
+-                    <View style={draftMessageRightAlign}>
+-                        <ReportActionItemThread
+-                            childReportID={`${action.childReportID}`}
+-                            numberOfReplies={numberOfThreadReplies}
+-                            mostRecentReply={`${action.childLastVisibleActionCreated}`}
+-                            isHovered={hovered}
+-                            icons={ReportUtils.getIconsForParticipants(oldestFourAccountIDs, personalDetails)}
+-                            onSecondaryInteraction={showPopover}
+-                        />
+-                    </View>
++                    <ReportActionItemThread
++                        childReportID={`${action.childReportID}`}
++                        numberOfReplies={numberOfThreadReplies}
++                        mostRecentReply={`${action.childLastVisibleActionCreated}`}
++                        isHovered={hovered}
++                        icons={ReportUtils.getIconsForParticipants(oldestFourAccountIDs, personalDetails)}
++                        onSecondaryInteraction={showPopover}
++                    />
++
+                 )}
+             </>
+         );

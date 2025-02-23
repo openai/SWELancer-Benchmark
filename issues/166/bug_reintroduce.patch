@@ -1,0 +1,85 @@
+diff --git a/src/components/Reactions/ReportActionItemEmojiReactions.tsx b/src/components/Reactions/ReportActionItemEmojiReactions.tsx
+index 943158607db..1eb91b62ed0 100644
+--- a/src/components/Reactions/ReportActionItemEmojiReactions.tsx
++++ b/src/components/Reactions/ReportActionItemEmojiReactions.tsx
+@@ -123,7 +123,6 @@ function ReportActionItemEmojiReactions({
+                 onPress,
+                 onReactionListOpen,
+                 reactionEmojiName: emojiName,
+-                pendingAction: emojiReaction.pendingAction,
+             };
+         }),
+         ['oldestTimestamp'],
+@@ -150,20 +149,15 @@ function ReportActionItemEmojiReactions({
+                             key={reaction.reactionEmojiName}
+                         >
+                             <View>
+-                                <OfflineWithFeedback
+-                                    pendingAction={reaction.pendingAction}
+-                                    shouldDisableOpacity={!!reportAction.pendingAction}
+-                                >
+-                                    <EmojiReactionBubble
+-                                        ref={(ref) => (popoverReactionListAnchors.current[reaction.reactionEmojiName] = ref ?? null)}
+-                                        count={reaction.reactionCount}
+-                                        emojiCodes={reaction.emojiCodes}
+-                                        onPress={reaction.onPress}
+-                                        hasUserReacted={reaction.hasUserReacted}
+-                                        onReactionListOpen={reaction.onReactionListOpen}
+-                                        shouldBlockReactions={shouldBlockReactions}
+-                                    />
+-                                </OfflineWithFeedback>
++                                <EmojiReactionBubble
++                                    ref={(ref) => (popoverReactionListAnchors.current[reaction.reactionEmojiName] = ref ?? null)}
++                                    count={reaction.reactionCount}
++                                    emojiCodes={reaction.emojiCodes}
++                                    onPress={reaction.onPress}
++                                    hasUserReacted={reaction.hasUserReacted}
++                                    onReactionListOpen={reaction.onReactionListOpen}
++                                    shouldBlockReactions={shouldBlockReactions}
++                                />
+                             </View>
+                         </Tooltip>
+                     );
+diff --git a/src/libs/actions/Report.ts b/src/libs/actions/Report.ts
+index 0fe2bfbf8d4..0623f941033 100644
+--- a/src/libs/actions/Report.ts
++++ b/src/libs/actions/Report.ts
+@@ -2533,29 +2533,6 @@ function addEmojiReaction(reportID: string, reportActionID: string, emoji: Emoji
+         },
+     ];
+ 
+-    const failureData: OnyxUpdate[] = [
+-        {
+-            onyxMethod: Onyx.METHOD.MERGE,
+-            key: `${ONYXKEYS.COLLECTION.REPORT_ACTIONS_REACTIONS}${reportActionID}`,
+-            value: {
+-                [emoji.name]: {
+-                    pendingAction: null,
+-                },
+-            },
+-        },
+-    ];
+-
+-    const successData: OnyxUpdate[] = [
+-        {
+-            onyxMethod: Onyx.METHOD.MERGE,
+-            key: `${ONYXKEYS.COLLECTION.REPORT_ACTIONS_REACTIONS}${reportActionID}`,
+-            value: {
+-                [emoji.name]: {
+-                    pendingAction: null,
+-                },
+-            },
+-        },
+-    ];
+ 
+     const parameters: AddEmojiReactionParams = {
+         reportID,
+@@ -2567,7 +2544,7 @@ function addEmojiReaction(reportID: string, reportActionID: string, emoji: Emoji
+         useEmojiReactions: true,
+     };
+ 
+-    API.write(WRITE_COMMANDS.ADD_EMOJI_REACTION, parameters, {optimisticData, successData, failureData});
++    API.write(WRITE_COMMANDS.ADD_EMOJI_REACTION, parameters, {optimisticData});
+ }
+ 
+ /**

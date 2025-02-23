@@ -1,0 +1,34 @@
+diff --git a/src/pages/home/report/ReportActionItemParentAction.tsx b/src/pages/home/report/ReportActionItemParentAction.tsx
+index d3842786b16..786047763b1 100644
+--- a/src/pages/home/report/ReportActionItemParentAction.tsx
++++ b/src/pages/home/report/ReportActionItemParentAction.tsx
+@@ -147,7 +147,7 @@ function ReportActionItemParentAction({
+                             action={ancestor.reportAction}
+                             displayAsGroup={false}
+                             isMostRecentIOUReportAction={false}
+-                            shouldDisplayNewMarker={ancestor.shouldDisplayNewMarker}
++                            shouldDisplayNewMarker={false}
+                             index={index}
+                             isFirstVisibleReportAction={isFirstVisibleReportAction}
+                             shouldUseThreadDividerLine={shouldUseThreadDividerLine}
+diff --git a/src/pages/home/report/ReportActionsList.tsx b/src/pages/home/report/ReportActionsList.tsx
+index 8f5fc907a96..db42bc2dec8 100644
+--- a/src/pages/home/report/ReportActionsList.tsx
++++ b/src/pages/home/report/ReportActionsList.tsx
+@@ -515,7 +515,7 @@ function ReportActionsList({
+                 displayAsGroup={ReportActionsUtils.isConsecutiveActionMadeByPreviousActor(sortedVisibleReportActions, index)}
+                 mostRecentIOUReportActionID={mostRecentIOUReportActionID}
+                 shouldHideThreadDividerLine={shouldHideThreadDividerLine}
+-                shouldDisplayNewMarker={reportAction.reportActionID === unreadMarkerReportActionID}
++                shouldDisplayNewMarker={false}
+                 shouldDisplayReplyDivider={sortedVisibleReportActions.length > 1}
+                 isFirstVisibleReportAction={firstVisibleReportActionID === reportAction.reportActionID}
+                 shouldUseThreadDividerLine={shouldUseThreadDividerLine}
+@@ -533,7 +533,6 @@ function ReportActionsList({
+             parentReportActionForTransactionThread,
+             shouldUseThreadDividerLine,
+             firstVisibleReportActionID,
+-            unreadMarkerReportActionID,
+         ],
+     );
+ 

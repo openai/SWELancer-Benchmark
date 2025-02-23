@@ -1,0 +1,58 @@
+import sys, os
+
+base_path = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
+sys.path.insert(0, base_path)
+
+from playwright.sync_api import sync_playwright, expect
+import re
+from utils.trace_cleaner import trace_cleaner
+
+NEWDOT_URL = "https://dev.new.expensify.com:8082/"
+OLDDOT_URL = "http://localhost:9000/"
+
+def new_dot_login(page):
+    page.goto(NEWDOT_URL)
+
+def social_media_url(page, context):
+
+    new_tab_detected = False
+
+    def handle_new_tab(new_page):
+        nonlocal new_tab_detected
+        new_tab_detected = True
+        print("New tab detected with URL:", new_page.url)
+
+
+    context.on("page", handle_new_tab)
+
+
+    page.locator("a:nth-child(3)").hover()
+    page.locator("a:nth-child(3)").click()
+
+
+    page.wait_for_timeout(3000)  # Adjust this as needed
+
+
+    if new_tab_detected:
+        print("New tab was successfully opened.")
+    else:
+        print("No new tab was detected.")
+        raise Exception("New tab was not opened as expected!")
+
+
+def test_expensify_0000():
+     with sync_playwright() as p:
+        browser = p.chromium.launch(proxy = {"server": "http://localhost:8080"}, headless = False, args = ["--no-sandbox", "--disable-dev-shm-usage", "--ignore-certificate-errors", "--disable-web-security", "--disable-features=IsolateOrigins,site-per-process"], slow_mo = 1000, channel = "chromium")
+        context = browser.new_context()
+        context.tracing.start(screenshots=True, snapshots=True, sources=True)
+        try:
+            page = context.new_page()
+            new_dot_login(page)
+            page.wait_for_timeout(2000)
+
+            social_media_url(page,context)
+        finally:
+            context.tracing.stop()
+            context.tracing.export_trace("/app/expensify/user_tool/output_browser1.zip")
+            trace_cleaner("/app/expensify/user_tool/output_browser1.zip")
+            browser.close()

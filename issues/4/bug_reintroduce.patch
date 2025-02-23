@@ -1,0 +1,38 @@
+diff --git a/src/pages/workspace/AccessOrNotFoundWrapper.tsx b/src/pages/workspace/AccessOrNotFoundWrapper.tsx
+index 45bce8c2d1b..b83c703fbe7 100644
+--- a/src/pages/workspace/AccessOrNotFoundWrapper.tsx
++++ b/src/pages/workspace/AccessOrNotFoundWrapper.tsx
+@@ -84,20 +84,15 @@ type AccessOrNotFoundWrapperProps = {
+     allPolicies?: OnyxCollection<OnyxTypes.Policy>;
+ } & Pick<FullPageNotFoundViewProps, 'subtitleKey' | 'onLinkPress'>;
+ 
+-type PageNotFoundFallbackProps = Pick<AccessOrNotFoundWrapperProps, 'policyID' | 'fullPageNotFoundViewProps'> & {
+-    isFeatureEnabled: boolean;
+-    isPolicyNotAccessible: boolean;
+-    isMoneyRequest: boolean;
+-};
++type PageNotFoundFallbackProps = Pick<AccessOrNotFoundWrapperProps, 'policyID' | 'fullPageNotFoundViewProps'> & {shouldShowFullScreenFallback: boolean; isMoneyRequest: boolean};
+ 
+-function PageNotFoundFallback({policyID, fullPageNotFoundViewProps, isFeatureEnabled, isPolicyNotAccessible, isMoneyRequest}: PageNotFoundFallbackProps) {
+-    const shouldShowFullScreenFallback = !isFeatureEnabled || isPolicyNotAccessible;
++function PageNotFoundFallback({policyID, shouldShowFullScreenFallback, fullPageNotFoundViewProps, isMoneyRequest}: PageNotFoundFallbackProps) {
+     const {shouldUseNarrowLayout} = useResponsiveLayout();
+     return (
+         <NotFoundPage
+             shouldForceFullScreen={shouldShowFullScreenFallback}
+             onBackButtonPress={() => {
+-                if (isPolicyNotAccessible) {
++                if (shouldShowFullScreenFallback) {
+                     Navigation.dismissModal();
+                     return;
+                 }
+@@ -174,8 +169,7 @@ function AccessOrNotFoundWrapper({
+             <PageNotFoundFallback
+                 policyID={policyID}
+                 isMoneyRequest={isMoneyRequest}
+-                isFeatureEnabled={isFeatureEnabled}
+-                isPolicyNotAccessible={isPolicyNotAccessible}
++                shouldShowFullScreenFallback={!isFeatureEnabled || isPolicyNotAccessible}
+                 fullPageNotFoundViewProps={fullPageNotFoundViewProps}
+             />
+         );

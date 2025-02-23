@@ -1,5 +1,0 @@
-{
-    "price": 2000.0,
-    "title": "[HOLD #34289] [$2000] The app crashes when the user is logged into multiple tabs and logs out of one of the tabs",
-    "issue_repo_steps": "Action performed: - Open newDot in 2 different tabs.\r\n- Log out from one of the tabs and observe that in other tab you can see the app crashes.\r\n\r\n<video src=\"https://user-images.githubusercontent.com/35863227/220402373-25ab6355-8f49-48ef-b89c-f59d04101dff.mov\"></video>\n\nExpected result: The user should have been logged out in the other tab\n\nActual result: None"
-}

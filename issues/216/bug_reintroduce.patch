@@ -1,0 +1,24 @@
+diff --git a/src/components/AddPaymentCard/PaymentCardForm.tsx b/src/components/AddPaymentCard/PaymentCardForm.tsx
+index f38ea60f1aa..40f56f5af1c 100644
+--- a/src/components/AddPaymentCard/PaymentCardForm.tsx
++++ b/src/components/AddPaymentCard/PaymentCardForm.tsx
+@@ -265,7 +265,6 @@ function PaymentCardForm({
+                             inputID={INPUT_IDS.ADDRESS_STREET}
+                             label={translate(label.defaults.billingAddress)}
+                             containerStyles={[styles.mt5]}
+-                            maxInputLength={CONST.FORM_CHARACTER_LIMIT}
+                             // Limit the address search only to the USA until we fully can support international debit cards
+                             isLimitedToUSA
+                         />
+diff --git a/src/components/AddressForm.tsx b/src/components/AddressForm.tsx
+index 8ba50e39501..fa5d17fc6be 100644
+--- a/src/components/AddressForm.tsx
++++ b/src/components/AddressForm.tsx
+@@ -161,7 +161,6 @@ function AddressForm({
+                         zipCode: INPUT_IDS.ZIP_POST_CODE,
+                         country: INPUT_IDS.COUNTRY as Country,
+                     }}
+-                    maxInputLength={CONST.FORM_CHARACTER_LIMIT}
+                     shouldSaveDraft={shouldSaveDraft}
+                 />
+             </View>

@@ -1,0 +1,35 @@
+diff --git a/src/libs/ReportUtils.ts b/src/libs/ReportUtils.ts
+index 78ebdd92751..b9daaad09df 100644
+--- a/src/libs/ReportUtils.ts
++++ b/src/libs/ReportUtils.ts
+@@ -4375,7 +4375,6 @@ function buildOptimisticIOUReport(payeeAccountID: number, payerAccountID: number
+ 
+         // We don't translate reportName because the server response is always in English
+         reportName: `${payerEmail} owes ${formattedTotal}`,
+-        parentReportID: chatReportID,
+         lastVisibleActionCreated: DateUtils.getDBTime(),
+         fieldList: policy?.fieldList,
+     };
+@@ -4488,7 +4487,6 @@ function buildOptimisticExpenseReport(
+                 notificationPreference: CONST.REPORT.NOTIFICATION_PREFERENCE.HIDDEN,
+             },
+         },
+-        parentReportID: chatReportID,
+         lastVisibleActionCreated: DateUtils.getDBTime(),
+         parentReportActionID,
+     };
+diff --git a/src/libs/actions/IOU.ts b/src/libs/actions/IOU.ts
+index 5262cc4dc4f..8b85aa5cc9e 100644
+--- a/src/libs/actions/IOU.ts
++++ b/src/libs/actions/IOU.ts
+@@ -2140,10 +2140,6 @@ function getMoneyRequestInformation(
+     } else {
+         reportPreviewAction = ReportUtils.buildOptimisticReportPreview(chatReport, iouReport, comment, optimisticTransaction);
+         chatReport.lastVisibleActionCreated = reportPreviewAction.created;
+-
+-        // Generated ReportPreview action is a parent report action of the iou report.
+-        // We are setting the iou report's parentReportActionID to display subtitle correctly in IOU page when offline.
+-        iouReport.parentReportActionID = reportPreviewAction.reportActionID;
+     }
+ 
+     const shouldCreateOptimisticPersonalDetails = isNewChatReport && !allPersonalDetails[payerAccountID];

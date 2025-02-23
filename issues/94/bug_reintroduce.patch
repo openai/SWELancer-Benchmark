@@ -1,0 +1,121 @@
+diff --git a/src/libs/ReportUtils.ts b/src/libs/ReportUtils.ts
+index 78ebdd92751..633518e49cc 100644
+--- a/src/libs/ReportUtils.ts
++++ b/src/libs/ReportUtils.ts
+@@ -3316,7 +3316,7 @@ function getTransactionReportName(reportAction: OnyxEntry<ReportAction | Optimis
+         return Localize.translateLocal('iou.receiptMissingDetails');
+     }
+ 
+-    if (TransactionUtils.isFetchingWaypointsFromServer(transaction) && TransactionUtils.getMerchant(transaction) === Localize.translateLocal('iou.fieldPending')) {
++    if (TransactionUtils.isFetchingWaypointsFromServer(transaction)) {
+         return Localize.translateLocal('iou.fieldPending');
+     }
+ 
+diff --git a/src/libs/actions/IOU.ts b/src/libs/actions/IOU.ts
+index 5262cc4dc4f..054cac22977 100644
+--- a/src/libs/actions/IOU.ts
++++ b/src/libs/actions/IOU.ts
+@@ -65,8 +65,9 @@ import type {ErrorFields, Errors} from '@src/types/onyx/OnyxCommon';
+ import type {PaymentMethodType} from '@src/types/onyx/OriginalMessage';
+ import type ReportAction from '@src/types/onyx/ReportAction';
+ import type {OnyxData} from '@src/types/onyx/Request';
++import type {Comment, Receipt, ReceiptSource, SplitShares, TransactionChanges, WaypointCollection} from '@src/types/onyx/Transaction';
++import type {EmptyObject} from '@src/types/utils/EmptyObject';
+ import type {SearchTransaction} from '@src/types/onyx/SearchResults';
+-import type {Comment, Receipt, ReceiptSource, Routes, SplitShares, TransactionChanges, WaypointCollection} from '@src/types/onyx/Transaction';
+ import {isEmptyObject} from '@src/types/utils/EmptyObject';
+ import * as CachedPDFPaths from './CachedPDFPaths';
+ import * as Category from './Policy/Category';
+@@ -2518,7 +2519,9 @@ function getUpdateMoneyRequestParams(
+     if (transaction && updatedTransaction && (hasPendingWaypoints || hasModifiedDistanceRate)) {
+         updatedTransaction = {
+             ...updatedTransaction,
+-            ...TransactionUtils.calculateAmountForUpdatedWaypointOrRate(updatedTransaction, transactionChanges, policy, ReportUtils.isExpenseReport(iouReport)),
++            amount: CONST.IOU.DEFAULT_AMOUNT,
++            modifiedAmount: CONST.IOU.DEFAULT_AMOUNT,
++            modifiedMerchant: Localize.translateLocal('iou.fieldPending'),
+         };
+ 
+         // Delete the draft transaction when editing waypoints when the server responds successfully and there are no errors
+@@ -2839,7 +2842,9 @@ function getUpdateTrackExpenseParams(
+     if (transaction && updatedTransaction && (hasPendingWaypoints || hasModifiedDistanceRate)) {
+         updatedTransaction = {
+             ...updatedTransaction,
+-            ...TransactionUtils.calculateAmountForUpdatedWaypointOrRate(transaction, transactionChanges, policy, false),
++            amount: CONST.IOU.DEFAULT_AMOUNT,
++            modifiedAmount: CONST.IOU.DEFAULT_AMOUNT,
++            modifiedMerchant: Localize.translateLocal('iou.fieldPending'),
+         };
+ 
+         // Delete the draft transaction when editing waypoints when the server responds successfully and there are no errors
+@@ -3091,7 +3096,6 @@ type UpdateMoneyRequestDistanceParams = {
+     transactionID: string;
+     transactionThreadReportID: string;
+     waypoints: WaypointCollection;
+-    routes?: Routes;
+     policy?: OnyxEntry<OnyxTypes.Policy>;
+     policyTagList?: OnyxEntry<OnyxTypes.PolicyTagLists>;
+     policyCategories?: OnyxEntry<OnyxTypes.PolicyCategories>;
+@@ -3102,14 +3106,12 @@ function updateMoneyRequestDistance({
+     transactionID,
+     transactionThreadReportID,
+     waypoints,
+-    routes = undefined,
+     policy = {} as OnyxTypes.Policy,
+     policyTagList = {},
+     policyCategories = {},
+ }: UpdateMoneyRequestDistanceParams) {
+     const transactionChanges: TransactionChanges = {
+         waypoints,
+-        routes,
+     };
+     const allReports = ReportConnection.getAllReports();
+     const transactionThreadReport = allReports?.[`${ONYXKEYS.COLLECTION.REPORT}${transactionThreadReportID}`] ?? null;
+diff --git a/src/pages/iou/request/step/IOURequestStepDistance.tsx b/src/pages/iou/request/step/IOURequestStepDistance.tsx
+index 14597df8e31..e5a1c97e9ef 100644
+--- a/src/pages/iou/request/step/IOURequestStepDistance.tsx
++++ b/src/pages/iou/request/step/IOURequestStepDistance.tsx
+@@ -418,19 +418,12 @@ function IOURequestStepDistance({
+             const oldWaypoints = transactionBackup?.comment?.waypoints ?? {};
+             const oldAddresses = Object.fromEntries(Object.entries(oldWaypoints).map(([key, waypoint]) => [key, 'address' in waypoint ? waypoint.address : {}]));
+             const addresses = Object.fromEntries(Object.entries(waypoints).map(([key, waypoint]) => [key, 'address' in waypoint ? waypoint.address : {}]));
+-            const hasRouteChanged = !isEqual(transactionBackup?.routes, transaction?.routes);
+             if (isEqual(oldAddresses, addresses)) {
+                 navigateBack();
+                 return;
+             }
+-            IOU.updateMoneyRequestDistance({
+-                transactionID: transaction?.transactionID ?? '-1',
+-                transactionThreadReportID: report?.reportID ?? '-1',
+-                waypoints,
+-                ...(hasRouteChanged ? {routes: transaction?.routes} : {}),
+-                policy,
+-            });
+-            navigateBack();
++            IOU.updateMoneyRequestDistance({transactionID: transaction?.transactionID ?? '', transactionThreadReportID: report?.reportID ?? '', waypoints});
++            Navigation.dismissModal();
+             return;
+         }
+ 
+@@ -448,9 +441,7 @@ function IOURequestStepDistance({
+         transactionBackup,
+         waypoints,
+         transaction?.transactionID,
+-        transaction?.routes,
+         report?.reportID,
+-        policy,
+     ]);
+ 
+     const renderItem = useCallback(
+diff --git a/src/types/onyx/Transaction.ts b/src/types/onyx/Transaction.ts
+index bc74921c62b..cdabdde7bac 100644
+--- a/src/types/onyx/Transaction.ts
++++ b/src/types/onyx/Transaction.ts
+@@ -485,7 +485,6 @@ export type {
+     Comment,
+     Receipt,
+     Waypoint,
+-    Routes,
+     ReceiptError,
+     ReceiptErrors,
+     TransactionPendingFieldsKey,

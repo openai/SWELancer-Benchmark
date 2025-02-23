@@ -1,0 +1,84 @@
+diff --git a/src/libs/ReportUtils.ts b/src/libs/ReportUtils.ts
+index 78ebdd92751..bb4cb167000 100644
+--- a/src/libs/ReportUtils.ts
++++ b/src/libs/ReportUtils.ts
+@@ -4448,17 +4448,8 @@ function buildOptimisticInvoiceReport(chatReportID: string, policyID: string, re
+  * @param total - Amount in cents
+  * @param currency
+  * @param reimbursable – Whether the expense is reimbursable
+- * @param parentReportActionID – The parent ReportActionID of the PolicyExpenseChat
+  */
+-function buildOptimisticExpenseReport(
+-    chatReportID: string,
+-    policyID: string,
+-    payeeAccountID: number,
+-    total: number,
+-    currency: string,
+-    reimbursable = true,
+-    parentReportActionID?: string,
+-): OptimisticExpenseReport {
++function buildOptimisticExpenseReport(chatReportID: string, policyID: string, payeeAccountID: number, total: number, currency: string, reimbursable = true): OptimisticExpenseReport {
+     // The amount for Expense reports are stored as negative value in the database
+     const storedTotal = total * -1;
+     const policyName = getPolicyName(ReportConnection.getAllReports()?.[`${ONYXKEYS.COLLECTION.REPORT}${chatReportID}`]);
+@@ -4490,7 +4481,6 @@ function buildOptimisticExpenseReport(
+         },
+         parentReportID: chatReportID,
+         lastVisibleActionCreated: DateUtils.getDBTime(),
+-        parentReportActionID,
+     };
+ 
+     // Get the approver/manager for this report to properly display the optimistic data
+@@ -4880,7 +4870,6 @@ function buildOptimisticSubmittedReportAction(amount: number, currency: string,
+  * @param iouReport
+  * @param [comment] - User comment for the IOU.
+  * @param [transaction] - optimistic first transaction of preview
+- * @param reportActionID
+  */
+ function buildOptimisticReportPreview(
+     chatReport: OnyxInputOrEntry<Report>,
+@@ -4888,13 +4877,12 @@ function buildOptimisticReportPreview(
+     comment = '',
+     transaction: OnyxInputOrEntry<Transaction> = null,
+     childReportID?: string,
+-    reportActionID?: string,
+ ): ReportAction<typeof CONST.REPORT.ACTIONS.TYPE.REPORT_PREVIEW> {
+     const hasReceipt = TransactionUtils.hasReceipt(transaction);
+     const message = getReportPreviewMessage(iouReport);
+     const created = DateUtils.getDBTime();
+     return {
+-        reportActionID: reportActionID ?? NumberUtils.rand64(),
++        reportActionID: NumberUtils.rand64(),
+         reportID: chatReport?.reportID,
+         actionName: CONST.REPORT.ACTIONS.TYPE.REPORT_PREVIEW,
+         pendingAction: CONST.RED_BRICK_ROAD_PENDING_ACTION.ADD,
+diff --git a/src/libs/actions/IOU.ts b/src/libs/actions/IOU.ts
+index 5262cc4dc4f..01d4d8f14fc 100644
+--- a/src/libs/actions/IOU.ts
++++ b/src/libs/actions/IOU.ts
+@@ -6443,7 +6443,6 @@ function getReportFromHoldRequestsOnyxData(
+ } {
+     const {holdReportActions, holdTransactions} = getHoldReportActionsAndTransactions(iouReport?.reportID ?? '');
+     const firstHoldTransaction = holdTransactions[0];
+-    const newParentReportActionID = rand64();
+ 
+     const optimisticExpenseReport = ReportUtils.buildOptimisticExpenseReport(
+         chatReport.reportID,
+@@ -6452,16 +6451,8 @@ function getReportFromHoldRequestsOnyxData(
+         holdTransactions.reduce((acc, transaction) => acc + transaction.amount, 0) * (ReportUtils.isIOUReport(iouReport) ? 1 : -1),
+         getCurrency(firstHoldTransaction),
+         false,
+-        newParentReportActionID,
+-    );
+-    const optimisticExpenseReportPreview = ReportUtils.buildOptimisticReportPreview(
+-        chatReport,
+-        optimisticExpenseReport,
+-        '',
+-        firstHoldTransaction,
+-        optimisticExpenseReport.reportID,
+-        newParentReportActionID,
+     );
++    const optimisticExpenseReportPreview = ReportUtils.buildOptimisticReportPreview(chatReport, optimisticExpenseReport, '', firstHoldTransaction, optimisticExpenseReport.reportID);
+ 
+     const updateHeldReports: Record<string, Pick<OnyxTypes.Report, 'parentReportActionID' | 'parentReportID' | 'chatReportID'>> = {};
+     const addHoldReportActions: OnyxTypes.ReportActions = {};

@@ -1,0 +1,20 @@
+diff --git a/src/components/Search/index.tsx b/src/components/Search/index.tsx
+index b415d91b7ab..bd196ba0e0f 100644
+--- a/src/components/Search/index.tsx
++++ b/src/components/Search/index.tsx
+@@ -188,15 +188,6 @@ function Search({queryJSON}: SearchProps) {
+     const isDataLoaded = searchResults?.data !== undefined && searchResults?.search?.type === type && searchResults?.search?.status === status;
+     const shouldShowLoadingState = !isOffline && !isDataLoaded;
+     const shouldShowLoadingMoreItems = !shouldShowLoadingState && searchResults?.search?.isLoading && searchResults?.search?.offset > 0;
+-    const isSearchResultsEmpty = !searchResults?.data || SearchUtils.isSearchResultsEmpty(searchResults);
+-    const prevIsSearchResultEmpty = usePrevious(isSearchResultsEmpty);
+-
+-    useEffect(() => {
+-        if (!isSearchResultsEmpty || prevIsSearchResultEmpty) {
+-            return;
+-        }
+-        turnOffMobileSelectionMode();
+-    }, [isSearchResultsEmpty, prevIsSearchResultEmpty]);
+
+     if (shouldShowLoadingState) {
+         return (
