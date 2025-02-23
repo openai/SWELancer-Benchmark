@@ -1,6 +1,8 @@
-# SWE-Lancer
+# SWE-Lancer (Paper Codebase)
 
-This repo contains the dataset and code for the paper "SWE-Lancer: Can Frontier LLMs Earn $1 Million from Real-World Freelance Software Engineering?".
+This repo contains the dataset and code for the paper "SWE-Lancer: Can Frontier LLMs Earn $1 Million from Real-World Freelance Software Engineering?". **This frozen branch contains the code and dataset from the paper; we may make periodic updates to the codebase; however, the dataset and evaluation are static.** Please read the [changelog](https://github.com/openai/SWELancer-Benchmark/tree/paper?tab=readme-ov-file#changelog) for caveats of running on this branch.
+
+# Setup
 
 **Step 1: Package Management and Requirements**
 
@@ -158,3 +160,17 @@ For a complete example of a ComputerInterface implementation, you can refer to t
 ## Contributing
 
 For questions or contributions, please open an issue or pull request.
+
+## Changelog
+
+Because this branch is not updated regularly, please be aware that pull requests merged from the community post-release are not included. This includes:
+* Reliability improvements to the evaluation environment
+* Improvements to the tasks
+* New freelancer tasks from Expensify
+
+### Changes not on This Branch (Non-Exhaustive)
+
+- Small fixes for Docker build issues on x86 Mac
+- Removal of a hint from a task commit
+- Addition of tasks from December and January 2024
+- Updates to environment and issue reintroduction for very old tasks to be more realistic
