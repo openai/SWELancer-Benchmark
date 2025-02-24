@@ -116,7 +116,7 @@ print(os.listdir())
 
 You can include other content in your message, as long as it has the Python code block. You must only submit one code block per message.
                                  
-The python code block is your means of interactign with the environment; write Python code to view files, edit files, and run commands. Do not leave any steps incomplete. You must implement all fixes yourself.
+The python code block is your means of interacting with the environment; write Python code to view files, edit files, and run commands. Do not leave any steps incomplete. You must implement all fixes yourself.
                                                                        
 When you are done, send "DONE" (and nothing else - you don't need a python code block), and we will grade your submission.
                                  
