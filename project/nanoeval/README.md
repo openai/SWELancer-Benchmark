@@ -2,17 +2,6 @@
 
 Simple, ergonomic, and high performance evals. We use it at OpenAI as part of our infrastructure to run Preparedness evaluations.
 
-# Installation
-
-```bash
-# Using https://github.com/astral-sh/uv (recommended)
-uv add "git+https://github.com/openai/SWELancer-Benchmark#egg=nanoeval&subdirectory=project/nanoeval"
-# Using pip
-pip install "git+https://github.com/openai/SWELancer-Benchmark#egg=nanoeval&subdirectory=project/nanoeval"
-```
-
-nanoeval is pre-release software and may have breaking changes, so it's recommended that you pin your installation to a specific commit. The uv command above will do this for you.
-
 # Principles
 
 1. **Minimal indirection.** You should be able to implement and understand an eval in 100 lines.
@@ -26,6 +15,17 @@ nanoeval is pre-release software and may have breaking changes, so it's recommen
 - `EvalSpec` - An eval to run and runtime characteristics of how to run it (i.e. concurrency, recording, other administrivia)
 - `Task` - A single scoreable unit of work.
 - `Solver` - A strategy (usually involving sampling a model) to go from a task to a result that can be scored. For example, there may be different ways to prompt a model to answer a multiple-choice question (i.e. looking at logits, few-shot prompting, etc)
+
+# Installation
+
+```bash
+# Using https://github.com/astral-sh/uv (recommended)
+uv add "git+https://github.com/openai/SWELancer-Benchmark#egg=nanoeval&subdirectory=project/nanoeval"
+# Using pip
+pip install "git+https://github.com/openai/SWELancer-Benchmark#egg=nanoeval&subdirectory=project/nanoeval"
+```
+
+nanoeval is pre-release software and may have breaking changes, so it's recommended that you pin your installation to a specific commit. The uv command above will do this for you.
 
 # Running your first eval
 
