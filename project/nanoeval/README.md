@@ -65,7 +65,7 @@ Because nanoeval uses a persistent database to track the state of individual tas
 
 ```bash
 # Restarts the eval in a new process
-python3 -m nanoeval.extras.resume run_set_id=...
+python3 -m nanoeval.bin.resume run_set_id=...
 ```
 
 You can list all run sets (databases) using the following command:
