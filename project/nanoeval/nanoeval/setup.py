@@ -6,12 +6,10 @@ import os
 import resource
 from concurrent.futures import ThreadPoolExecutor
 from contextlib import AsyncExitStack, contextmanager
-from functools import partial
 from typing import Any, Coroutine, Generator
 
 import structlog
 from structlog.contextvars import bound_contextvars
-from structlog.types import EventDict
 
 from nanoeval._aiomonitor import start_aiomonitor
 from nanoeval.library_config import get_library_config
@@ -26,75 +24,9 @@ cleaned up when the program exits.
 """
 
 
-def _rename_field(
-    old: str, new: str, logger: logging.Logger, name: str, event_dict: EventDict
-) -> EventDict:
-    del logger, name
-
-    if value := event_dict.get(old):
-        event_dict[new] = value
-        del event_dict[old]
-    return event_dict
-
-
-def _remove_all_fields_except(
-    to_keep: list[str], logger: logging.Logger, name: str, event_dict: EventDict
-) -> EventDict:
-    del logger, name
-
-    for key in list(event_dict.keys()):
-        if key not in to_keep:
-            del event_dict[key]
-    return event_dict
-
-
-class PrintOrWarningFilter(logging.Filter):
-    def filter(self, record: logging.LogRecord) -> bool:
-        if record.levelno > logging.INFO or (
-            os.environ.get("NANOEVAL_LOG_ALL") and record.levelno == logging.INFO
-        ):
-            return True
-
-        return isinstance(record.msg, dict) and record.msg.get("_print", False)
-
-
 def nanoeval_logging() -> None:
     logging.captureWarnings(True)
-    get_library_config().on_logging_setup()
-    # Remove all StreamHandlers from the root logger
-    for handler in logging.getLogger().handlers:
-        if isinstance(handler, logging.StreamHandler):
-            logging.getLogger().removeHandler(handler)
-
-    handler = logging.StreamHandler()
-    # Use OUR `ProcessorFormatter` to format all `logging` entries to stdout.
-    handler.setFormatter(
-        structlog.stdlib.ProcessorFormatter(
-            processors=[
-                structlog.stdlib.ProcessorFormatter.remove_processors_meta,
-                structlog.contextvars.merge_contextvars,
-                structlog.processors.add_log_level,
-                structlog.processors.MaybeTimeStamper(fmt="iso"),
-                partial(
-                    _remove_all_fields_except,
-                    ["timestamp", "level", "event", "component", "exc_info"],
-                ),
-                structlog.dev.ConsoleRenderer(),
-            ],
-            # logger -> structlog transforms
-            foreign_pre_chain=[
-                structlog.stdlib.add_logger_name,
-                partial(_rename_field, "logger", "component"),
-                partial(_rename_field, "logger_name", "component"),
-                structlog.stdlib.ExtraAdder(),
-            ],
-        )
-    )
-
-    handler.addFilter(PrintOrWarningFilter())
-    root_logger = logging.getLogger()
-    root_logger.addHandler(handler)
-    root_logger.setLevel(logging.INFO)
+    get_library_config().setup_logging()
 
 
 @contextmanager

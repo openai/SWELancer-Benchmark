@@ -21,7 +21,9 @@ from nanoeval.solvers.computer_tasks.code_execution_interface import (
 from nanoeval_alcatraz.task_to_alcatraz_config import task_to_alcatraz_config
 
 logger = structlog.stdlib.get_logger(component=__name__)
+
 ALCATRAZ_TIMEOUT = int(os.getenv("ALCATRAZ_TIMEOUT", 120))
+
 
 class Python3ExceptionDict(BaseModel):
     """A pydantic model for serializing a Python 3.x exception.
@@ -48,6 +50,16 @@ class BaseAlcatrazComputerInterface(JupyterComputerInterface, ABC):
     async def disable_internet(self) -> None:
         logger.info("Disabling internet...")
         await self.cluster.add_weak_network_block_via_ip_tables()
+
+        # Verify
+        logger.info("Post-setup network access disabled")
+        try:
+            from alcatraz.utils.network import assert_internet_disabled
+
+            await assert_internet_disabled(self.cluster)
+            logger.info("Verified network access successfully disabled")
+        except ImportError:
+            pass
 
     async def upload(self, file: bytes, destination: str) -> None:
         return await self.cluster.upload(file, destination)

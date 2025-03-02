@@ -79,24 +79,27 @@ def compute_default_metrics_on_correctness_without_answer_groups(
     samples_df["answer_group_id"] = samples_df["is_correct"].astype(int)
     del samples_df["is_correct"]
 
-    # Create two answer groups: 0 is wrong, 1 is right.
+    # Create two answer groups: 0 is wrong, 1 is right. Ensure no instance-level duplicates.
     answer_group_correctness_df = pd.DataFrame(
         flatten(
             [
                 {
-                    "instance": sample.instance,
+                    "instance": instance,
                     "answer_group_id": 0,
                     "is_correct": False,
                 },
                 {
-                    "instance": sample.instance,
+                    "instance": instance,
                     "answer_group_id": 1,
                     "is_correct": True,
                 },
             ]
-            for sample in samples_df.itertuples()
+            for instance in samples_df["instance"].unique()
         )
     )
+
+    # Should have 1 answer group for False and 1 for True
+    assert len(answer_group_correctness_df) == 2 * len(samples_df["instance"].unique())
 
     return compute_default_metrics(samples_df, answer_group_correctness_df)
 
