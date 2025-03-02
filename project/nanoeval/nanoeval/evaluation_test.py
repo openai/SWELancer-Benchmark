@@ -1,7 +1,9 @@
 from __future__ import annotations
 
 import asyncio
+import os
 from typing import Any
+from unittest.mock import patch
 
 import numpy as np
 import pytest
@@ -24,45 +26,51 @@ async def test_concurrency_blocking_edge_case() -> None:
 
     If this test fails, it will hang forever.
     """
-    async with global_exit_stack, db.open_run_set_db(backup=False), asyncio.TaskGroup() as tg:
-        # This eval will never finish and get queued in the executor forever.
-        # Note concurrency=0.
-        background = tg.create_task(
-            nanoeval.validate(
-                EvalSpec(
-                    eval=GPQAEval(solver=MockSolver()),
-                    runner=RunnerArgs(n_tasks=1, concurrency=0),
-                )
-            )
-        )
 
-        # Wait for the task to get registered
-        while True:
-            with db.conn() as c:
-                (count,) = c.execute("SELECT COUNT(*) FROM eval").fetchone()
-                if count > 0:
-                    break
-            await asyncio.sleep(0.5)
-
-        print("made it to the point where the first one got picked up by the executor")
-
-        for f in asyncio.as_completed(
-            [
-                # Will never finish - and that's ok!
-                background,
-                # We expect this one to actually finish.
+    # In general setting concurrency to 0 is not allowed as it would just make the eval hang,
+    # however we can bypass this for tests in order to create an eval that intentionally hangs.
+    with patch.dict(os.environ, {"NANOEVAL_ALLOW_ZERO_CONCURRENCY": "1"}, clear=False):
+        async with global_exit_stack, db.open_run_set_db(backup=False), asyncio.TaskGroup() as tg:
+            # This eval will never finish and get queued in the executor forever.
+            background = tg.create_task(
                 nanoeval.validate(
                     EvalSpec(
                         eval=GPQAEval(solver=MockSolver()),
-                        runner=RunnerArgs(n_tasks=1, concurrency=1),
+                        runner=RunnerArgs(
+                            n_tasks=1,
+                            concurrency=0,  # Forces the eval to hang.
+                        ),
                     )
-                ),
-            ]
-        ):
-            await f
-            print("We did it! one of the evals finished!")
-            await cancel_task(background)
-            break
+                )
+            )
+
+            # Wait for the task to get registered
+            while True:
+                with db.conn() as c:
+                    (count,) = c.execute("SELECT COUNT(*) FROM eval").fetchone()
+                    if count > 0:
+                        break
+                await asyncio.sleep(0.5)
+
+            print("made it to the point where the first one got picked up by the executor")
+
+            for f in asyncio.as_completed(
+                [
+                    # Will never finish - and that's ok!
+                    background,
+                    # We expect this one to actually finish.
+                    nanoeval.validate(
+                        EvalSpec(
+                            eval=GPQAEval(solver=MockSolver()),
+                            runner=RunnerArgs(n_tasks=1, concurrency=1),
+                        )
+                    ),
+                ]
+            ):
+                await f
+                print("We did it! one of the evals finished!")
+                await cancel_task(background)
+                break
 
 
 @pytest.mark.asyncio
@@ -346,3 +354,18 @@ async def test_tasks_crash_in_second_eval() -> None:
                 )
 
     assert first_eval_succeeded
+
+
+@pytest.mark.asyncio
+async def test_concurrency_none() -> None:
+    async with global_exit_stack, db.open_run_set_db(backup=False):
+        report = await nanoeval.validate(
+            EvalSpec(
+                eval=GPQAEval(solver=MockSolver()),
+                runner=RunnerArgs(
+                    n_tasks=1,
+                    concurrency=None,
+                ),
+            )
+        )
+        assert "accuracy" in report

@@ -23,7 +23,6 @@ import chz
 from chz.factories import function
 from nanoeval._multiprocessing_utils import check_multiprocess_safe
 from nanoeval.asyncio_utils import HasAsyncContextManager
-from nanoeval.recorder import dummy_recorder
 from nanoeval.recorder_protocol import RecorderConfig
 
 
@@ -31,6 +30,7 @@ class Task(BaseModel):
     """
     All nanoeval Tasks must inherit from this class.
     """
+
     question_id: str
     attempt_id: int = 1
     retry_idx: int = 0
@@ -129,10 +129,10 @@ class Eval(Generic[TTask, TResult], HasAsyncContextManager):
            is to compute accuracy (this will underweight instances with fewer rollouts). Instead, you should compute accuracy
            by instance, and then average over instances.
 
-           Notably, this function is called on an interval before the eval is completed, so it should be able to handle partial
-           results and partial results are very likely to be ragged.
+           Notably, this function is called on an interval, so it should be able to handle partial results and partial
+           results are very likely to be ragged.
 
-        This function is used by the default implementation of `eval.get_full_summary()`.
+        This function is called by `eval.get_full_summary()`.
         """
         raise NotImplementedError
 
@@ -198,7 +198,10 @@ class Eval(Generic[TTask, TResult], HasAsyncContextManager):
 @chz.chz
 class RunnerArgs:
     # Runner options.
-    concurrency: int = 4096
+    concurrency: int | None = chz.field(
+        default=4096,
+        doc="Per-eval concurrency. If None, concurrency is not limited.",
+    )
     # If enabled, use multiprocessing. This can be useful for CPU-bound tasks, and uses
     # multiprocessing as the outer loop, and asyncio concurrency as the inner loop.
     # We split tasks into groups of size `concurrency`. A subprocess processes one group
@@ -215,10 +218,10 @@ class RunnerArgs:
         doc="Limit the number of tasks run. The limit is the first N tasks selected before shuffling.",
     )
     run_set_id: str | None = None
-    recorder: RecorderConfig = chz.field(
-        meta_factory=function(default_module="nanoeval.recorders"),
-        default_factory=dummy_recorder,
-        doc="Recorder configuration used to create a recorder for the eval.",
+    recorder: RecorderConfig | None = chz.field(
+        meta_factory=function(),
+        default=None,
+        doc="Recorder configuration used to create a recorder for the eval. If None, default recorder is used (as determined by `library_config().get_default_recorder()`.",
     )
     enable_slackbot: bool = True
     slack_name: str | None = None
@@ -227,7 +230,7 @@ class RunnerArgs:
     summary_interval: float | None = None
     use_monitor: bool = chz.field(
         default=False,
-        doc="If enabled, starts a streamlit server on port 8501 to monitor the eval. You can also run it manually by running `streamlit run project/nanoeval/monitor.py`.",
+        doc="If enabled, starts a streamlit server on port 8501 to monitor the eval. You can also run it manually by running `python3 -m nanoeval.bin.mon`.",
     )
     max_retries: int = chz.field(
         default=16,
@@ -247,13 +250,23 @@ class RunnerArgs:
     def _validate_multiprocessing_options(self) -> None:
         if self.num_processes:
             assert self.num_processes > 0
-            assert (
-                self.experimental_use_multiprocessing
-            ), "num_processes requires experimental_use_multiprocessing"
+            assert self.experimental_use_multiprocessing, (
+                "num_processes requires experimental_use_multiprocessing"
+            )
 
     @chz.validate
     def _numerical_limits(self) -> None:
         assert self.n_tasks is None or self.n_tasks > 0
+
+    @chz.validate
+    def _validate_concurrency(self) -> None:
+        if self.concurrency is not None and self.concurrency <= 0:
+            if self.concurrency == 0 and os.environ.get("NANOEVAL_ALLOW_ZERO_CONCURRENCY"):
+                pass
+            else:
+                raise ValueError(
+                    "concurrency must be > 0 or None unless NANOEVAL_ALLOW_ZERO_CONCURRENCY is set."
+                )
 
 
 @chz.chz

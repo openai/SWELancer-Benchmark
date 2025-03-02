@@ -75,7 +75,7 @@ class ComputerInterface(ABC):
     async def check_shell_command(self, cmd: str) -> ExecutionResult:
         res = await self.send_shell_command(cmd)
         assert res.exit_code == 0, (
-            f"Command failed with {res.exit_code=}\n\n{res.output.decode(errors='ignore')}"
+            f"Command failed with {res.exit_code=}\n\n{cmd=}\n\n{res.output.decode(errors='ignore')}"
         )
         return res
 
