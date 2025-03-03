@@ -54,7 +54,7 @@ class BaseAlcatrazComputerInterface(JupyterComputerInterface, ABC):
         # Verify
         logger.info("Post-setup network access disabled")
         try:
-            from alcatraz.utils.network import assert_internet_disabled
+            from alcatraz.utils.network import assert_internet_disabled # type: ignore
 
             await assert_internet_disabled(self.cluster)
             logger.info("Verified network access successfully disabled")
