@@ -36,12 +36,12 @@ from typing import Any, AsyncGenerator, Generator
 from nanoeval_alcatraz.task_to_alcatraz_config import task_to_alcatraz_config
 from nanoeval_alcatraz.alcatraz_computer_interface import AlcatrazComputerInterface
 
-from openai import OpenAI
+from openai import AsyncOpenAI
 import os
 import tiktoken
 
 
-client = OpenAI(
+client = AsyncOpenAI(
     api_key=os.environ.get("OPENAI_API_KEY"),  # This is the default and can be omitted
 )
 
@@ -65,10 +65,10 @@ def trim_messages(messages: list[dict[str, Any]], max_tokens: int, model: str = 
         messages.pop(1)
     return messages
 
-def get_model_response(messages: list[dict[str, Any]]) -> str:
+async def get_model_response(messages: list[dict[str, Any]]) -> str:
     messages = trim_messages(messages, 110000)
     
-    chat_completion = client.chat.completions.create(
+    chat_completion = await client.chat.completions.create(
         messages=messages, # type: ignore
         model="gpt-4o",
     )
@@ -126,7 +126,7 @@ Please note that the Python code is not a Jupyter notebook; you must write a ful
                 print(messages)
 
                 for remaining_turns in range(max_turns, 0, -1):
-                    model_response = get_model_response(messages)
+                    model_response = await get_model_response(messages)
                     print(model_response)
 
                     messages.append({"role": "assistant", "content": model_response})
