@@ -6,6 +6,7 @@ from __future__ import annotations
 
 import inspect
 import logging
+import os
 from pprint import pformat
 from typing import (
     Any,
@@ -250,9 +251,9 @@ class RunnerArgs:
     def _validate_multiprocessing_options(self) -> None:
         if self.num_processes:
             assert self.num_processes > 0
-            assert self.experimental_use_multiprocessing, (
-                "num_processes requires experimental_use_multiprocessing"
-            )
+            assert (
+                self.experimental_use_multiprocessing
+            ), "num_processes requires experimental_use_multiprocessing"
 
     @chz.validate
     def _numerical_limits(self) -> None:
