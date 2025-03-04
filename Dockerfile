@@ -111,10 +111,12 @@ RUN curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.40.1/install.sh | b
 
 # Install Pip
 COPY requirements.txt .
+# Remove last 3 lines from requirements
+RUN head -n -3 requirements.txt > requirements-docker.txt
 RUN curl https://bootstrap.pypa.io/get-pip.py -o get-pip.py && \
     python3.12 get-pip.py && \
     python3.12 -m pip install --upgrade pip && \
-    python3.12 -m pip install --no-cache-dir -r requirements.txt
+    python3.12 -m pip install --no-cache-dir -r requirements-docker.txt
 
 # Setup playwright
 RUN python3.12 -m playwright install
@@ -154,6 +156,5 @@ EXPOSE 5900
 RUN update-alternatives --install /usr/bin/python python /usr/bin/python3 1 && \
     update-alternatives --set python /usr/bin/python3
 
-# Set the entrypoint and default command
-ENTRYPOINT ["/bin/bash", "-l", "-c"]
+# Set the default command
 CMD ["/app/tests/run.sh"]

@@ -10,6 +10,7 @@ boostedblob
 dill
 docker
 IPython
+tiktoken
 jupyter-client
 libcst==1.5.1
 loky
@@ -37,3 +38,6 @@ service-identity
 structlog
 tenacity
 vncdotool
+-e ./project/alcatraz
+-e ./project/nanoeval
+-e ./project/nanoeval_alcatraz
