@@ -1,0 +1,6 @@
+environments:
+  py:
+    path: requirements.txt
+    kind: uv-venv
+    prefix: .venv
+    python: '3.11'
