@@ -1,0 +1,110 @@
+[
+    {
+        "RepoTags": [
+            "swelancer:latest"
+        ],
+        "Parent": "",
+        "Comment": "buildkit.dockerfile.v0",
+        "Created": "2025-03-04T14:36:15.462957927Z",
+        "Author": "",
+        "Config": {
+            "Hostname": "",
+            "Domainname": "",
+            "User": "",
+            "AttachStdin": false,
+            "AttachStdout": false,
+            "AttachStderr": false,
+            "ExposedPorts": {
+                "5900/tcp": {},
+                "5901/tcp": {}
+            },
+            "Tty": false,
+            "OpenStdin": false,
+            "StdinOnce": false,
+            "Env": [
+                "PATH=/opt/conda/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin",
+                "DEBIAN_FRONTEND=noninteractive",
+                "NVM_DIR=/root/.nvm",
+                "PYTHONUNBUFFERED=1",
+                "PYTHONPATH=/app/tests",
+                "DISPLAY=:99",
+                "LIBGL_ALWAYS_INDIRECT=1"
+            ],
+            "Cmd": [
+                "/app/tests/run.sh"
+            ],
+            "ArgsEscaped": true,
+            "Image": "",
+            "Volumes": null,
+            "WorkingDir": "/app/expensify",
+            "Entrypoint": [
+                "/bin/bash",
+                "-l",
+                "-c"
+            ],
+            "OnBuild": null,
+            "Labels": {
+                "org.opencontainers.image.ref.name": "ubuntu",
+                "org.opencontainers.image.version": "22.04"
+            }
+        },
+        "Architecture": "arm64",
+        "Variant": "v8",
+        "Os": "linux",
+        "Size": 2958147051,
+        "GraphDriver": {
+            "Data": null,
+            "Name": "overlayfs"
+        },
+        "RootFS": {
+            "Type": "layers",
+            "Layers": [
+                "sha256:59b223680ef978509f20faf6bf069866dfc02c422159347face0a7565d698526",
+                "sha256:083aa0c019e975878fde8816b094ff8fe36f5d7a2cf5d3e8b5e8557042e5bf2f",
+                "sha256:b44f43c59dbed4ad9bcc8cd2fc1e588dc496c14c7811f89f241138c4daac08d2",
+                "sha256:a44c0499d62ca38338c0c0083d297b90e2bdf84e2c53f587a32027aaff23cf08",
+                "sha256:a8c78b622fa0f488ef0c6e054b3fb4917c8f4ceb92bf31eeee34556fbae05a1a",
+                "sha256:ab6d0bea1782c2849228e432942bde9afae9646e210b792cdf360291b3a01bc0",
+                "sha256:640b8702ceabe4380be93ae2cf0c19becf9ee79a0a54bd726b5623e1102e24ae",
+                "sha256:f9ab13561a3f63367abeb6a6c8ef136513d3f1a6413e0e55f6f621f13bd151a7",
+                "sha256:06eb55395e37706670ea761cb8efccb0492d62d47cbb3b8bf07b05d0d1118b39",
+                "sha256:0bf426de6db986f1570292457349882972f21f523e441748a4fcda12b2b5fafb",
+                "sha256:bd3001c6ba1740ed7e132104c7bd30bf8b4fac9bcbf2952ceec6565525ce49ee",
+                "sha256:a256a031948fdc0421ab89e55ad2dff939789bc332c931b1b5dfe2fc7774c531",
+                "sha256:a4ea8b5b02fc803c520a1fb52a5499a32d95448c8dd4be7ec4aa275e2ba70f30",
+                "sha256:209ac431830b7bab9df6bbc92dcfccf8ecb291d426f7eb51fc6d8f31a49a52df",
+                "sha256:81f1ebeb59a3241f063b448b0fe248a73d38c114f24214260357386afcfcd69a",
+                "sha256:db3d4d9bc3942af0c2986e52a166506b1d1a3b426416b64eb1965440592bf58d",
+                "sha256:3fa5b20cdc886f073bf21eb540dcd17ab03801c7844b915adc9be923fa061ab0",
+                "sha256:42305125ca4f564f1106c3abcfa86dddb0713e1361c2c130099b340fc4566bd0",
+                "sha256:260df0d93f06013e4990e671c738693b72fec09f2bd570ae2bfab066808631c3",
+                "sha256:88f44a1ae21e552b588f95cf3549a39bb4c8760144626f7654b41083616f72bf",
+                "sha256:415afbd3764090b705469db924be20a44bbaa3dfd1ed0538af5656cf36e11807",
+                "sha256:0e254f661f902521d997516ca0100a6d40cac1433dc5e7c4d5c002777510d3e7",
+                "sha256:532d9a76f52d03c7adb99d9a566afed4cceb0dd302f19d94c58e9582894f2a42",
+                "sha256:99f4fac32b9ffa530e5d09233e1b29fd157eb67402e4def9c3590765f7842ef4",
+                "sha256:0907e840d3bfd7894a06c242df2104a70828f7b7a45a372e68eb24ac3557e92e",
+                "sha256:5a616de0c022d6ea211f59fefbc010914da498e21b1651bbbb2ec768412c344a",
+                "sha256:4ab63b7f5dcf495c353c96e952be64d1452a47200c2937f0ec12bc3ac68d0f2d",
+                "sha256:849d87fd155823a14c2087826cac195eb8fdfdcebc915aa642522390abc089f6",
+                "sha256:ffb6af9830fa4b0438695ccc6d41694ebef30a62ad7dd6a4b34a2c6448c44595",
+                "sha256:09c896786d83bcdae32c8c6f0051af51d3d955323980ec85ea4f3a2760528976",
+                "sha256:586d59a30e00452c5d53ca8c05c559cad25bce2713c040bb2e1047db8e016e57",
+                "sha256:4514516cfa3dcd5367c32a19b41c84ea50c1208c579c58dcb5f3143c1f37619c",
+                "sha256:1a9220394959ce01b700e0c5c6c980d1811432d8e3d4718a4071eb92cc37d0ef",
+                "sha256:50f03fd5727add0cdabec93a1cdd1f6acc803098530374c4b291f1cfff4d154a",
+                "sha256:d65242df0fede21901f69acb929e3a105202fd53c947a5843356e777c5f736f7",
+                "sha256:e25f97af29db7e6ccbe38bdde036230d0cf4ba4d1ed6d1bfed9faa4afa30f92c",
+                "sha256:8b837c8d790fb0c4b6258ea1e963cd0975c045c8103881d1a93b020036d0f915",
+                "sha256:4cb2d4daa69bf53e8eddd2c41bfe2824955e6c7cb4197a4569bb65a9910d54ba",
+                "sha256:5c84810d3bd1283a63ed79b4d156f6f93bff37db383a4745ecee1bd0c7bda53b",
+                "sha256:8f3ceda21019c352e90d2103c16ca25ed2d610116fa1a69d23dc857420be92d0",
+                "sha256:064b1f1ced1b24a4508c7a27ef37dbf12eb739c25a0e5d3f3b8c4aa10fb5a09b",
+                "sha256:5f70bf18a086007016e948b04aed3b82103a36bea41755b6cddfaf10ace3c6ef",
+                "sha256:d8fac57d0e6e716165adae9091535034dbdae90d93bb1acf9d25c3c7074922e6"
+            ]
+        },
+        "DockerfileMD5": "4a5bec4b9bb92a2084c2a5fec5fc4736",
+        "DepsMD5s": {}
+    }
+]
