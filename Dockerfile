@@ -156,6 +156,5 @@ EXPOSE 5900
 RUN update-alternatives --install /usr/bin/python python /usr/bin/python3 1 && \
     update-alternatives --set python /usr/bin/python3
 
-# Set the entrypoint and default command
-ENTRYPOINT ["/bin/bash", "-l", "-c"]
+# Set the default command
 CMD ["/app/tests/run.sh"]
