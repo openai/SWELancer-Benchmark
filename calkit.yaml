@@ -21,7 +21,7 @@ environments:
     kind: uv-venv
     prefix: .venv
     python: "3.11"
-  docker-x86:
+  docker-amd64:
     kind: docker
     path: Dockerfile_x86
     image: swelancer
