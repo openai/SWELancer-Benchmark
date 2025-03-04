@@ -37,3 +37,6 @@ service-identity
 structlog
 tenacity
 vncdotool
+-e ./project/alcatraz
+-e ./project/nanoeval
+-e ./project/nanoeval_alcatraz
