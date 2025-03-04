@@ -17,14 +17,15 @@ dependencies:
       kind: env-var
 environments:
   py:
-    path: requirements.txt
     kind: uv-venv
+    path: requirements.txt
     prefix: .venv
     python: "3.11"
   docker-amd64:
     kind: docker
     path: Dockerfile_x86
     image: swelancer
+    platform: linux/amd64
   docker-arm64:
     kind: docker
     path: Dockerfile
