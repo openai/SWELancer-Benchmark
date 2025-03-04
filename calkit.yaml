@@ -1,3 +1,20 @@
+dependencies:
+  - uv
+  - docker
+  - USE_WEB_PROXY:
+      kind: env-var
+      default: "false"
+  - EXPENSIFY_URL:
+      kind: env-var
+      default: https://www.expensify.com/
+  - NEW_EXPENSIFY_URL:
+      kind: env-var
+      default: https://new.expensify.com/
+  - ALCATRAZ_TIMEOUT:
+      kind: env-var
+      default: "480"
+  - OPENAI_API_KEY:
+      kind: env-var
 environments:
   py:
     path: requirements.txt
