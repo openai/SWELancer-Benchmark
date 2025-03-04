@@ -1,0 +1,12 @@
+stages:
+  run-swelancer:
+    cmd: calkit xenv -n py -- python run_swelancer.py
+    deps:
+      - run_swelancer.py
+      - swelancer.py
+      - requirements.txt
+      - project/alcatraz/alcatraz
+      - project/nanoeval/nanoeval
+      - project/nanoeval_alcatraz/nanoeval_alcatraz
+      - Dockerfile
+      - Dockerfile_x86
