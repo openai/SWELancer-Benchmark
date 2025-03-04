@@ -20,4 +20,12 @@ environments:
     path: requirements.txt
     kind: uv-venv
     prefix: .venv
-    python: '3.11'
+    python: "3.11"
+  docker-x86:
+    kind: docker
+    path: Dockerfile_x86
+    image: swelancer
+  docker-arm64:
+    kind: docker
+    path: Dockerfile
+    image: swelancer
