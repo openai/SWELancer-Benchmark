@@ -8,6 +8,3 @@ stages:
       - project/alcatraz/alcatraz
       - project/nanoeval/nanoeval
       - project/nanoeval_alcatraz/nanoeval_alcatraz
-      - Dockerfile
-      - Dockerfile_x86
-      - runtime_scripts
