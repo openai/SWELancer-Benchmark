@@ -6,89 +6,50 @@ This repo contains the dataset and code for the paper ["SWE-Lancer: Can Frontier
 
 Thank you so much for checking out our benchmark! If you have questions, run into issues, or want to contribute, please open an issue or pull request. You can also reach us at samuelgm@openai.com and michele@openai.com at any time.
 
-We will continue to update this repository with the latest tasks, updates to the scaffolding, and improvements to the codebase 
+We will continue to update this repository with the latest tasks, updates to the scaffolding, and improvements to the codebase
 
 - If you'd like to use the latest version, please use the `main` branch.
 
-- If you'd like to use the version of the dataset from the paper and codebase at time of paper release, please check out the `paper` branch. Note that the performance outlined in our paper is on our internal scaffold. We've aimed to open-source as much of it as possible, but the open-source agent and harness may not be exactly the same. 
-
+- If you'd like to use the version of the dataset from the paper and codebase at time of paper release, please check out the `paper` branch. Note that the performance outlined in our paper is on our internal scaffold. We've aimed to open-source as much of it as possible, but the open-source agent and harness may not be exactly the same.
 
 ---
 
 **Step 1: Package Management and Requirements**
 
-Python 3.11 is the most stable version to use with SWE-Lancer.
+[Calkit](https://github.com/calkit/calkit) is used to
+manage the necessary [Docker](https://docker.com) and
+[uv](https://github.com/astral-sh/uv) environments,
+so all three of these tools must be installed.
 
-For package management, this repo comes with a pre-existing virtualenv or you can build one from scratch.
+**Step 2: Run the Docker Container**
 
-We recommend using the pre-built virtualenv with [uv](https://github.com/astral-sh/uv), a lightweight OSS package manager. To do this, run:
-
-```bash
-uv sync
-source .venv/bin/activate
-for proj in nanoeval alcatraz nanoeval_alcatraz; do
-  uv pip install -e project/"$proj"
-done
-```
-
-To use your own virtualenv, without uv, run:
+Run the Docker container, building if necessary, by executing:
 
 ```bash
-python -m venv .venv
-source .venv/bin/activate
-pip install -r requirements.txt
-for proj in nanoeval alcatraz nanoeval_alcatraz; do
-  pip install -e project/"$proj"
-done
+calkit xenv -n docker-arm64 -- ISSUE_ID=1 bash /app/tests/run.sh
 ```
 
-**Step 2: Build the Docker Image**
+If you are running on an AMD64 (x86) platform, replace `docker-arm64` with
+`docker-amd64` in the command above.
 
-Please run the command that corresponds to your computer's architecture.
+**Step 2: Check Environmental Variables**
 
-For Apple Silicon (or other ARM64 systems):
+To ensure environmental variables are set properly, execute:
 
 ```bash
-docker buildx build \
-  -f Dockerfile \
-  --ssh default=$SSH_AUTH_SOCK \
-  -t swelancer \
-  .
+calkit check env-vars
 ```
 
-For Intel-based Mac (or other x86_64 systems):
+You will be prompted for any missing environmental variables,
+e.g., `OPENAI_API_KEY`,
+and these will be added to a `.env` file, which will be ignored by Git.
 
-```bash
-docker buildx build \
-  -f Dockerfile_x86 \
-  --platform linux/amd64 \
-  --ssh default=$SSH_AUTH_SOCK \
-  -t swelancer \
-  .
-```
-
-After the command completes, run the Docker container.
-
-**Step 3: Configure Environment Variables**
-
-Ensure you have an OpenAI API key and username set on your machine.
-
-Locate the `sample.env` file in the root directory. This file contains template environment variables needed for the application:
-
-```plaintext
-# sample.env contents example:
-PUSHER_APP_ID=your-app-id
-# ... other variables
-```
-
-Create a new file named `.env` and copy the contents from `sample.env`.
-
-**Step 4: Running SWE-Lancer**
+**Step 3: Running SWE-Lancer**
 
 You are now ready to run the eval with:
 
 ```bash
-uv run python run_swelancer.py
+calkit run
 ```
 
 You should immediately see logging output as the container gets set up and the tasks are loaded, which may take several minutes. You can adjust the model, concurrency, recording, and other parameters in `run_swelancer.py`.
@@ -172,14 +133,15 @@ For a complete example of a ComputerInterface implementation, you can refer to t
    - Handle network issues gracefully
 
 ## Citation
+
 ```
 @misc{miserendino2025swelancerfrontierllmsearn,
-      title={SWE-Lancer: Can Frontier LLMs Earn $1 Million from Real-World Freelance Software Engineering?}, 
+      title={SWE-Lancer: Can Frontier LLMs Earn $1 Million from Real-World Freelance Software Engineering?},
       author={Samuel Miserendino and Michele Wang and Tejal Patwardhan and Johannes Heidecke},
       year={2025},
       eprint={2502.12115},
       archivePrefix={arXiv},
       primaryClass={cs.LG},
-      url={https://arxiv.org/abs/2502.12115}, 
+      url={https://arxiv.org/abs/2502.12115},
 }
 ```
