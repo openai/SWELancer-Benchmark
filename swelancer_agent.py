@@ -16,7 +16,7 @@ from typing_extensions import override
 from nanoeval.solvers.computer_tasks.steps import FinalResultWithException, Step
 from alcatraz.clusters.local import LocalConfig
 import shlex
-
+import time
 import asyncio
 import functools
 import os
@@ -180,7 +180,7 @@ You can include other content in your message, as long as it has the Python code
                                  
 The python code block is your means of interactign with the environment; write Python code to view files, edit files, and run commands. Do not leave any steps incomplete. You must implement all fixes yourself.
                                                                        
-When you are done, send "DONE" (and nothing else - you don't need a python code block), and we will grade your submission. You should not include "DONE" or attempt to print it in your code. IT should be your very last message after submitting your final solution, on its own.
+When you are done, send "DONE" (and nothing else - you don't need a python code block), and we will grade your submission.
                                                        
 Please note that the Python code is not a Jupyter notebook; you must write a full Python script each time, including imports, and printing things if you want to see the output.
 """})
