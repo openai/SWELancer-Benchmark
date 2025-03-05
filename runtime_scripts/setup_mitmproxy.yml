@@ -8,20 +8,13 @@
         state: directory
         mode: '0755'
   
-    - name: Start mitmdump in the background
+    - name: Start mitmdump to generate certificates
       shell: |
-        nohup mitmdump --mode transparent --showhost 2>&1 & echo $! > /tmp/mitmdump.pid
-      async: 1
-      poll: 0
+        mitmdump --mode transparent --showhost &
+        MITMDUMP_PID=$!
+        sleep 10
+        kill -9 $MITMDUMP_PID
 
-    - name: Wait for mitmdump to start
-      pause:
-        seconds: 10
-
-    - name: Stop mitmdump
-      shell: "kill `cat /tmp/mitmdump.pid`"
-      ignore_errors: yes
-    
     - name: Ensure mitmproxy-ca-cert.pem is present
       assert:
         that:
