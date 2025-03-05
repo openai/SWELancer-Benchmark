@@ -232,7 +232,7 @@ Please note that the Python code is not a Jupyter notebook; you must write a ful
                                 status_message = f"Error: {e}"
                             )
 
-                    time.sleep(0.2)
+                    time.sleep(1)
     
                     print(f"Remaining turns: {remaining_turns}")
                     
