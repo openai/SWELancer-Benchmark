@@ -31,11 +31,11 @@ async def main() -> None:
                 taskset=taskset
             ),
             runner=RunnerArgs(
-                concurrency=25,
-                experimental_use_multiprocessing=True,
+                concurrency=len(taskset),
+                experimental_use_multiprocessing=False,
                 enable_slackbot=False,
                 recorder=dummy_recorder(),
-                max_retries=5
+                max_retries=1
             ),
         )
     )
