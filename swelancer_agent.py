@@ -155,7 +155,8 @@ class SimpleAgentSolver(PythonCodingSolver):
                     metadata={
                         "model": self.model,
                         "solver": self.name,
-                    }
+                    },
+                    session_id="swelancer"
                 )
 
                 # 1. Run the task setup
@@ -207,7 +208,7 @@ Please note that the Python code is not a Jupyter notebook; you must write a ful
 
                             # Update generation with output and usage info
                             generation.end(
-                                output=model_response,
+                                output=[model_response],
                                 usage_details={
                                     "input": usage_info["prompt_tokens"],
                                     "output": usage_info["completion_tokens"],
