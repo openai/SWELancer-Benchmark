@@ -176,17 +176,65 @@ class LocalConfig(ClusterConfig):
 def _allocate_port() -> Generator[int, None, None]:
     """
     Gives you a random unallocated port.
+    
+    This function now actually checks if the port is available by attempting to bind to it
+    before returning it, avoiding "port is already allocated" errors.
     """
     global _FREE_PORTS
-    to_allocate = random.choice(list(_FREE_PORTS))
-
-    _FREE_PORTS.remove(to_allocate)
-    logger.info("Allocated %d", to_allocate)
+    max_attempts = 10  # Limit number of attempts to avoid infinite loops
+    
+    for _ in range(max_attempts):
+        if not _FREE_PORTS:
+            logger.warning("No free ports available in the predefined range!")
+            # Fallback to letting the OS choose a port
+            s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+            s.bind(("", 0))
+            to_allocate = s.getsockname()[1]
+            s.close()
+            logger.info("Allocated OS-chosen port %d", to_allocate)
+            try:
+                yield to_allocate
+            finally:
+                logger.info("Freeing OS-chosen port %d", to_allocate)
+            return
+            
+        # Try to get a port from our predefined list
+        to_allocate = random.choice(list(_FREE_PORTS))
+        _FREE_PORTS.remove(to_allocate)
+        
+        # Actually check if the port is available by attempting to bind to it
+        s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        try:
+            s.bind(("", to_allocate))
+            s.close()
+            logger.info("Allocated verified port %d", to_allocate)
+            try:
+                yield to_allocate
+            finally:
+                logger.info("Freeing port %d", to_allocate)
+                _FREE_PORTS.add(to_allocate)
+            return
+        except OSError:
+            # Port is actually in use, don't add it back to _FREE_PORTS
+            logger.warning("Port %d is already in use despite being in _FREE_PORTS", to_allocate)
+            continue
+        finally:
+            try:
+                s.close()
+            except:
+                pass
+    
+    # If we've exhausted our attempts, fall back to letting the OS choose
+    logger.warning("Failed to allocate a port after %d attempts, letting OS choose", max_attempts)
+    s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    s.bind(("", 0))
+    to_allocate = s.getsockname()[1]
+    s.close()
+    logger.info("Allocated OS-chosen port %d", to_allocate)
     try:
         yield to_allocate
     finally:
-        logger.info("Freeing port %d", to_allocate)
-        _FREE_PORTS.add(to_allocate)
+        logger.info("Freeing OS-chosen port %d", to_allocate)
 
 
 class _IOPubParentHeader(pydantic.BaseModel):
