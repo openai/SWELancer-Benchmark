@@ -38,41 +38,93 @@ from nanoeval_alcatraz.alcatraz_computer_interface import AlcatrazComputerInterf
 
 from openai import OpenAI
 import os
-import tiktoken
+from deepseek_tokenizer import ds_token
+from langfuse import Langfuse
 
+# Initialize Langfuse client
+langfuse = Langfuse(
+    public_key=os.getenv("LANGFUSE_PUBLIC_KEY"),
+    secret_key=os.getenv("LANGFUSE_SECRET_KEY"),
+    host="http://localhost:3000"
+)
 
 client = OpenAI(
-    api_key=os.environ.get("OPENAI_API_KEY"),  # This is the default and can be omitted
+    api_key=os.environ.get("OPENAI_API_KEY"),
+    base_url="https://api.deepseek.com/v1"
 )
 
 
-def count_tokens(messages: list[dict[str, Any]], model: str = "gpt-4") -> int:
-    """Count the number of tokens in a list of messages."""
-    encoding = tiktoken.encoding_for_model(model)
-    num_tokens = 0
+def count_tokens(messages: list[dict[str, Any]]) -> tuple[int, int]:
+    """Count the number of tokens in a list of messages and the last message."""
+    total_tokens = 0
+    last_message_tokens = 0
     
-    for message in messages:
+    for i, message in enumerate(messages):
         # Every message follows format: {"role": role, "content": content}
-        num_tokens += 4  # Every message follows format: <im_start>{role/name}\n{content}<im_end>\n
-        for key, value in message.items():
-            num_tokens += len(encoding.encode(str(value)))
+        message_text = f"{message['role']}\n{message['content']}"
+        message_tokens = len(ds_token.encode(message_text))
+        
+        if i == len(messages) - 1:
+            last_message_tokens = message_tokens
+        total_tokens += message_tokens
     
-    return num_tokens
+    return total_tokens, last_message_tokens
 
-def trim_messages(messages: list[dict[str, Any]], max_tokens: int, model: str = "gpt-4") -> list[dict[str, Any]]:
+def calculate_cost(prompt_tokens: int, completion_tokens: int, model: str = "deepseek-reasoner") -> float:
+    """Calculate the cost of API calls based on token usage."""
+    # Pricing per 1K tokens (approximate/example values - adjust as needed)
+    MODEL_PRICING = {
+        "deepseek-reasoner": {
+            "prompt": 0.002,  # $0.002 per 1K tokens
+            "completion": 0.002  # $0.002 per 1K tokens
+        }
+    }
+    
+    if model not in MODEL_PRICING:
+        return 0.0
+    
+    pricing = MODEL_PRICING[model]
+    prompt_cost = (prompt_tokens / 1000) * pricing["prompt"]
+    completion_cost = (completion_tokens / 1000) * pricing["completion"]
+    
+    return prompt_cost + completion_cost
+
+def trim_messages(messages: list[dict[str, Any]], max_tokens: int) -> list[dict[str, Any]]:
     """Trim messages to fit within token limit by removing older messages."""
-    while len(messages) > 1 and count_tokens(messages, model) > max_tokens:
+    while len(messages) > 1 and count_tokens(messages)[0] > max_tokens:
         messages.pop(1)
     return messages
 
-def get_model_response(messages: list[dict[str, Any]]) -> str:
+def get_model_response(model: str, messages: list[dict[str, Any]]) -> tuple[str, dict[str, Any]]:
+    """Get model response and return token usage statistics."""
     messages = trim_messages(messages, 110000)
     
+    # Count tokens in the prompt
+    prompt_tokens, _ = count_tokens(messages)
+    
+    combined_messages = []
+    for message in messages:
+        if message["role"] == "user" and combined_messages and combined_messages[-1]["role"] == "user":
+            combined_messages[-1]["content"] += "\n" + message["content"]
+        else:
+            combined_messages.append(message)
+    
     chat_completion = client.chat.completions.create(
-        messages=messages,
-        model="gpt-4o",
+        messages=combined_messages,
+        model="deepseek-reasoner"
     )
-    return chat_completion.choices[0].message.content
+
+    completion = chat_completion.choices[0].message.content
+    completion_tokens = len(ds_token.encode(completion))
+    
+    usage_info = {
+        "prompt_tokens": prompt_tokens,
+        "completion_tokens": completion_tokens,
+        "total_tokens": prompt_tokens + completion_tokens,
+        "cost": calculate_cost(prompt_tokens, completion_tokens)
+    }
+    
+    return completion, usage_info
 
 
 @chz.chz
@@ -97,6 +149,15 @@ class SimpleAgentSolver(PythonCodingSolver):
         try:
             async with self._start_computer(task) as computer:
                 print(computer)
+                # Create a new trace for this task
+                trace = langfuse.trace(
+                    name=f"SWELancer Task {task.question_id}",
+                    metadata={
+                        "model": self.model,
+                        "solver": self.name,
+                    }
+                )
+
                 # 1. Run the task setup
                 await task.setup(computer)
 
@@ -118,17 +179,60 @@ You can include other content in your message, as long as it has the Python code
                                  
 The python code block is your means of interactign with the environment; write Python code to view files, edit files, and run commands. Do not leave any steps incomplete. You must implement all fixes yourself.
                                                                        
-When you are done, send "DONE" (and nothing else - you don't need a python code block), and we will grade your submission.
-                                 
+When you are done, send "DONE" (and nothing else - you don't need a python code block), and we will grade your submission. You should not include "DONE" or attempt to print it in your code. IT should be your very last message after submitting your final solution, on its own.
+                                                       
 Please note that the Python code is not a Jupyter notebook; you must write a full Python script each time, including imports, and printing things if you want to see the output.
 """})
-                max_turns = 30
-                print(messages)
+                max_turns = 2
+                print(messages, self.model)
 
                 for remaining_turns in range(max_turns, 0, -1):
-                    model_response = get_model_response(messages)
-                    print(model_response)
+                    while True:
+                        try:
+                           # Create and end generation span
+                            generation = langfuse.generation(
+                                name="Model Response",
+                                model="deepseek-reasoner",
+                                model_parameters={
+                                    "remaining_turns": remaining_turns,
+                                    "total_messages": len(messages)
+                                },
+                                input=messages,
+                                trace_id=trace.id
+                            )
 
+                            # Get model response and usage info
+                            model_response, usage_info = get_model_response(model=self.model, messages=messages)
+                            print(model_response)
+
+                            # Update generation with output and usage info
+                            generation.end(
+                                output=model_response,
+                                usage_details={
+                                    "input": usage_info["prompt_tokens"],
+                                    "output": usage_info["completion_tokens"],
+                                    "cache_read_input_tokens": 0,
+                                    "total": usage_info["total_tokens"]
+                                },
+                                cost_details = {
+                                    "input": (0.135 / 1000000) * usage_info["prompt_tokens"],
+                                    "cache_read_input_tokens": 0,
+                                    "output": (0.550 / 1000000) * usage_info["completion_tokens"],
+                                    "total": usage_info["cost"]
+                                }
+                            )
+                            break
+                        except Exception as e:
+                            print(f"Error: {e}")
+                            # Update generation with output and usage info
+                            generation.end(
+                                output=f"",
+                                level="ERROR",
+                                status_message = f"Error: {e}"
+                            )
+    
+                    print(f"Remaining turns: {remaining_turns}")
+                    
                     messages.append({"role": "assistant", "content": model_response})
 
                     execution_output = None
@@ -145,6 +249,19 @@ Please note that the Python code is not a Jupyter notebook; you must write a ful
                             "rm -rf /app/tests"
                         )
                         await computer.send_shell_command("rm -rf /app/tests")
+
+                        # Log user tool execution
+                        span = langfuse.span(
+                            name="User Tool Execution",
+                            input="<user-tool>",
+                            output=execution_output,
+                            metadata={
+                                "type": "user_tool",
+                                "remaining_turns": remaining_turns
+                            },
+                            trace_id=trace.id
+                        )
+                        span.end()
                     else:
                         # Extract Python code from the model response
                         python_blocks = re.findall(r"```python\s*\n(.*?)\n```", model_response, re.DOTALL)
@@ -160,13 +277,29 @@ Please note that the Python code is not a Jupyter notebook; you must write a ful
 
                         execution_output = await computer.send_shell_command(f"python -c {shlex.quote(code)}")
                         execution_output = execution_output.output.decode("utf-8", errors="replace")
-                        
-                    if model_response.lower() == "done":
+
+                        # Log Python code execution
+                        span = langfuse.span(
+                            name="Python Code Execution",
+                            input=f"```python\n{code}\n```",
+                            output=execution_output,
+                            metadata={
+                                "type": "python_execution",
+                                "remaining_turns": remaining_turns
+                            },
+                            trace_id=trace.id
+                        )
+                        span.end()
+                    
+                    print(f"Model response: '{model_response}'   | '{model_response.lower()}'")
+                    if model_response.lower().endswith("done"):
                         print("Breaking because model is done!")
                         break
 
-
                     print(execution_output)
+                    if execution_output.lower().strip().endswith("done"):
+                        print("Breaking because execution is done!")
+                        break
 
                     # Append the code and its output to the messages
                     messages.append({
@@ -176,9 +309,31 @@ Please note that the Python code is not a Jupyter notebook; you must write a ful
 
                 # 3. Grade and yield the final result
                 grade = await task.grade(computer)
+
+                # Log the final score
+                langfuse.score(
+                     name="Task Grade",
+                     value=grade.score,
+                     comment=grade.grader_log,
+                     trace_id=trace.id
+                )
+
+                # End the trace
+                #trace.end()
+                
+                # Ensure all events are sent
+                langfuse.flush()
+
                 yield FinalResultSuccessful(grade=grade)
         except Exception as e:
             print(f"Error: {e}")
+            langfuse.score(
+                name="Task Grade",
+                value=0,
+                comment=f"Grading failed with error: {str(e)}",
+                trace_id=trace.id
+            )
+
             raise
             yield FinalResultSuccessful(
                 grade=Grade(score=0, grader_log=f"Grading failed with error: {str(e)}")

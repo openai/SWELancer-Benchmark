@@ -4,6 +4,7 @@ from __future__ import annotations
 from dotenv import load_dotenv
 load_dotenv()
 
+import json
 from swelancer import SWELancerEval 
 import argparse
 import nanoeval
@@ -26,8 +27,8 @@ async def main() -> None:
         EvalSpec(
             # taskset is a list of ISSUE_IDs you wish to evaluate (e.g., ["123", "456_789"])
             eval=SWELancerEval(
-                solver=SimpleAgentSolver(model="gpt-4o"),
-                taskset=["28250_990","45771_18"]
+                solver=SimpleAgentSolver(model="deepseek-reasoner"),
+                taskset=taskset
             ),
             runner=RunnerArgs(
                 concurrency=25,
@@ -40,6 +41,10 @@ async def main() -> None:
     )
     print(report)
 
+    if taskset and len(taskset) == 1:
+        # Save the report to a JSON file based on task_id
+        with open(f"report_{taskset[0]}.json", "w") as f:
+            json.dump(report, f)
 
 if __name__ == "__main__":
     nanoeval_entrypoint(main())
