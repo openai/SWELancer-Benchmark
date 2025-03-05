@@ -147,18 +147,19 @@ class SimpleAgentSolver(PythonCodingSolver):
     @override
     async def run(self, task: ComputerTask) -> AsyncGenerator[Step | FinalResult, None]:
         try:
+            # Create a new trace for this task
+            trace = langfuse.trace(
+                name=f"SWELancer Task {task.question_id}",
+                metadata={
+                    "model": self.model,
+                    "solver": self.name,
+                },
+                session_id="swelancer"
+            )
+
             async with self._start_computer(task) as computer:
                 print(computer)
-                # Create a new trace for this task
-                trace = langfuse.trace(
-                    name=f"SWELancer Task {task.question_id}",
-                    metadata={
-                        "model": self.model,
-                        "solver": self.name,
-                    },
-                    session_id="swelancer"
-                )
-
+                
                 # 1. Run the task setup
                 await task.setup(computer)
 
