@@ -963,7 +963,7 @@ class BaseAlcatrazCluster(ABC):
 
         self._exit_stack.callback(asyncio.create_task(self._jupyter_start_kernel()).cancel)
 
-        async with asyncio.timeout(60):
+        async with asyncio.timeout(60 * 3):
             # Poll in runtime_dir until we find the connection file path.
             while True:
                 connection_files = await self._jupyter_list_connection_files()
