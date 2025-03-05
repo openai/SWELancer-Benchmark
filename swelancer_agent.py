@@ -97,7 +97,7 @@ def trim_messages(messages: list[dict[str, Any]], max_tokens: int) -> list[dict[
 
 def get_model_response(model: str, messages: list[dict[str, Any]]) -> tuple[str, dict[str, Any]]:
     """Get model response and return token usage statistics."""
-    messages = trim_messages(messages, 110000)
+    messages = trim_messages(messages, 55000)
     
     # Count tokens in the prompt
     prompt_tokens, _ = count_tokens(messages)
