@@ -184,6 +184,7 @@ When you are done, send "DONE" (and nothing else - you don't need a python code 
 Please note that the Python code is not a Jupyter notebook; you must write a full Python script each time, including imports, and printing things if you want to see the output.
 """})
                 max_turns = 30
+                print(messages, self.model)
 
                 for remaining_turns in range(max_turns, 0, -1):
                     while True:
@@ -229,6 +230,8 @@ Please note that the Python code is not a Jupyter notebook; you must write a ful
                                 level="ERROR",
                                 status_message = f"Error: {e}"
                             )
+
+                    time.sleep(0.2)
     
                     print(f"Remaining turns: {remaining_turns}")
                     
