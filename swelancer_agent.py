@@ -127,36 +127,49 @@ def get_model_response(model: str, messages: list[dict[str, Any]]) -> tuple[str,
     usage_info = None
 
     for chunk in stream:
+        # Extract usage information if available
         if hasattr(chunk, 'usage') and chunk.usage is not None:
-            usage_data = {
+            usage_info = {
                 "prompt_tokens": chunk.usage.prompt_tokens,
                 "completion_tokens": chunk.usage.completion_tokens,
                 "total_tokens": chunk.usage.total_tokens,
                 "cost": calculate_cost(chunk.usage.prompt_tokens, chunk.usage.completion_tokens)
             }
             
-        print(chunk)
-        if chunk.choices and chunk.choices[0].delta.content is not None:
-            chunk_content = chunk.choices[0].delta.content
+        # Process content from delta if it exists
+        if chunk.choices:
+            delta = chunk.choices[0].delta
             
-            # Print first token received
-            if not first_token_printed and chunk_content:
-                print(f"First token received: {chunk_content}, Time taken: {time.time() - start_time}")
-                first_token_printed = True
+            # Get content from either delta.content or delta.reasoning_content
+            chunk_content = None
+            if delta.content is not None:
+                chunk_content = delta.content
+            elif hasattr(delta, 'reasoning_content') and delta.reasoning_content:
+                chunk_content = delta.reasoning_content
             
-            completion += chunk_content
-            char_count += len(chunk_content)
+            # Process the content if we got something from either source
+            if chunk_content:
+                # Print first token received
+                if not first_token_printed and chunk_content:
+                    print(f"First token received: {chunk_content}, Time taken: {time.time() - start_time}")
+                    first_token_printed = True
+                
+                completion += chunk_content
+                char_count += len(chunk_content)
 
-            # Print progress every 100 characters
-            if char_count // 100 > (char_count - len(chunk_content)) // 100:
-                print(f"Received {char_count} characters so far")
-    
+                # Print progress every 100 characters
+                if char_count // 100 > (char_count - len(chunk_content)) // 100:
+                    print(f"Received {char_count} characters so far")
+            
+            else:
+                print("No content from delta", chunk)
+
+    if char_count == 0:
+        raise Exception("No response from model")
   
     print(f"Stream complete. Total: {len(completion)} characters, in {time.time() - start_time} seconds")
     
-    
     return completion, usage_info
-
 
 @chz.chz
 class SimpleAgentSolver(PythonCodingSolver):
