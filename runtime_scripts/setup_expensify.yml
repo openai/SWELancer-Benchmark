@@ -135,18 +135,18 @@
         executable: /bin/bash
       when: git_tag.stdout != ''
     
-    # - name: Set npm registry to use the local npm proxy
-    #   shell: |
-    #     source /root/.nvm/nvm.sh
-    #     npm set registry http://npmcache:4873/
-    #   args:
-    #     chdir: /app/expensify
-    #     executable: /bin/bash
+    - name: Set npm registry to use the local npm proxy
+      shell: |
+        source /root/.nvm/nvm.sh
+        npm set registry http://10.0.0.9:4873/
+      args:
+        chdir: /app/expensify
+        executable: /bin/bash
 
     - name: Install node modules via npm
       shell: |
         source /root/.nvm/nvm.sh
-        npm install --no-cache
+        npm install
       args:
         chdir: /app/expensify
         executable: /bin/bash
