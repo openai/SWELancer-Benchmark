@@ -1861,6 +1861,7 @@ class LocalCluster(BaseAlcatrazCluster):
         docker_compose_yaml: str | None = None,
         tmux_enabled: bool = False,
         extra_hosts: dict[str, str] | None = None
+    ):
         if jupyter_setup is None:
             jupyter_setup = ["jupyter", "kernel", "--ip", "0.0.0.0"]
         super().__init__(
