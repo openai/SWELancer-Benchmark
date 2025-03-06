@@ -11,6 +11,7 @@ ENV LIBGL_ALWAYS_INDIRECT=1
 
 # Update package list and install basic utilities
 RUN apt-get update && apt-get install -y \
+    clang \
     curl \
     git \
     wget \
