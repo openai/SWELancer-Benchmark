@@ -616,6 +616,20 @@ class BaseAlcatrazCluster(ABC):
                 logger.info(result.stdout)
 
         for i, image in enumerate(images):
+            # Get network configuration for Linux systems
+            extra_hosts = {}
+            if sys.platform.startswith('linux') and not self.local_network:
+                try:
+                    net_config = await self.get_container_net_config()
+                    # Add host.docker.internal mapping for Linux
+                    extra_hosts = {
+                        "host.docker.internal": net_config["vm_private_ip"],
+                        "gateway.docker.internal": net_config["gateway"]
+                    }
+                    logger.info(f"Setting extra hosts for Linux: {extra_hosts}")
+                except Exception as e:
+                    logger.warning(f"Failed to get container network config for extra hosts: {e}")
+            
             _, ctr = await self._create_container(
                 image=image,
                 name=f"container{i}-{self.container_group_name.split('alcatraz-')[1]}",
@@ -638,6 +652,7 @@ class BaseAlcatrazCluster(ABC):
                 privileged=self.privileged and i == 0,
                 shm_size=self.shm_size if i == 0 else None,
                 mem_limit=self.mem_limit if i == 0 else None,
+                extra_hosts=extra_hosts if extra_hosts else None,
             )
             self.containers.append(ctr)
 
@@ -1115,6 +1130,20 @@ class BaseAlcatrazCluster(ABC):
 
         logger.info("starting socat containers for jupyter!")
         assert not self.socat_container, "socat container already exists!"
+        
+        # Add extra_hosts for Linux systems
+        extra_hosts = {}
+        if sys.platform.startswith('linux') and not self.local_network:
+            try:
+                net_config = await self.get_container_net_config()
+                extra_hosts = {
+                    "host.docker.internal": net_config["vm_private_ip"],
+                    "gateway.docker.internal": net_config["gateway"]
+                }
+                logger.info(f"Setting extra hosts for socat container: {extra_hosts}")
+            except Exception as e:
+                logger.warning(f"Failed to get container network config for socat extra hosts: {e}")
+                
         host_port_leases, self.socat_container = await self._create_container(
             container_ports=ports_to_forward,
             force_host_ports=None if isinstance(self, LocalCluster) else list(range(11000, 11005)),
@@ -1125,6 +1154,7 @@ class BaseAlcatrazCluster(ABC):
             remove=True,  # Equivalent to '--rm'
             network_mode="tinydockernet-" + self.container_group_name,  # Equivalent to '--network'
             entrypoint="/bin/sh",
+            extra_hosts=extra_hosts if extra_hosts else None,
             # override socat entrypoint with a placeholder. We'll call socat ourselves and many times not just once!
         )
         logger.info("forwarding ports %s", ports_to_forward)
@@ -1424,6 +1454,25 @@ class BaseAlcatrazCluster(ABC):
                 raise RuntimeError(
                     f"Service {service_name} has ports exposed to the host. You should remove this. Containers can still talk through the network."
                 )
+        
+        # Add extra_hosts configuration for Linux systems
+        if sys.platform.startswith('linux') and not self.local_network:
+            try:
+                net_config = await self.get_container_net_config()
+                extra_hosts = [
+                    f"host.docker.internal:{net_config['vm_private_ip']}",
+                    f"gateway.docker.internal:{net_config['gateway']}"
+                ]
+                logger.info(f"Setting extra hosts for Docker Compose services: {extra_hosts}")
+                
+                # Add extra_hosts to each service in the docker-compose file
+                for service_name, service_value in docker_compose_dict.get("services", {}).items():
+                    if "extra_hosts" in service_value:
+                        service_value["extra_hosts"].extend(extra_hosts)
+                    else:
+                        service_value["extra_hosts"] = extra_hosts
+            except Exception as e:
+                logger.warning(f"Failed to set extra hosts for Docker Compose services: {e}")
 
         external_networks = [
             network_name
