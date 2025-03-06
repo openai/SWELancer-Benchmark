@@ -50,9 +50,9 @@ langfuse = Langfuse(
 
 client = OpenAI(
     api_key=os.environ.get("OPENAI_API_KEY"),
-    base_url="https://api.deepseek.com/v1"
+    base_url="https://api.deepseek.com/v1",
+    timeout=1200
 )
-
 
 def count_tokens(messages: list[dict[str, Any]]) -> tuple[int, int]:
     """Count the number of tokens in a list of messages and the last message."""
@@ -72,11 +72,10 @@ def count_tokens(messages: list[dict[str, Any]]) -> tuple[int, int]:
 
 def calculate_cost(prompt_tokens: int, completion_tokens: int, model: str = "deepseek-reasoner") -> float:
     """Calculate the cost of API calls based on token usage."""
-    # Pricing per 1K tokens (approximate/example values - adjust as needed)
     MODEL_PRICING = {
         "deepseek-reasoner": {
-            "prompt": 0.002,  # $0.002 per 1K tokens
-            "completion": 0.002  # $0.002 per 1K tokens
+            "prompt": 0.55,  # $0.55 per 1M tokens
+            "completion": 2.19  # $2.19 per 1M tokens
         }
     }
     
@@ -84,8 +83,8 @@ def calculate_cost(prompt_tokens: int, completion_tokens: int, model: str = "dee
         return 0.0
     
     pricing = MODEL_PRICING[model]
-    prompt_cost = (prompt_tokens / 1000) * pricing["prompt"]
-    completion_cost = (completion_tokens / 1000) * pricing["completion"]
+    prompt_cost = (prompt_tokens / 1000000) * pricing["prompt"]
+    completion_cost = (completion_tokens / 1000000) * pricing["completion"]
     
     return prompt_cost + completion_cost
 
@@ -109,20 +108,52 @@ def get_model_response(model: str, messages: list[dict[str, Any]]) -> tuple[str,
         else:
             combined_messages.append(message)
     
-    chat_completion = client.chat.completions.create(
+    # Use streaming API
+    stream = client.chat.completions.create(
         messages=combined_messages,
-        model="deepseek-reasoner"
+        model="deepseek-reasoner",
+        stream=True,
+        stream_options={
+            "include_usage": True
+        }
     )
-
-    completion = chat_completion.choices[0].message.content
-    completion_tokens = len(ds_token.encode(completion))
     
-    usage_info = {
-        "prompt_tokens": prompt_tokens,
-        "completion_tokens": completion_tokens,
-        "total_tokens": prompt_tokens + completion_tokens,
-        "cost": calculate_cost(prompt_tokens, completion_tokens)
-    }
+    # Collect the full response from stream chunks
+    completion = ""
+    char_count = 0
+    first_token_printed = False
+    print("Starting to receive stream...")
+    start_time = time.time()
+    usage_info = None
+
+    for chunk in stream:
+        if hasattr(chunk, 'usage') and chunk.usage is not None:
+            usage_data = {
+                "prompt_tokens": chunk.usage.prompt_tokens,
+                "completion_tokens": chunk.usage.completion_tokens,
+                "total_tokens": chunk.usage.total_tokens,
+                "cost": calculate_cost(chunk.usage.prompt_tokens, chunk.usage.completion_tokens)
+            }
+            
+        print(chunk)
+        if chunk.choices and chunk.choices[0].delta.content is not None:
+            chunk_content = chunk.choices[0].delta.content
+            
+            # Print first token received
+            if not first_token_printed and chunk_content:
+                print(f"First token received: {chunk_content}, Time taken: {time.time() - start_time}")
+                first_token_printed = True
+            
+            completion += chunk_content
+            char_count += len(chunk_content)
+
+            # Print progress every 100 characters
+            if char_count // 100 > (char_count - len(chunk_content)) // 100:
+                print(f"Received {char_count} characters so far")
+    
+  
+    print(f"Stream complete. Total: {len(completion)} characters, in {time.time() - start_time} seconds")
+    
     
     return completion, usage_info
 
