@@ -152,6 +152,7 @@ class LocalConfig(ClusterConfig):
     docker_host: str = "unix:///var/run/docker.sock"
     local_network: bool = False  # whether to use network_mode="host"
     volumes_config: VolumesConfig = Field(default_factory=dict)
+    extra_hosts: dict[str, str] = Field(default_factory=dict)
 
     @override
     def build(self) -> "LocalCluster":
@@ -169,6 +170,7 @@ class LocalConfig(ClusterConfig):
             azure_container_config=self.azure_container_config,
             docker_compose_yaml=self.docker_compose_yaml,
             tmux_enabled=self.tmux_enabled,
+            extra_hosts=self.extra_hosts
         )
 
 
@@ -638,6 +640,7 @@ class BaseAlcatrazCluster(ABC):
                 privileged=self.privileged and i == 0,
                 shm_size=self.shm_size if i == 0 else None,
                 mem_limit=self.mem_limit if i == 0 else None,
+                extra_hosts=self.extra_hosts
             )
             self.containers.append(ctr)
 
@@ -1844,7 +1847,7 @@ class LocalCluster(BaseAlcatrazCluster):
         local_network: bool = False,
         health_check: bool = False,
         jupyter_setup: list[str] | None = None,
-        is_nvidia_gpu_env: bool = False,  # you better have nvidia gpus on your machine if you use this
+        is_nvidia_gpu_env: bool = False,
         privileged: bool = False,
         environment: dict[str, str] | None = None,
         disk_mount_path: str | None = None,
@@ -1857,7 +1860,7 @@ class LocalCluster(BaseAlcatrazCluster):
         container_registry_credentials: ContainerRegistryCredentials | None = None,
         docker_compose_yaml: str | None = None,
         tmux_enabled: bool = False,
-    ):
+        extra_hosts: dict[str, str] | None = None
         if jupyter_setup is None:
             jupyter_setup = ["jupyter", "kernel", "--ip", "0.0.0.0"]
         super().__init__(
@@ -1873,6 +1876,7 @@ class LocalCluster(BaseAlcatrazCluster):
             docker_compose_yaml=docker_compose_yaml,
             tmux_enabled=tmux_enabled,
             docker_host=docker_host,
+            extra_hosts=extra_hosts,
         )
         self.tmux_enabled = tmux_enabled
         self.docker_host = docker_host
