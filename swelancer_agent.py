@@ -183,12 +183,7 @@ class SimpleAgentSolver(PythonCodingSolver):
     async def _start_computer(self, task: ComputerTask) -> AsyncGenerator[ComputerInterface, None]:
         # replace with LocalCluster semantics
 
-        alcatraz_env = task_to_alcatraz_config(task, LocalConfig(
-            pull_from_registry=False,
-            extra_hosts={
-                "host.docker.internal": "host-gateway"
-            }
-        ))
+        alcatraz_env = task_to_alcatraz_config(task, LocalConfig(pull_from_registry=False))
 
         async with alcatraz_env.build() as cluster:
             yield AlcatrazComputerInterface(cluster_value=cluster)
