@@ -1,0 +1,6 @@
+{
+    "price": 500.0,
+    "title": "[HOLD for payment 2023-11-09] [$500] Manual request - Amount is not shown in the confirmation page after adding a receipt",
+    "issue_repo_steps": "Action performed: 1. Go to staging.new.expensify.com\r\n2. Go to chat > + > Request money > Manual.\r\n3. Enter amount and proceed to confirmation page.\r\n4. Click 3-dot menu > Add receipt.\r\n5. Select a receipt.\n\nExpected result: The amount field and amount entered should be visible in the confirmation page.\n\nActual result: None",
+    "_issue_id": "29854_602"
+}

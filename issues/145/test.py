@@ -1,68 +1,115 @@
-import time
-from playwright.sync_api import sync_playwright, expect
-from playwright.sync_api._context_manager import PlaywrightContextManager
-from playwright._impl._browser import Browser
-from playwright._impl._page import Page
+import pytest_asyncio
+import pytest
 
-# Utility to generate a random email
-def generate_random_email():
-    return "testerbro7077+453457745684@gmail.com"
+from playwright.async_api import async_playwright, expect, Page, BrowserContext
+from utils.login import EmailHandler, complete_onboarding
 
-# Login as member and fill in personal details
-def login_member_a(p, membera_first_name: str, membera_last_name: str) -> tuple:
-    browser = p.chromium.launch(
-        proxy = {"server": "http://localhost:8080"}, headless = False, 
-        args = ["--ignore-certificate-errors", 
-                "--disable-web-security", 
-                "--disable-features=IsolateOrigins,site-per-process"], 
-        slow_mo = 500, channel = "chromium")
-    context = browser.new_context(ignore_https_errors=True)
-    page = context.new_page()
+NEWDOT_URL = "http://dev.new.expensify.com:8082/"
+EXPENSIFY_EMAIL = "testingq186+52123_1@gmail.com"
+EXPENSIFY_PASSWORD = "kkfr hqiv yuxq rbso"
+FIRST_NAME = "Testing"
+LAST_NAME = "52123"
 
+TESTING_FLOW = True
 
-    user_email2 = generate_random_email()
+@pytest_asyncio.fixture
+async def context():
+    """
+    Launch the Expensify app.
+    """
+    pw = await async_playwright().start()
+    browser = await pw.chromium.launch(
+        channel="chrome",
+        headless=False,
+        args=[
+            "--ignore-certificate-errors",
+            "--disable-web-security",
+            "--disable-features=IsolateOrigins,site-per-process"
+        ],
+        proxy={"server": "http://localhost:8080"},
+        slow_mo=500
+    )
+    context = await browser.new_context(ignore_https_errors=True)
 
-    page.goto('https://dev.new.expensify.com:8082/')
-    page.locator('input[type="email"]').fill(user_email2)
-    page.get_by_role("button", name="Continue").click()
-    page.wait_for_timeout(1000)
+    yield context
+
+    await context.close()
+    await browser.close()
+    await pw.stop()
+
+@pytest_asyncio.fixture
+async def page(context: BrowserContext):
+    page = await context.new_page()
+
+    yield page
+
+async def new_dot_login(page: Page, email, password):
+    await page.goto(NEWDOT_URL)
+    with EmailHandler(email, password) as email_handler:
+        if not TESTING_FLOW :
+            email_handler.clean_inbox()  # Clean inbox
+
+        # Enter email
+        await page.get_by_role("textbox", name="Phone or email").fill(email)
+        await page.get_by_role("button", name="Continue").click()
+
+        try:
+            await expect(page.locator('input[name="validateCode"]').first).to_be_visible()
+            otp = email_handler.read_otp_code() if not TESTING_FLOW else "123456"
+            await page.locator('input[name="validateCode"]').first.fill(str(otp))
+            # Wait sign in to complete
+            await page.get_by_text("Please enter the magic code").wait_for(state="hidden")
+        except Exception:
+            await page.get_by_role("button", name="Join").click()
+            await complete_onboarding(page, FIRST_NAME, LAST_NAME)
+
+@pytest.mark.asyncio
+async def test_distance_receipt_placeholder_opacity(context: BrowserContext, page: Page):
+    await new_dot_login(page, EXPENSIFY_EMAIL, EXPENSIFY_PASSWORD)
 
     try:
-        page.get_by_role("button", name="Join").click()
-        page.wait_for_timeout(1000)
+        # Check if a workspace exists
+        await expect(page.get_by_label("Navigates to a chat").get_by_text(f"{FIRST_NAME} {LAST_NAME}'s Workspace").first).to_be_visible()
+    except Exception:
+        # Create a workspace if does not exist
+        await page.get_by_label("My settings").click()
+        await page.get_by_test_id("InitialSettingsPage").get_by_label("Workspaces").click()
+        await page.get_by_label("New workspace").click()
+        await expect(page.get_by_test_id("WorkspaceInitialPage").get_by_text(f"{FIRST_NAME} {LAST_NAME}'s Workspace")).to_be_visible()
+        await page.get_by_label("Back").click()
+        await page.get_by_label("Inbox").click()
+
+    await page.get_by_label("Navigates to a chat").get_by_text(f"{FIRST_NAME} {LAST_NAME}'s Workspace").first.click(timeout=10_000)
+    await context.set_offline(True)
+    await page.get_by_label("Create").last.click()
+    await page.get_by_label("Submit expense").click()
+    try:
+        # React error boundary overlay
+        await page.locator("#react-refresh-overlay").content_frame.get_by_role("button", name="× Close").click(timeout=8_000)
     except Exception:
         pass
-    expect(page.locator("text=What do you want to do today?")).to_be_visible()
-    page.wait_for_timeout(1000)
+    await page.get_by_label("Distance").click()
+    await page.get_by_test_id("IOURequestStartPage").get_by_role("button", name="Start").click()
+    await page.get_by_test_id("IOURequestStepWaypoint").get_by_role("textbox").click()
+    await page.get_by_test_id("IOURequestStepWaypoint").get_by_role("textbox").fill("abc")
+    await page.get_by_role("button", name="Save").click()
+    await page.get_by_role("button", name="Stop").click()
+    await page.get_by_test_id("IOURequestStepWaypoint").get_by_role("textbox").click()
+    await page.get_by_test_id("IOURequestStepWaypoint").get_by_role("textbox").fill("def")
+    await page.get_by_role("button", name="Save").click()
+    await page.get_by_role("button", name="Next").nth(1).click()
+    await page.get_by_role("button", name="Submit expense").click()
+    try:
+        # React error boundary overlay
+        await page.locator("#react-refresh-overlay").content_frame.get_by_role("button", name="× Close").click(timeout=8_000)
+    except Exception:
+        pass
+    await page.get_by_text("Pending...").last.click()
+    # Target the svg placeholder
+    svg = page.get_by_test_id(f"report-screen-{page.url.split("/")[-1]}").get_by_test_id("report-actions-list").get_by_role("img").first
+    # Use the svg placeholde to target its deeply nested parent div whose opacity needs to be tested
+    target_div = svg.locator("../../../../../..")
 
-    page.get_by_text("Track and budget expenses").click()
+    opacity = await target_div.evaluate("el => getComputedStyle(el).opacity")
 
-    page.locator('input[name="fname"]').fill(membera_first_name)
-    page.locator('input[name="lname"]').fill(membera_last_name)
-    page.get_by_role("button", name="Continue").last.click()
-    page.wait_for_timeout(1000)
-
-    return browser, page, user_email2
-
-# Add the member to the workspace using `user_email2`
-def auto_sueestion_check(page, user_email2):
-    page.locator('button[aria-label="Navigates to a chat"]').nth(1).click()
-    page.get_by_label("Search").get_by_role("img").nth(1).click()
-    page.get_by_test_id("search-router-text-input").fill("in:Co")
-    page.get_by_label("in:Concierge").click()
-    assert not page.get_by_role("button", name="in:Concierge").nth(1).is_visible(), "Suggestion visible even after it is selected"
-
-
-def test_run(membera_first_name="Sai", membera_last_name="Yagna"):
-    with sync_playwright() as p:
-
-        browser_membera, page_membera, user_email2 = login_member_a(p, membera_first_name, membera_last_name)
-        auto_sueestion_check(page_membera, user_email2)
-
-        
-
-        browser_membera.close()
-
-
-if __name__ == "__main__":
-    test_run()
+    assert opacity == '1', "The placeholder SVG has low opacity, the issue exists"

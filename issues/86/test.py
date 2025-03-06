@@ -1,119 +1,76 @@
-import time
-import pytest
-from playwright.sync_api import (
-    sync_playwright,
-    Page,
-    TimeoutError as PlaywrightTimeoutError,
-)
+import imaplib
+import email
+import re
+from playwright.sync_api import sync_playwright, expect, Page
 
 
-def generate_random_email():
-    # return f"t56826807+{int(time.time())}@gmail.com"
-    return "t56826807+1739876351@gmail.com"
-   
-
-@pytest.fixture
-def setup_playwright():
-    playwright = sync_playwright().start()
-
-    browser = playwright.chromium.launch(
-        headless=False,
-        args=[
-            "--ignore-certificate-errors",
-            "--disable-web-security",
-            "--disable-features=IsolateOrigins,site-per-process",
-        ],
-        proxy={"server": "http://localhost:8080"},
-        slow_mo=500,
-    )
-    context = browser.new_context(
-        locale="en-US",
-    )
-    page = context.new_page()
-
-    yield page
-
-    # Cleanup: close browsers and stop Playwright
-    browser.close()
-    playwright.stop()
+EMAIL = "velmoner+479@gmail.com"
+PASSWORD = "aory ezrb qkmi qkas"
+NEWDOT_URL = "https://dev.new.expensify.com:8082/"
 
 
-def login_user(page: Page, email: str):
-    page.goto("https://dev.new.expensify.com:8082/")
-    page.locator('input[type="email"]').fill(email)
-    page.locator("button", has_text="Continue").click()
-    page.locator("button", has_text="Join").click()
 
+def user_login(page: Page, email_id: str, password: str):
+    page.goto(NEWDOT_URL)
 
-def complete_onboarding(page: Page, first_name: str, last_name: str = ""):
-    page.locator("text='Track and budget expenses'").click()
-    page.locator('input[name="fname"]').fill(first_name)
-    page.locator('input[name="lname"]').fill(last_name)
-    page.get_by_role("button", name="Continue").last.click()
-
-def get_header_text(page: Page):
-    siblings = page.locator('button[id="backButton"]').last.locator("xpath=following-sibling::*").all()
-    inner_text = ""
-    for sibling in siblings:
-        inner_text+=sibling.inner_text()
-
-    return inner_text
-
-
-def test(setup_playwright):
-    page = setup_playwright
-
-    email_user, name_user = generate_random_email(), "User A"
-    
-    login_user(page, email_user)
-    
-    complete_onboarding(page, name_user)
-
-    page.get_by_label("Start chat (Floating action)").click()
+    page.locator('input[type="email"]').fill(email_id)
+    page.wait_for_timeout(2000)
+    page.get_by_role("button", name="Continue").nth(0).click()
+    otp = "123456"
+    page.wait_for_timeout(10000)
+    page.locator('input[data-testid="validateCode"]').fill(otp)
     try:
-        page.get_by_label("Submit expense").click(timeout=1000)
-    except Exception:
-        page.get_by_label("Create expense").click()
-    page.get_by_label("Manual").click()
+        page.get_by_role("button", name="Sign In").click()
+    except Exception as err:
+        pass
 
-    assert ("Create expense" in get_header_text(page)) or ("Submit expense" in get_header_text(page))
 
-    page.locator('input[placeholder="0"]').fill('100')
-    page.locator("#numPadContainerView").get_by_role("button", name="Next").click()
+def test_payment_text():
+    with sync_playwright() as p:
+        browser = p.chromium.launch(proxy = {"server": "http://localhost:8080"}, headless = False, args = ["--no-sandbox", "--disable-dev-shm-usage", "--ignore-certificate-errors", "--disable-web-security", "--disable-features=IsolateOrigins,site-per-process"], slow_mo = 1000, channel = "chromium")
+        page = browser.new_page()
+        email1, dname1 = "velmoner+321@gmail.com", "fin land"
+        email2, dname2 = "velmoner+8992@gmail.com", "gargi dime"
 
-    assert "Choose recipient" in get_header_text(page)
-    
-    page.get_by_test_id("selection-list-text-input").fill("t56826807+11@gmail.com")
-    page.get_by_test_id("selection-list").get_by_label("Approver").click()
+        user_login(page=page, email_id=EMAIL, password=PASSWORD)
+        page.get_by_label("Start chat (Floating action)", exact=True).click()
+        page.get_by_label("Start chat", exact=True).click()
 
-    assert "Confirm details" in get_header_text(page)
-    
-    page.keyboard.press("Escape")
+        page.get_by_test_id("selection-list-text-input").fill(email1)
+        page.get_by_label(dname1).get_by_role(
+            "button", name="Add to group").click()
 
-    page.get_by_label("Start chat (Floating action)").click()
-    page.get_by_label("Start chat", exact=True).click()
-    page.get_by_test_id("selection-list-text-input").fill("t56826807+11@gmail.com")
-    page.get_by_label("Approver").click()
+        page.get_by_test_id("selection-list-text-input").fill(email2)
+        page.get_by_label(dname2).get_by_role(
+            "button", name="Add to group").click()
 
-    page.get_by_label("Create").click()
-    page.get_by_label("Pay Approver").click()
+        page.get_by_role("button", name="Next").click()
+        page.get_by_role("button", name="Start group").click()
 
-    assert "Pay Approver" in get_header_text(page)
+        chatroom_id = page.url.split("/")[-1]
+        search_text = f"type:chat status:all in:{chatroom_id}"
+        page.get_by_test_id(
+            f"report-screen-{chatroom_id}").get_by_text("fin, gargi, wii").click()
+        page.get_by_label("Leave").click()
 
-    page.locator('input[placeholder="0"]').fill('100')
-    page.get_by_role("button", name="Next").click()
+        current_report_id = page.url.split("/")[-1]
+        page.get_by_test_id(
+            f"report-screen-{current_report_id}").get_by_label("Search").click()
+        page.get_by_test_id("search-router-text-input").fill(search_text)
+        page.wait_for_timeout(1500)
+        page.get_by_label(search_text).click()
+        page.wait_for_timeout(1000)
+        page.get_by_text("Filters").click()
+        page.get_by_test_id(
+            "SearchAdvancedFiltersPage").get_by_text("In").click()
 
-    assert "Confirm details" in get_header_text(page)
+        empty_item_exists = False
 
-    page.keyboard.press("Escape")
+        # condition to find
+        for i in page.get_by_test_id("selection-list").get_by_role("button").all():
+            if i.get_attribute("id") and i.get_attribute("id") == chatroom_id:
+                empty_item_exists = True
+        assert not empty_item_exists, "Empty entry found in search list with green check"
 
-    page.get_by_label("Create").click()
-    page.get_by_label("Split expense").click()
-    page.get_by_label("Manual").click()
-
-    assert "Create expense" in get_header_text(page)
-
-    page.locator('input[placeholder="0"]').fill('100')
-    page.locator("#numPadContainerView").get_by_role("button", name="Next").click()
-
-    assert "Confirm details" in get_header_text(page)
+        # Close browser
+        browser.close()

@@ -1,0 +1,6 @@
+{
+    "price": 250.0,
+    "title": "[Due for payment 2025-02-26] [HOLD for payment 2025-02-07] [$250] Implement animation to the switch expandable sections",
+    "issue_repo_steps": "\r\nThis is a request from @dubielzyk-expensify to add animation to the expanding section in Workflows (and other similar places in the app) where after toggling the switch, we open the section like this https://github.com/user-attachments/assets/43e48c18-6b18-4ec6-bc7f-3238f125d616\r\n\r\ncc @sumo-slonik @blazejkustra would like to implement this - can you please comment\r\n\r\n@dubielzyk-expensify do you have some specifics about the easing/ animation at this moment?\n<details><summary>Upwork Automation - Do Not Edit</summary>\n    <ul>\n        <li>Upwork Job URL: https://www.upwork.com/jobs/~021866452926963427651</li>\n        <li>Upwork Job ID: 1866452926963427651</li>\n        <li>Last Price Increase: 2024-12-10</li>\n    </ul>\n</details>\n\n<details><summary>Issue Owner</summary>Current Issue Owner: @stephanieelliott</details>",
+    "_issue_id": "53759"
+}

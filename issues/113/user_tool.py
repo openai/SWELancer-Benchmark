@@ -1,93 +1,68 @@
-from playwright.sync_api import sync_playwright
+from playwright.sync_api import sync_playwright, expect
 from utils.trace_cleaner import trace_cleaner
 
+user_email = "totherandomuser+52599@gmail.com"
 
-# Expensify app URL
-EXPENSIFY_URL = "https://dev.new.expensify.com:8082/"
 
-# Email login credentials
-EMAIL_USERNAME = "naturesv057+51982_2@gmail.com"
-
-def launch_browser(pw, device=None, geolocation=None):
-    """
-    Launch the browser.
-    """
-    browser = pw.chromium.launch(
-        headless=False,
-        proxy={"server": "http://127.0.0.1:8080/"},
-        args=[
-            "--ignore-certificate-errors",
-            "--disable-web-security",
-            "--disable-features=IsolateOrigins,site-per-process",
-        ],
-        slow_mo=500
-    )
-    context_args = {}
-    if device:
-        context_args.update(pw.devices[device])
-    if geolocation:
-        context_args["geolocation"] = geolocation
-        context_args["permissions"] = ["geolocation"]
-    context = browser.new_context(**context_args)
+def login(p, context):
     page = context.new_page()
-    return browser, context, page
+    page.goto('https://dev.new.expensify.com:8082')
+
+    # Step 1: Enter username and continue
+    page.get_by_test_id("username").click()
+    page.get_by_test_id("username").fill(user_email)
+    page.get_by_role("button", name="Continue").click()
+
+    # Step 2: Mark Inbox read and then get magic code from email
+    magic_code = "123456"
+
+    # Step 3: Fill in the magic code
+    validate_code_input = page.locator('input[name="validateCode"]')
+    expect(validate_code_input).to_be_visible()
+    validate_code_input.fill(magic_code)
+    page.wait_for_timeout(1000)
+
+    return page
 
 
-def login_user(page):
-    """
-    Login to the Expensify app and complete the onboarding.
-    """
-    # Open the Expensify app
-    page.goto(EXPENSIFY_URL)
-
-    # Login user
-    page.get_by_role("textbox", name="Phone or email").fill(EMAIL_USERNAME)
-    page.locator("div", has_text="Continue").last.click()
-    page.wait_for_timeout(2000)
-    
-    # Get the OTP code from the email
-    otp = "123456"
-    
-    # Enter the OTP code
-    page.keyboard.type(otp)
-
-
-def test_51982():
+def test():
     with sync_playwright() as p:
-        browser, context, page = launch_browser(p)
-        # Start tracing with screenshots, snapshots and sources
+
+        # Step 1: Main Browser Login
+        browser = p.chromium.launch(headless=False, args=[
+            "--disable-web-security",
+            "--disable-features=IsolateOrigins,site-per-process"
+        ], slow_mo=500)
+        
+        context = browser.new_context()
+
+        # Start tracing
         context.tracing.start(screenshots=True, snapshots=True, sources=True)
+
         try:
-            # Step 1: Login user
-            login_user(page)
+            page = login(p, context)
+
+            page.get_by_label("Start chat (Floating action)").click()
+            page.get_by_label("Start chat", exact=True).click()
+            page.get_by_test_id("selection-list-text-input").click()
+            page.get_by_test_id("selection-list-text-input").fill("totherandomuser")
+            page.get_by_test_id("selection-list").get_by_label("totherandomuser+").click()
+            page.wait_for_timeout(2000)
+            page.get_by_test_id("report-screen-7998596991069043").get_by_label("Search").click()
+            page.wait_for_timeout(2000)
+            page.get_by_label("Search in totherandomuser+").click()
             page.wait_for_timeout(2000)
 
-            # Step 2: Reintroduce scenario
-            page.get_by_label("My settings").click()
-            page.get_by_test_id("InitialSettingsPage").get_by_label("Workspaces").click()
-            page.get_by_label("New workspace").click()
-            page.get_by_label("More features").click()
-            page.get_by_label("Set up custom fields for").click()
-            page.get_by_role("button", name="Upgrade").click()
-            page.get_by_role("link", name="View your subscription").click()
-            page.go_back()
+            locator = page.get_by_test_id("search-router-text-input")
+            scroll_left = locator.evaluate("el => el.scrollLeft")
             
-            # Step 3: Check if the issue is resolved
-            g_element = page.locator("svg g[clip-path]").last  # Locate the <g> element inside the SVG
-            
-            initial_box = g_element.bounding_box()  # Get the initial position
-            page.wait_for_timeout(1000)
-            
-            new_box = g_element.bounding_box()  # Get the position after 1 second
-            
-            assert initial_box != new_box, "SVG image is not animating! Position did not change."  # Assert that the <g> element has moved (is animating)
+            assert scroll_left > 0, "The cursor should be at the end"
         finally:
-            # Stop tracing and export trace
             trace_path = "/app/expensify/user_tool/output_browser1.zip"
             context.tracing.stop(path=trace_path)
             trace_cleaner(trace_path)
             browser.close()
 
 
-if __name__ == '__main__':
-    test_51982()
+if __name__ == "__main__":
+    test()

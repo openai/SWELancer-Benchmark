@@ -1,152 +1,148 @@
-from playwright.sync_api import sync_playwright
-import time
-import imaplib
-import email
-import re
-import random
+import sys, os
+
+base_path = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
+sys.path.insert(0, base_path)
+
 import pytest
+from playwright.sync_api import sync_playwright, Page
 
-# Constants for URLs and credentials
-NEWDOT_URL = "https://dev.new.expensify.com:8082/"
-OLDDOT_URL = "http://localhost:9000/"
-EMAIL = "ikhanle001+83@gmail.com"
-PASSWORD = ""
+static_email = "testuserexpensify1+82@gmail.com"
 
+@pytest.fixture
+def setup_playwright():
 
-class IMAPOTPExtractor:
-    def __init__(self, email_address, password):
-        if not self._validate_email(email_address):
-            raise ValueError("Invalid email address format.")
-        self.original_email = email_address
-        self.password = password
+    playwright = sync_playwright().start()
 
-        random_suffix = random.randint(1000, 9999)
-        current_timestamp = int(time.time())
-        random_suffix = f"{current_timestamp}{random_suffix}"
+    browser = playwright.chromium.launch(
+        headless=True, slow_mo=1000, args=["--disable-web-security", "--disable-features=IsolateOrigins,site-per-process"]
+    )
+    page = browser.new_page()
+    yield page
 
-    def _validate_email(self, email_address):
-        return bool(re.match(r"[^@]+@[^@]+\.[^@]+", email_address))
-
-    def set_new_email(self, email):
-        self.new_email = email
-
-    def check_for_otp(self):
-        try:
-            mail = imaplib.IMAP4_SSL("imap.gmail.com")
-            mail.login(self.original_email, self.password)
-            mail.select("inbox")
-
-            status, messages = mail.search(None, "UNSEEN")
-            if status != "OK":
-                return None
-
-            email_ids = messages[0].split()
-            email_ids = email_ids[::-1]
-
-            for email_id in email_ids:
-                status, msg_data = mail.fetch(email_id, '(RFC822)')
-                if status != "OK":
-                    continue
-
-                for response_part in msg_data:
-                    if isinstance(response_part, tuple):
-                        msg = email.message_from_bytes(response_part[1])
-
-                        if self.new_email in msg["To"]:
-                            otp_code = self._extract_otp_from_email(msg)
-                            if otp_code:
-                                mail.store(email_id, '+FLAGS', '\\Deleted')
-                                mail.expunge()
-                                mail.close()
-                                mail.logout()
-                                return otp_code
-
-            mail.close()
-            mail.logout()
-            return None
-
-        except imaplib.IMAP4.error:
-            return None
-
-    def _extract_otp_from_email(self, msg):
-        if msg.is_multipart():
-            for part in msg.walk():
-                if part.get_content_type() == "text/plain":
-                    email_body = part.get_payload(decode=True).decode()
-                    otp_code = self._extract_otp(email_body)
-                    if otp_code:
-                        return otp_code
-        else:
-            email_body = msg.get_payload(decode=True).decode()
-            otp_code = self._extract_otp(email_body)
-            if otp_code:
-                return otp_code
-        return None
-
-    def _extract_otp(self, text):
-        match = re.search(r"\b\d{6}\b", text)
-        return match.group(0) if match else None
+    browser.close()
+    playwright.stop()
 
 
-# Initialize the OTP extractor
-gmail_account_helper = IMAPOTPExtractor(EMAIL, PASSWORD)
 
-
-# Login helper function
-def new_dot_login(page, email):
-    page.goto(NEWDOT_URL)
+def login_user(page: Page, email: str, first_name: str, last_name: str):
+    page.goto("https://dev.new.expensify.com:8082/")
     page.locator('input[type="email"]').fill(email)
-    page.wait_for_timeout(2000)
-    page.get_by_role("button", name="Continue").nth(0).click()
-    # page.wait_for_timeout(10000)
-    # gmail_account_helper.set_new_email(email)
-    # otp = gmail_account_helper.check_for_otp()
-    otp = '123456'
-    page.locator('input[data-testid="validateCode"]').fill(otp)
+    page.locator('button[tabindex="0"]').click()
+
+
+    join_button = page.get_by_role("button", name="Join")
+    join_button.click()
+    page.locator("text='Track and budget expenses'").click()
+    page.get_by_role("button", name="Continue").click()
+
+    page.locator('input[name="fname"]').fill(first_name)
+    page.locator('input[name="lname"]').fill(last_name)
+    page.get_by_role("button", name="Continue").last.click()
+
+
+def create_workspace_and_add_member(page: Page, member_email: str):
+    page.locator('button[aria-label="Workspaces"]').click()
+    page.get_by_test_id("WorkspaceSwitcherPage").get_by_role(
+        "button", name="New workspace"
+    ).click()
+    page.locator('div[aria-label="Members"]').click()
+    page.locator("button", has_text="Invite member").click()
+    page.locator('input[aria-label="Name, email, or phone number"]').fill(member_email)
+    page.locator("button", has_text=member_email).click()
+    page.locator('button[data-listener="Enter"]', has_text="Next").click()
+    page.locator('button[data-listener="Enter"]', has_text="Invite").click()
+    page.locator('button[aria-label="Back"]').click()
+    page.locator('button[aria-label="Back"]').click()
+
+
+
+def browse_to_workspace(page: Page, workspace_name: str):
+    page.locator('button[aria-label="Workspaces"]').click()
     try:
-        page.get_by_role("button", name="Sign In").click()
-    except:
-        pass
-
-@pytest.fixture(scope="module")
-def setup_browser():
-    """Initialize browser and page context for all tests within a single session."""
-    with sync_playwright() as p:
-        browser = p.chromium.launch(
-            headless=False,
-            args=[
-                "--ignore-certificate-errors",
-                "--disable-web-security",
-                "--disable-features=IsolateOrigins,site-per-process"
-            ],
-            slow_mo=1000
-        )
-        context = browser.new_context(**p.devices['iPhone 12'], ignore_https_errors=True)
-        page = context.new_page()
-        yield page
-        browser.close()
+        page.locator(f'button[aria-label="{workspace_name}"]').click()
+    except Exception:
+        page.locator(f'button[aria-label="{workspace_name}"]').nth(1).click()
+    page.locator(
+        'button[aria-label="Navigates to a chat"]', has_text=workspace_name
+    ).nth(0).click()
 
 
-@pytest.fixture(scope="module")
-def login_to_new_dot(setup_browser):
-    """Log into the Expensify application with the provided email."""
-    page = setup_browser
-    new_dot_login(page, EMAIL)
-    return page
 
-def test_wrong_message_in_submit_expense_page(login_to_new_dot):
-    """Verify that the payment complete message is displayed in Spanish when language preference is set to Spanish."""
+def submit_expense(page: Page, amount: int, merchant: str):
+    page.locator('button[aria-label="Create"]').nth(2).click()
+    page.locator('div[aria-label="Submit expense"]').click()
+    page.locator('button[aria-label="Manual"]').click()
+    page.locator('input[placeholder="0"]').fill(str(amount))
+    page.locator('button[data-listener="Enter"]', has_text="Next").nth(0).click()
+    page.locator('div[role="menuitem"]', has_text="Merchant").click()
+    page.locator('input[aria-label="Merchant"]').fill(merchant)
+    page.locator('button[data-listener="Enter"]', has_text="Save").click()
+    page.locator('button[data-listener="Enter"]', has_text="Submit").click()
 
-    page = login_to_new_dot
-    page.wait_for_timeout(5000)
-    page.locator('//button[@aria-label="Start chat (Floating action)"]').last.click()
-    page.locator('//div[@aria-label="Scan receipt"]').last.click()
-    page.locator('//button[@aria-label="Manual"]').last.click()
-    page.locator('//input[@virtualkeyboardpolicy="manual"]').last.fill("15")
-    page.wait_for_timeout(2000)
-    page.keyboard.press("Enter")
-    confirm_detail_page_text = page.locator('//div[@data-testid="IOURequestStepConfirmation"] | //div[@data-testid="IOURequestStepParticipants"]').last.inner_text()
 
-    assert ("You no longer have access to your previous quick action destination. "
-            "Pick a new one below") not in confirm_detail_page_text, \
-        "'Choose recipient' page opens with the wrong message"
+
+def wait_for_text_with_assertion(
+    page: Page,
+    locator,
+    text: str,
+    max_retries=10,
+    interval=1,
+    assertion_message="Text not found",
+):
+    for attempt in range(max_retries):
+        try:
+            if text in locator.inner_text():
+                print(f"'{text}' found in the inner text.")
+                return
+        except Exception as e:
+            print(f"Attempt {attempt + 1} failed with exception: {e}")
+        page.wait_for_timeout(1000)
+    raise AssertionError(assertion_message)
+
+
+@pytest.mark.usefixtures("setup_playwright")
+def test_duplicate_and_hold_expense(setup_playwright):
+    page = setup_playwright
+    user1_email = static_email
+    user2_email = "testuser@gmail.com"
+    first_name1, last_name1 = "Chris", "Brown"
+    workspace_name = f"{first_name1} {last_name1}'s Workspace"
+
+    login_user(page, user1_email, first_name1, last_name1)
+    create_workspace_and_add_member(page, user2_email)
+    browse_to_workspace(page, workspace_name)
+
+    submit_expense(page, 100, "Merchant 1")
+    submit_expense(page, 200, "Merchant 2")
+    submit_expense(page, 100, "Merchant 1")
+
+    page.locator(
+        'button[aria-label="View details"]', has_text=f"{workspace_name} owes:"
+    ).last.click()
+
+    first_message = page.locator('div[aria-label="Cash"][data-tag="pressable"]').first
+
+    wait_for_text_with_assertion(
+        page,
+        first_message,
+        "Duplicate",
+        max_retries=10,
+        interval=1,
+        assertion_message="Expected 'Duplicate' text not found in the first message.",
+    )
+
+    first_message.hover()
+    page.locator('button[aria-label="Menu"]').click()
+    page.locator('div[aria-label="Hold"]').click()
+    page.locator('input[aria-label="Reason"]').fill("Random reason")
+    page.locator('button[data-listener="Enter"]', has_text="Hold expense").click()
+
+    wait_for_text_with_assertion(
+        page,
+        first_message,
+        "Hold",
+        max_retries=5,
+        interval=1,
+        assertion_message="Expense's text not updated to 'Hold' from 'Duplicate'.",
+    )
+

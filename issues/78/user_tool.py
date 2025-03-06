@@ -1,99 +1,134 @@
-import re
-from playwright.sync_api import Playwright, sync_playwright, expect
-import time
+import pytest
+import os
+from playwright.async_api import Page, expect, async_playwright
 from utils.trace_cleaner import trace_cleaner
+from utils.login import NEW_DOT_URL, sign_in
+from utils.browser import close_browser, start_browser
 
-def get_mail_addr():
-    timestamp = int(time.time())
-    return f"aliceogleoggglu+{timestamp}@gmail.com"
+STATIC_PREFIX = 53036
+EXPENSIFY_USERNAME_FIRSTNAME = "osaidtest"
+EXPENSIFY_USERNAME_LASTNAME = "testaccount"
+EXPENSIFY_USERNAME = f"{EXPENSIFY_USERNAME_FIRSTNAME} {EXPENSIFY_USERNAME_LASTNAME}"
+EXPENSIFY_EMAIL_USERNAME = "osaidtest5"
+EXPENSIFY_EMAIL = f"osaidtest5+{STATIC_PREFIX}@gmail.com"
+EXPENSIFY_PASSWORD = "ntvd acej mmaa qqmd"
+DATA_DIR = "browser_context"
+WORKSPACE_NAME = "workspace1"
+SLOW_MO = 1000
+NORMAL_RUN = False
+PROXY_SETTINGS = {"server": "http://localhost:8080"}
+SEARCH_QUERY = "type:expense status:all from:osaidtest5+530366@gmail.com to:osaidtest5+53036@gmail.com"
+SECOND_USER_USERNAME = 'second usr'
 
-def run(playwright: Playwright) -> None:
 
-    browser = playwright.chromium.launch(headless=False, args=[
-            "--disable-web-security",
-            "--disable-features=IsolateOrigins,site-per-process",
-            "--ignore-certificate-errors"], slow_mo=800)
-    context = browser.new_context(ignore_https_errors=True)
-    page = context.new_page()
+async def sign_in_recorded(page: Page, email: str):
+    await page.get_by_test_id("username").fill(email)
+    await page.get_by_role("button", name="Continue").click()
+    await page.get_by_test_id("validateCode").fill("123456")
 
-    # Start tracing
-    context.tracing.start(screenshots=True, snapshots=True, sources=True)
 
+async def start_browser(
+    headless=False,
+    persistent=False,
+    data_dir=None,
+    slow_mo=500,
+    launch_args=["--ignore-certificate-errors"],
+    proxy=None,
+):
+    """
+    Start a browser instance with the given parameters.
+
+    :param headless: Boolean to specify if the browser should run in headless mode.
+    :param persistent: Boolean to specify if the browser context should be persistent.
+    :param data_dir: Directory to store browser data for persistent context.
+    :return: A tuple of (context, page, playwright).
+    """
+
+    # Initialize Playwright
+    playwright = await async_playwright().start()
+    device = playwright.devices["Desktop Safari"]
+    context, page = None, None
+    if persistent:
+        if data_dir is None:
+            data_dir = "browser_context"
+        if not os.path.exists(data_dir):
+            os.makedirs(data_dir)
+
+        context = await playwright.chromium.launch_persistent_context(
+            data_dir,
+            proxy=proxy,
+            headless=headless,
+            args=launch_args,
+            slow_mo=slow_mo,
+            timezone_id="Asia/Karachi",
+            **device
+        )
+        page = context.pages[0]
+    else:
+        browser = await playwright.chromium.launch(
+            headless=headless, args=launch_args, slow_mo=slow_mo, proxy=proxy,
+        )
+        context = await browser.new_context(
+            ignore_https_errors=True, timezone_id="Asia/Karachi", permissions=["clipboard-read", "clipboard-write"], **device
+        )
+        page = await context.new_page()
+
+    return context, page, playwright  # Return playwright to close later
+
+
+@pytest.mark.asyncio
+async def test_53036():
     try:
-        # Step 1: Login
-        user_mail_addr = get_mail_addr()
-        page.goto("https://dev.new.expensify.com:8082/")
-        page.get_by_test_id("username").fill(user_mail_addr)
-        page.get_by_role("button", name="Continue").click()
-        page.get_by_role("button", name="Join").click()
-        page.wait_for_timeout(1000)
-        
-        # Step 2: Enter user information
-        page.get_by_text("Track and budget expenses").click()
-        page.get_by_role("textbox", name="First name").fill("ali")
-        page.get_by_role("textbox", name="Last name").click()
-        page.get_by_role("textbox", name="Last name").fill("veli")
-        page.get_by_role("button", name="Continue").click()
-        page.wait_for_timeout(1000)
-        
-        # Step 3: Create WS
-        page.get_by_label("My settings").click()
-        page.get_by_test_id("InitialSettingsPage").get_by_label("Workspaces").get_by_text("Workspaces").click()
-        page.get_by_label("New workspace").click()
-        page.get_by_label("Back").click()
-        page.get_by_label("Inbox").click()
-        page.wait_for_timeout(1000)
+        context, page, playwright = await start_browser(
+            persistent=False,
+            data_dir=DATA_DIR,
+            headless=False,
+            slow_mo=SLOW_MO,
+            launch_args=[
+                "--ignore-certificate-errors",
+                "--disable-web-security",
+                "--disable-features=IsolateOrigins,site-per-process",
+            ],
+            proxy=PROXY_SETTINGS
+        )
 
-        # Step 4: Submit Expense
-        page.locator("[data-testid='DisplayNamesWithTooltip']", has_text="Ali veli's Workspace").first.click()
-        page.get_by_label("Create").last.click()
-        page.get_by_text("Submit expense", exact=True).click()
-        page.get_by_label("Manual").click()
-        page.get_by_placeholder("0").fill("1234")
-        page.locator("#numPadContainerView").get_by_role("button", name="Next").click()
-        page.get_by_text("Merchant").click()
-        page.get_by_role("textbox", name="Merchant").fill("w")
-        page.get_by_role("button", name="Save").click()
-        page.locator("div[data-selection-scrapper-hidden-element]", has_text="Submit").last.click()
-        page.wait_for_timeout(1000)
+        # Start tracing
+        await context.tracing.start(screenshots=True, snapshots=True, sources=True)
 
-        # Step 4: Add category to expense
-        page.get_by_label("View details").click()
-        page.get_by_text("Category").click()
-        page.get_by_label("Fees").click()
-        page.get_by_text("Category", exact=True).last.click()
-        page.get_by_label("Back").click()
-        page.wait_for_timeout(1000)
+        try:
+            # Step 1: Sign in
+            if NORMAL_RUN:
+                # Normal test run
+                await sign_in(page, EXPENSIFY_EMAIL, password=EXPENSIFY_PASSWORD)
+            else:
+                # Recorded Test Run.
+                await page.goto(NEW_DOT_URL)
+                await sign_in_recorded(page=page, email=EXPENSIFY_EMAIL)
 
-        # Step 5: Disable all categories
-        page.get_by_label("My settings").click()
-        page.locator("div[dir='auto']", has_text="Ali veli's Workspace").last.click()
-        page.get_by_text("Categories").click()
-        page.get_by_label("Select all").click()
-        page.get_by_role("button", name="selected").click()
-        page.get_by_text("Disable categories").click()
-        page.get_by_label("Back").click()
-        page.get_by_label("Inbox").click()
-        # Refresh is needed for mitm record file
-        page.goto("https://dev.new.expensify.com:8082/")
-        page.wait_for_timeout(1000)
-        page.locator("div[data-testid='DisplayNamesWithTooltip']", has_text="Ali veli's Workspace").first.click()
-        page.locator("div[aria-label='Last chat message preview']", has_text="Ali veli's Workspace").last.click()
-        page.locator("div[dir='auto']", has_text="Ali veli's Workspace owes:").last.click()
-        page.locator("div[dir='auto']", has_text="Category").last.click()
-        page.wait_for_timeout(2000)
+            await page.get_by_test_id("CustomBottomTabNavigator").get_by_label("Search").click()
 
-        # Step 6: Verify expense category is highlighted
-        button = page.locator("button[aria-label='Fees'][role='button'][data-tag='pressable']")
-        expect(button).to_have_css("background-color", "rgb(230, 225, 218)")
+            # Cleanup (Reset Filters if present)
+            await page.get_by_role("button", name="Filters").click()
+            if await page.get_by_role("link", name="Reset filters").is_visible():
+                await page.get_by_role("link", name="Reset filters").click()
+            await page.get_by_label("Back").click()
+            
+            await page.get_by_test_id("Search").get_by_label("Search").click()
+            await page.get_by_test_id("search-router-text-input").fill(SEARCH_QUERY)
+            await page.get_by_test_id("search-router-text-input").press("Enter")
+
+            await page.get_by_role("button", name="Filters").click()
+
+            # Assert that the filters are correctly applied.
+            await expect(page.get_by_test_id("SearchAdvancedFiltersPage").get_by_text(SECOND_USER_USERNAME)).to_be_visible()
+            await expect(page.get_by_test_id("SearchAdvancedFiltersPage").get_by_text(EXPENSIFY_USERNAME)).to_be_visible()
+            await expect(page.get_by_role("button", name="Save search")).to_be_visible()
+
+        finally:
+            # Stop tracing and export the trace file, then clean the trace
+            await context.tracing.stop(path="/app/expensify/user_tool/output_browser1.zip")
+            trace_cleaner("/app/expensify/user_tool/output_browser1.zip")
 
     finally:
-        # Stop tracing and export the trace file
-        context.tracing.stop(path="/app/expensify/user_tool/output_browser1.zip")
-        trace_cleaner("/app/expensify/user_tool/output_browser1.zip")
-        context.close()
-        browser.close()
-
-def test_52259():
-    with sync_playwright() as playwright:
-        run(playwright)
+        # Step 6: Close the browser.
+        await close_browser(context, page, playwright)

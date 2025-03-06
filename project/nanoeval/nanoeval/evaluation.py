@@ -346,7 +346,8 @@ async def run(spec: EvalSpec) -> dict[str, Any]:  # type: ignore
         )
 
     # Build the recorder!
-    recorder = await spec.runner.recorder.factory(spec, len(tasks))
+    recorder_config = spec.runner.recorder or get_library_config().get_default_recorder()
+    recorder = await recorder_config.factory(spec, len(tasks))
 
     # Load all tasks into the database
     with db.conn() as conn:
@@ -358,7 +359,7 @@ async def run(spec: EvalSpec) -> dict[str, Any]:  # type: ignore
                 datetime.now(),
                 dill.dumps(spec),
                 dill.dumps(recorder),
-                spec.runner.concurrency,
+                spec.runner.concurrency if spec.runner.concurrency is not None else 999999,
             ),
         )
 

@@ -1,64 +1,83 @@
-from typing import Any
-from playwright._impl._page import Page
-# from playwright._impl._locator import Locator
 from playwright.sync_api import sync_playwright, expect
-from playwright.sync_api._context_manager import PlaywrightContextManager
 
 
-EMAIL = "brighturing926+51316@gmail.com"
-user_workspace_admin = "https://dev.new.expensify.com:8082/r/524783183199166"
-invalid_member = "+1 631-791-8378"
+# Expensify app URL
+EXPENSIFY_URL = "https://dev.new.expensify.com:8082/"
 
+# Email login credentials
+EMAIL_USERNAME = "naturesv057+54575_2@gmail.com"
 
-def login_user(p: PlaywrightContextManager, user_email: str) -> Page:
-    # Step 1: Open expensify url
-    browser = p.chromium.launch(
-        proxy = {"server": "http://localhost:8080"}, headless = False, args = ["--no-sandbox", "--disable-dev-shm-usage", "--ignore-certificate-errors", "--disable-web-security", "--disable-features=IsolateOrigins,site-per-process"], slow_mo = 500, channel = "chromium")
-    context = browser.new_context()
+def launch_browser(pw, device=None, geolocation=None):
+    """
+    Launch the browser.
+    """
+    browser = pw.chromium.launch(
+        headless=False,
+        proxy = {"server": "http://127.0.0.1:8080/"},
+        args=[
+            "--ignore-certificate-errors",
+            "--disable-web-security",
+            "--disable-features=IsolateOrigins,site-per-process",
+        ],
+        slow_mo=500
+    )
+    context_args = {}
+    if device:
+        context_args.update(pw.devices[device])
+    if geolocation:
+        context_args["geolocation"] = geolocation
+        context_args["permissions"] = ["geolocation"]
+    context = browser.new_context(**context_args)
     page = context.new_page()
-    page.goto('https://dev.new.expensify.com:8082/')
-
-    page.locator('input[type="email"]').fill(user_email)
-    page.locator('button[tabindex="0"]').click()
-
-    # Magic code entry
-    my_otp_code = "123456"
-
-    page.get_by_test_id("validateCode").fill(my_otp_code)
-
-    # Click Optional sign in button
-    try:
-        page.get_by_role("button", name="Sign in").click()
-
-    except Exception:
-        pass
-
-    return page
+    return browser, context, page
 
 
-def test_14513() -> Any:
+def login_user(page):
+    """
+    Login to the Expensify app and complete the onboarding.
+    """
+    # Open the Expensify app
+    page.goto(EXPENSIFY_URL)
+
+    # Login user
+    page.get_by_role("textbox", name="Phone or email").fill(EMAIL_USERNAME)
+    page.locator("div", has_text="Continue").last.click()
+    
+    # Get the OTP code from the email
+    otp = "123456"
+    
+    # Enter the OTP code
+    page.keyboard.type(otp)
+
+
+def test_54575():
     with sync_playwright() as p:
-        # Step 1: Log in the user and begin test actions
-        page = login_user(p, EMAIL)
+        # Step 1: Login user
+        browser, context, page = launch_browser(p)
+        login_user(page)
+        page.wait_for_timeout(5000)
 
+        # Step 2: Reintroduce scenario
+        try:
+            page.get_by_label("Close").click(timeout=2000)
+        except:
+            pass
         page.get_by_label("My settings").click()
+        try:
+            page.get_by_label("Close").click(timeout=2000)
+        except:
+            pass
         page.get_by_test_id("InitialSettingsPage").get_by_label("Workspaces").click()
         page.get_by_label("New workspace").first.click()
+        page.get_by_label("More features").click()
+        page.get_by_label("Add, update, and enforce").click()
+        page.get_by_label("Gain insights and control").click()
+        page.get_by_label("Configure how spend is").click()
+        page.get_by_label("Send and receive invoices.").click()
+        page.get_by_label("Classify costs and track").click()
+        page.get_by_label("Document and reclaim eligible").click()
+        page.get_by_label("Sync your chart of accounts").click()
+        page.wait_for_timeout(2000)
 
-        # page.pause()
-        page.get_by_label("Members").click()
-        page.get_by_role("button", name="Invite member").click()
-        page.get_by_test_id("selection-list-text-input").fill(invalid_member)
-        page.get_by_label(invalid_member).first.click()
-        page.get_by_role("button", name="Next").click()
-        page.get_by_test_id("WorkspaceInviteMessagePage").get_by_role("button", name="Invite").click()
-        page.wait_for_timeout(3000)
-        expect(page.get_by_test_id("WorkspaceInitialPage").get_by_text("Unable to add members to")).to_be_visible()
-        page.get_by_label("Back").click()
-        expect(page.get_by_text("Unable to add members to")).to_be_visible()
-
-        page.wait_for_timeout(3000)
-        page.get_by_label("Inbox").click()
-        page.wait_for_timeout(3000)
-        page.get_by_text(invalid_member).first.click()
-        expect(page.get_by_text("Unexpected error creating")).to_be_visible()
+        #Step 3: Check if the issue is resolved
+        expect(page.get_by_test_id("WorkspaceInitialPage")).to_contain_text("Workspace profileMembersDistance ratesExpensify CardWorkflowsInvoices₹0.00CategoriesTagsTaxesAccountingMore features")

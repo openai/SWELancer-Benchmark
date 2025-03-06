@@ -1,0 +1,6 @@
+{
+    "price": 50.0,
+    "title": "[HOLD for payment 2024-12-05] [$50] Update copy on the wallet settings page",
+    "issue_repo_steps": "# Problem\r\nWhen users find it difficult to navigate our application's features due to interface clutter, it leads to decreased engagement and lower conversion and retention rates.\r\n\r\n# Solution\r\nClean up some of the copy on the wallet settings page:\r\n\r\n1. Change the title of the block from \"Send and receive money with friends\" to \"Expensify Wallet\"\r\n2. Change the subtitle from \"Your wallet has been enabled to send and receive money with friends.\" to \"Send and receive money with friends.\"\r\n\r\n![image](https://github.com/user-attachments/assets/7130fdcf-062e-4e76-b5a8-edc46ea6ef06)\r\n\n<details><summary>Upwork Automation - Do Not Edit</summary>\n    <ul>\n        <li>Upwork Job URL: https://www.upwork.com/jobs/~021859017641475961132</li>\n        <li>Upwork Job ID: 1859017641475961132</li>\n        <li>Last Price Increase: 2024-11-19</li>\n<li>Automatic offers: </li>\n<ul>\n<li>rayane-djouah | Reviewer | 105008734</li>\n</ul></li>\n    </ul>\n</details>\n\n<details><summary>Issue Owner</summary>Current Issue Owner: @trjExpensify</details>",
+    "_issue_id": "52789"
+}

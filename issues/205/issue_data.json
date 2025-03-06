@@ -1,0 +1,6 @@
+{
+    "price": 250.0,
+    "title": "[HOLD for payment 2024-10-25] [$250] [QBO] There is no option to enter credentials.",
+    "issue_repo_steps": "Action performed: 1. Go to Workspace => Accounting.\r\n2. Connect your workspace with QBO.\r\n3. From QBO dashboard, disconnect Expensify App.\r\n4. Go back to ND, click the menu from the Accounting page => Sync now.\r\n5. Notice that's an error shows. Click threedot menu again, notice that you won't see `Enter credentials` option.\n\nExpected result: If there's an authentication error, we should have `Enter credentials` option from three dot menu.\n\nActual result: None",
+    "_issue_id": "50357_1124"
+}

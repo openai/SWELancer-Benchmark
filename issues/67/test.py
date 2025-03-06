@@ -1,60 +1,54 @@
-import re
 from playwright.sync_api import sync_playwright, expect
 
-def launch_browser(playwright):
-    browser = playwright.chromium.launch(
-            channel="chrome",
-            headless=False,
-            slow_mo=500,
-            proxy={"server": "http://localhost:8080"},
-            args=[
-                "--ignore-certificate-errors",
-                "--disable-web-security",
-                "--disable-features=IsolateOrigins,site-per-process"
-            ]
-        )
-    
-    context = browser.new_context(timezone_id = "Asia/Karachi")
+
+def generate_random_email():
+    return "nitish.expensify+1740042181@gmail.com"
+
+
+def login_user(pw):
+    browser = pw.chromium.launch(proxy={"server": "http://localhost:8080"}, headless=False, args=[
+                                 "--no-sandbox", "--disable-dev-shm-usage", "--ignore-certificate-errors", "--disable-web-security", "--disable-features=IsolateOrigins,site-per-process"], slow_mo=2000, channel="chromium")
+    context_args = {}
+    context_args["timezone_id"] = "Asia/Calcutta"
+    context = browser.new_context(**context_args)
     page = context.new_page()
+    user_email = generate_random_email()
 
-    return browser, page
+    page.goto('https://dev.new.expensify.com:8082/', timeout=3000000)
 
-def login_user(page, first_name="Test", last_name="User"):
-
-    page.goto("https://dev.new.expensify.com:8082/")
-
-    user_email = "freelancer.test.exp+1739715118@gmail.com"
-
-    page.get_by_test_id("username").fill(user_email)
+    page.locator('input[type="email"]').fill(user_email)
     page.get_by_role("button", name="Continue").click()
-    page.get_by_role("button", name="Join").click()
-    page.get_by_text("Track and budget expenses").click()
-    page.get_by_role("button", name="Continue").click()
-    page.get_by_role("textbox", name="First name").fill(first_name)
-    page.get_by_role("textbox", name="Last name").fill(last_name)
-    page.get_by_role("form").get_by_role("button", name="Continue").click()
+
+    try:
+        expect(page.get_by_role("button", name="Sign in")
+               ).to_be_visible(timeout=3000)
+        page.get_by_test_id("validateCode").fill("123456")
+    except Exception:
+        page.get_by_role("button", name="Join").click()
+
+    return page, browser
 
 
-def test_example():
-    with sync_playwright() as playwright:
+def test_the_issue():
+    with sync_playwright() as p:
+        page, browser = login_user(p)
 
-        browser, page = launch_browser(playwright)
-        login_user(page)
+        page.get_by_label("My settings").click()
 
-        tracking_header = re.compile("Tracking .+")
+        page.get_by_test_id("InitialSettingsPage").get_by_label(
+            "Workspaces").click()
 
-        page.get_by_test_id("lhn-options-list").get_by_text("Test User (you)").first.click()
-        page.get_by_role("button", name="Create").click()
-        page.get_by_label("Track expense").click()
-        page.get_by_label("Manual").click()
-        page.get_by_placeholder("0").fill("100")
-        page.locator("#numPadContainerView").get_by_role("button", name="Next").click()
-        page.get_by_role("button", name="Track expense").click()
-        page.get_by_text("Cash").click()
-        page.get_by_label(tracking_header).first.click()
+        page.locator("button").filter(has_text="dummy_ws.default-").click()
 
-        expect(page.get_by_label("Submit it to someone")).to_be_visible()
-        expect(page.get_by_label("Categorize it")).to_be_visible()
-        expect(page.get_by_label("Share it with my accountant")).to_be_visible()
-        
+        page.set_viewport_size({"width": 355, "height": 627})
+
+        page.get_by_test_id(
+            "WorkspacePageWithSections").get_by_label("Back").click()
+
+        page.set_viewport_size({"width": 900, "height": 627})
+        page.wait_for_timeout(10000)
+
+        assert page.get_by_test_id("WorkspacePageWithSections").get_by_text("Profile").is_visible(
+        ), "Workspace profile is not displayed in the central pane after resizing"
+
         browser.close()

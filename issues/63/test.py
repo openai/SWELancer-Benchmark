@@ -1,72 +1,92 @@
-from playwright._impl._page import Page
-from playwright.sync_api import sync_playwright
+import time
+import re 
+from playwright.sync_api import sync_playwright, expect
+def login_member_a(p, membera_first_name: str, membera_last_name: str) -> tuple:
+    browser = p.chromium.launch(proxy={"server": "http://localhost:8080"}, headless = False, args = ["--ignore-certificate-errors", "--disable-web-security", "--disable-features=IsolateOrigins,site-per-process"], slow_mo = 1000, channel = "chromium")
+    pixel_5 = p.devices['Pixel 5']
+    context = browser.new_context(**pixel_5)
+    page = context.new_page()
 
-NEW_DOT_URL = "https://dev.new.expensify.com:8082"
-ONE_SECOND = 1000
-TWO_SECONDS = 2000
-THREE_SECONDS = 3000
-FIVE_SECONDS = 5000
-email_address = "adebayovicktor0+test43726@gmail.com"
-password = ""
-
-# Sign In to Expensify
-def sign_in_new_dot(page: Page, email: str, url: str=None):
-    """
-    Sign in into the new Expensify dot.
-    """
-    # Go to URL
-    url = url if url else NEW_DOT_URL
-    page.goto(url)
-    # Sign In
-    page.get_by_test_id("username").fill(email)
-    page.wait_for_timeout(TWO_SECONDS)
+    user_email2 = "testerbro7077+hfjdjg@gmail.com"
+    page.goto('https://dev.new.expensify.com:8082/')
+    page.get_by_test_id("username").click()
+    page.get_by_test_id("username").fill(user_email2)
     page.get_by_role("button", name="Continue").click()
-    page.wait_for_timeout(FIVE_SECONDS)
-    # OTP is hardcoded for replay
-    otp = '123456'
-    page.get_by_test_id("validateCode").fill(otp)
-    page.wait_for_timeout(TWO_SECONDS)
+    page.get_by_role("button", name="Join").click()
+    page.get_by_text("Track and budget expenses").click()
+    page.get_by_role("textbox", name="First name").fill(membera_first_name)
+    page.get_by_role("textbox", name="Last name").click()
+    page.get_by_role("textbox", name="Last name").fill(membera_last_name)
+    page.get_by_role("button", name="Continue").click()
+    page.wait_for_timeout(1000)
 
-    # Wait sign in to complete
-    page.get_by_text("Please enter the magic code").wait_for(state="hidden")
-    page.wait_for_timeout(THREE_SECONDS)
+    return browser, page, user_email2
 
-def generate_email():
-    return f"adebayovicktor0+test51336@gmail.com"
+def check_color(page):
+    page.get_by_label("Back").click()
+    page.get_by_label("My settings").click()
+    page.get_by_test_id("InitialSettingsPage").get_by_label("Workspaces").get_by_text("Workspaces").click()
+    page.get_by_label("New workspace").click()
+    page.get_by_text("More features").click()
+    page.get_by_label("Classify costs and track").click()
+    page.get_by_text("Tags").click()
+    page.get_by_role("button", name="Add tag").click()
+    page.get_by_role("textbox", name="Name").fill("1 : ghhhg8gugigiigiggiigiggiigguguigtiyiy8gigigiigy9giigigigig : huigigjggiigkbbjhj : 🥰😘😘")
+    page.get_by_role("button", name="Save").click()
+    page.get_by_test_id("WorkspaceTagsPage").get_by_label("Back").click()
+    page.get_by_test_id("WorkspaceInitialPage").get_by_label("Back").click()
+    page.get_by_label("Back").click()
+    page.get_by_label("Inbox").click()
+    page.locator('button[aria-label="Navigates to a chat"]').nth(3).click()
+    page.get_by_label("Create").click()
+    try:
+        page.get_by_text("Create expense").click()
+    except:
+        page.get_by_text("Submit expense").nth(2).click()
+    page.get_by_label("Manual").click()
+    page.get_by_placeholder("0").fill("100")
+    page.locator("#numPadContainerView").get_by_role("button", name="Next").click()
+    page.get_by_text("Merchant").click()
+    page.get_by_role("textbox", name="Merchant").fill("Merchant")
+    page.get_by_role("button", name="Save").click()
+    page.get_by_label("Show more").click()
+    page.get_by_test_id("selection-list").get_by_text("Tag").click()
+    page.get_by_label("1 :").click()
+    page.get_by_role("button", name="Submit ").click()
+    page.get_by_label("Create").click()
+    try:
+        page.get_by_text("Create expense").click()
+    except:
+        page.get_by_text("Submit expense").nth(1).click()
+    page.get_by_placeholder("0").fill("50")
+    page.locator("#numPadContainerView").get_by_role("button", name="Next").click()
+    page.get_by_label("Show more").click()
+    page.get_by_test_id("selection-list").get_by_text("Tag").click()
+    page.get_by_label("1 :").click()
+    page.get_by_test_id("selection-list").get_by_text("Merchant").click()
+    page.get_by_role("textbox", name="Merchant").fill("Merchant7077")
+    page.get_by_role("button", name="Save").click()
+    page.get_by_role("button", name="Submit ").click()
+    page.get_by_label("View details").click()
+    page.get_by_text("1 :").nth(2).click()
+    page.get_by_text("Tag").nth(1).click()
+    locator = page.locator("div.css-text-146c3p1", has_text="huigigjggiigkbbjhj").last
 
-def test_emoji_is_deletable():
-    """
-    Test to verify that the send button is focused when the modal is opened
-    """
+    word_break = locator.evaluate(
+        """(node) => window.getComputedStyle(node).getPropertyValue("word-break")"""
+    ).strip()
+    
+    assert word_break == "break-all", "Tag name truncated"
+    
+def test_run(membera_first_name="Sai", membera_last_name="Yagna"):
     with sync_playwright() as p:
-        browser = p.chromium.launch(headless=False,
-                    proxy = {"server": "http://127.0.0.1:8080/"},
-                    args=[
-                        "--ignore-certificate-errors",
-                        "--disable-web-security",
-                        "--disable-features=IsolateOrigins,site-per-process"
-                    ],
-                    slow_mo=1000
-        )
-        user_email = generate_email()
-        context = browser.new_context()
-        page = context.new_page()
-        sign_in_new_dot(page, user_email)
-        # page.get_by_label("Close").click()
-        page.wait_for_timeout(2000)
-        page.get_by_label("Emoji").first.click()
-        page.get_by_role("textbox", name="Search").fill("black")
-        page.get_by_label("⬛", exact=True).click()
-        page.get_by_label("Emoji").first.click()
-        page.wait_for_timeout(2000)
-        page.get_by_role("textbox", name="Search").fill("wale")
-        page.get_by_label("🏴󠁧󠁢󠁷󠁬󠁳󠁿", exact=True).click()
-        page.wait_for_timeout(2000)
-        page.keyboard.press('Backspace')
-        page.keyboard.press('Backspace')
-        page.wait_for_timeout(2000)
-        page.keyboard.press('Backspace')
-        page.keyboard.press('Backspace')
-        inner_text = page.locator("#composer").inner_text()
-        assert inner_text == '', "The flag 🏴󠁧󠁢󠁷󠁬󠁳󠁿 and ⬛ is not deleted"
+        browser_membera, page_membera, user_email2 = login_member_a(p, membera_first_name, membera_last_name)
+        check_color(page_membera)
+
+
+
         
+        browser_membera.close()
+
+if __name__ == "__main__":
+    test_run()

@@ -24,6 +24,7 @@ logger = structlog.stdlib.get_logger(component=__name__)
 class Grade(BaseModel):
     score: float
     grader_log: str
+    is_continuous: bool = False
 
 
 class ComputerTask(ABC, ComputerConfiguration, Task, SerializableBaseModel):
@@ -165,4 +166,5 @@ class SimpleJupyterTask(ComputerTask):
         return Grade(
             score=score,
             grader_log=res.output,
+            # Should this be `is_continuous=True`?
         )

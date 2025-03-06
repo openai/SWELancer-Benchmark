@@ -1,272 +1,168 @@
-import logging
-import sys
-
-from playwright.sync_api import sync_playwright, expect
-from playwright._impl._browser import Browser
-from playwright._impl._page import Page
-from playwright.sync_api._context_manager import PlaywrightContextManager
-import re
-import time
 import imaplib
 import email
-import random
+import re
+from email.header import decode_header
+from playwright.sync_api import sync_playwright, expect
 
-# Expensify app URL
-NEWDOT_URL = "https://dev.new.expensify.com:8082"
-OLDDOT_URL = "http://127.0.0.1:9000/"
+GMAIL_NAME = "nomandevtur+55462.2"
+GMAIL_APP_PASSWORD = "tpye xlsj axyq nltq"
 
-# Logger
-logging.basicConfig(level=logging.INFO, stream=sys.stdout, format="%(message)s")
-LOGGER = logging.getLogger(__name__)
 
-class IMAPOTPExtractor:
-    def __init__(self, email_address, password):
-        # Validate email and password input
-        if not self._validate_email(email_address):
-            raise ValueError("Invalid email address format.")
-        self.original_email = email_address
-        self.password = password
+def get_test_user_info(seed = None, first_name = None, last_name = None):
+    if first_name is None:
+        first_name = GMAIL_NAME
 
-        # Generate new random email using "+" prefix
-        random_suffix = random.randint(1000, 9999)
-        current_timestamp = int(time.time())
-        random_suffix = f'{current_timestamp}{random_suffix}'
-        self.new_email = self._generate_new_email(email_address, random_suffix)
+    if last_name is None:
+        last_name = ""
+
+    email = f"{GMAIL_NAME}+{seed}@gmail.com" if seed is not None else f"{GMAIL_NAME}@gmail.com"
     
-    def _validate_email(self, email_address):
-        # Simple email validation
-        return bool(re.match(r'[^@]+@[^@]+\.[^@]+', email_address))
-    
-    def _generate_new_email(self, email_address, suffix):
-        # Add random number suffix to the email before the "@" symbol
-        username, domain = email_address.split('@')
-        return f'{username}+{suffix}@{domain}'
+    return {"email": email, "password": GMAIL_APP_PASSWORD, "first_name": first_name, "last_name": last_name}
 
-    def get_new_email(self):
-        # Return the generated email with "+" suffix
-        return self.new_email
-    
-    def check_for_otp(self):
-        # Connect to the Gmail server using IMAP
-        try:
-            mail = imaplib.IMAP4_SSL("imap.gmail.com")
-            mail.login(self.original_email, self.password)
-            mail.select("inbox")
+def delete_email_inbox(user_email, password, retries=5, delay=10):
+    imap = imaplib.IMAP4_SSL("imap.gmail.com")
+    imap.login(user_email, password)
 
-            # Fetch all unread emails
-            status, messages = mail.search(None, "UNSEEN")
-            if status != "OK":
-                print("No unread emails found.")
-                return None
 
+    # Select inbox and delete all emails
+    imap.select("inbox")
+    status, all_emails = imap.search(None, "ALL")
+    if status == "OK":
+        for email_id in all_emails[0].split():
+            imap.store(email_id, "+FLAGS", "\\Deleted")
+        imap.expunge()
+
+
+def get_magic_code(user_email, password, retries=5, delay=5):
+    # Connect to the server
+    imap = imaplib.IMAP4_SSL("imap.gmail.com")
+    imap.login(user_email, password)
+
+    for _ in range(retries):
+        imap.select("inbox")
+        status, messages = imap.search(None, '(UNSEEN SUBJECT "Expensify magic sign-in code:")')
+
+        if status == "OK":
             email_ids = messages[0].split()
-            # Start from the latest email by reversing the list
-            email_ids = email_ids[::-1]  # Reverse order to process latest first
+            print(email_ids)
 
-            # Iterate over each email until OTP is found
-            for email_id in email_ids:
-                # Fetch the email by ID
-                status, msg_data = mail.fetch(email_id, '(RFC822)')
-                if status != "OK":
-                    print("Error fetching email.")
-                    continue
+            if email_ids:
+                latest_email_id = email_ids[-1]
+                status, msg_data = imap.fetch(latest_email_id, "(RFC822)")
 
                 for response_part in msg_data:
                     if isinstance(response_part, tuple):
                         msg = email.message_from_bytes(response_part[1])
+                        subject, encoding = decode_header(msg["Subject"])[0]
+                        if isinstance(subject, bytes):
+                            subject = subject.decode(encoding or "utf-8")
 
-                        # Check if the To address matches the generated new email
-                        if msg["To"] == self.new_email:
-                            # Extract OTP from the email body
-                            otp_code = self._extract_otp_from_email(msg)
-                            if otp_code:
-                                # Delete the email containing the OTP
-                                mail.store(email_id, '+FLAGS', '\\Deleted')
-                                mail.expunge()  # Permanently removes deleted emails from the mailbox
-                                
-                                # Logout and return OTP
-                                mail.close()
-                                mail.logout()
-                                return otp_code
-
-            # Logout if OTP not found in unread emails
-            mail.close()
-            mail.logout()
-            print("No OTP found in unread emails.")
-            return None
-        
-        except imaplib.IMAP4.error:
-            print("Failed to connect to Gmail. Please check your email address or password.")
-            return None
-
-    def _extract_otp_from_email(self, msg):
-        # Extract OTP code from the email content
-        if msg.is_multipart():
-            for part in msg.walk():
-                if part.get_content_type() == "text/plain":
-                    email_body = part.get_payload(decode=True).decode()
-                    otp_code = self._extract_otp(email_body)
-                    if otp_code:
-                        return otp_code
+                        # Search for the magic code in the subject
+                        match = re.search(r"Expensify magic sign-in code: (\d+)", subject)
+                        if match:
+                            code = match.group(1)
+                            imap.logout()
+                            return code
+            else:
+                print("No unread emails found with the subject. Retrying...")
         else:
-            email_body = msg.get_payload(decode=True).decode()
-            otp_code = self._extract_otp(email_body)
-            if otp_code:
-                return otp_code
-        return None
+            print("Failed to retrieve emails. Retrying...")
 
-    def _extract_otp(self, text):
-        # Find a 6-digit code in the email body
-        match = re.search(r'\b\d{6}\b', text)
-        return match.group(0) if match else None
-
-def submit_expense_in_workspace_chat(
-    browser: Browser, 
-    page: Page, 
-    user_email: str, 
-    amount: str = "1000"
-) -> tuple[Browser, Page, str]:
-    # Click on workspace chat
-    workspace_chat = page.locator('button[aria-label="Navigates to a chat"]', has_text="Milan T's Workspace").nth(0)
-    expect(workspace_chat).to_be_visible()
-    workspace_chat.click()
-    page.wait_for_timeout(1000)
- 
-    # Click on "+" icon and click submit expense
-    plus_create_icon = page.locator('button[aria-label="Create"]').last
-    expect(plus_create_icon).to_be_visible()
-    plus_create_icon.click()
-    page.wait_for_timeout(2000)
-
-    try:
-        expect(page.locator('div[aria-label="Submit expense"]')).to_be_visible()
-        page.locator('div[aria-label="Submit expense"]').click()
     
-    except:
-        page.get_by_label("Create expense").click()
+
+    imap.logout()
+    print("Max retries reached. Email not found.")
+    return None
+
+
+def select_activity(page, first_name, last_name, activity_text):
     
-    page.wait_for_timeout(1000)
+    # Select activity in onboarding page and click Continue
+    page.get_by_label(activity_text).click()
 
-    # Click on "Manual" button and enter amount
-    page.get_by_label("Manual").click()
-    page.wait_for_timeout(1000)
-
-    page.locator('input[role="presentation"]').fill(amount)
-
-    # Click on Next button
-    next_button = page.locator('button[data-listener="Enter"]', has_text="Next").first
-    expect(next_button).to_be_visible()
-    next_button.click()
-    page.wait_for_timeout(1000)
-
-
-    # Add the description
-    page.locator('div[role="menuitem"]', has_text="Description").click()
-    page.locator('div[role="textbox"][aria-label="What\'s it for?"]').fill("Descrip")
-    page.locator('button', has_text="Save").click()
-
-
-    # Add merchant details
-    page.locator('div[role="menuitem"]', has_text="Merchant").click()
-    page.wait_for_timeout(1000)
-    page.locator('input[aria-label="Merchant"]').fill("Merch")
-
-    save_button = page.locator('button', has_text="Save")
-    expect(save_button).to_be_visible()
-    save_button.click()
-    page.wait_for_timeout(1000)
-
-    # Submit the expense
-    save_button = page.locator('button[data-listener="Enter"]', has_text="Submit")
-    expect(save_button).to_be_visible()
-    save_button.click()
-    page.wait_for_timeout(1000)
-
-    return browser, page, user_email
-
-def login_user(p: PlaywrightContextManager, first_name="Milan", last_name="T") -> tuple[Browser, Page, str]:
-    email_address = "rgarciatammy4@gmail.com"
-    password = ""
-    account = IMAPOTPExtractor(email_address, password)
-    new_email_address = account.get_new_email()
-
-    # Launch chromiun and open new page
-    browser = p.chromium.launch(headless=False, args=[
-        "--ignore-certificate-errors",
-        "--disable-web-security",
-        "--disable-features=IsolateOrigins,site-per-process"
-    ],
-    proxy={"server": "http://localhost:8080"})
-    context = browser.new_context(viewport={"width": 320, "height": 812},
-        is_mobile=True,
-        has_touch=True)
-    page = context.new_page()
-
-    # Step 1: Open expensify url
-    page.goto('https://dev.new.expensify.com:8082/') 
-
-    # Step 2: Enter email and click continue
-    page.locator('input[type="email"]').fill(new_email_address)
-    page.locator('button[tabindex="0"]').click()
-    page.wait_for_timeout(1000)
-
-    # Step 3: Click join button
-    page.get_by_role("button", name="Join").click()
-        
-    # Step 4: Select 'Track and budget expenses' in onobarding page and click Continue
-    page.locator("text='Track and budget expenses'").click()
-    page.get_by_role("button", name="Continue").click()
-    page.wait_for_timeout(1000)
-
-    # Step 5: Enter first name, last name and click continue
-    page.locator('input[name="fname"]').fill(first_name)
-    page.locator('input[name="lname"]').fill(last_name)
+    # Enter first name, last name and click continue
+    page.get_by_role("textbox", name="First name").fill(first_name)
+    page.get_by_role("textbox", name="Last name").fill(last_name)
     page.get_by_role("button", name="Continue").last.click()
-    page.wait_for_timeout(1000)
 
-    return browser, page, new_email_address
 
-def test_tag_long_press_issue():
-    with sync_playwright() as pw:
-        browser, page, user_email = login_user(pw)
-        page.wait_for_timeout(2000)
-        page.get_by_label("Back").click()
-        page.wait_for_timeout(2000)
-        page.get_by_label("Start chat (Floating action)").click()
-        page.wait_for_timeout(2000)
-        page.get_by_label("New workspace").click()
-        page.wait_for_timeout(2000)
-        page.get_by_label("More features").click()
-        page.wait_for_timeout(2000)
-        page.get_by_label("Classify costs and track").click()
-        page.wait_for_timeout(2000)
-        page.get_by_label("Tags").click()
-        page.wait_for_timeout(2000)
-        page.get_by_role("button", name="Add tag").click()
-        page.wait_for_timeout(2000)
-        page.get_by_role("textbox", name="Name").fill("Tag1")
-        page.wait_for_timeout(2000)
-        page.get_by_role("textbox", name="Name").press("Enter")
-        page.wait_for_timeout(2000)
-        if(page.get_by_test_id("WorkspaceMoreFeaturesPage").get_by_label("Back").is_visible()):
-            page.get_by_test_id("WorkspaceMoreFeaturesPage").get_by_label("Back").click()
-        page.get_by_role("button", name="Add tag").click()
-        page.wait_for_timeout(2000)
-        page.get_by_role("textbox", name="Name").fill("Tag2")
-        page.wait_for_timeout(2000)
-        page.get_by_role("textbox", name="Name").press("Enter")
-        page.wait_for_timeout(2000)
-        if(page.get_by_test_id("WorkspaceMoreFeaturesPage").get_by_label("Back").is_visible()):
-            page.get_by_test_id("WorkspaceMoreFeaturesPage").get_by_label("Back").click()
-        page.get_by_label("Tag1").click()
-        page.get_by_label("Tag1").first.hover()
-        page.mouse.down()
-        page.wait_for_timeout(5000)
-        page.mouse.up()
-        page.wait_for_timeout(2000)
-        expect(page.get_by_text("Enable tag")).to_be_visible()
-        expect(page.get_by_text("Select")).not_to_be_visible()
+def login_user(page, user_info, activity_text="Track and budget expenses"):
+    # Clear cookies, local storage, and session storage
+    page.context.clear_cookies()
 
-        # Close the browser
+    page.goto('https://dev.new.expensify.com:8082/')
+    page.wait_for_load_state('load')
+
+    page.get_by_test_id("username").fill(user_info["email"])
+    page.get_by_role("button", name="Continue").click()
+
+    join_button = page.get_by_role("button", name="Join")
+    validate_code_input = page.locator('input[data-testid="validateCode"]')
+
+    page.wait_for_timeout(5000)
+    if (join_button.is_visible()):
+        join_button.click(timeout=3000)
+    else:
+        # magic_code = get_magic_code(user_info["email"], user_info["password"], retries=6, delay=5)
+
+        # if magic_code is None:
+        #     #Retrying again
+        #     page.locator(f"span:has-text('Didn't receive a magic code?')").first.click()
+        #     magic_code = get_magic_code(user_info["email"], user_info["password"], retries=6, delay=5)
+        magic_code = "123456"
+        print(f"Magic code: {magic_code}")
+        validate_code_input.fill(magic_code)
+
+    page.wait_for_timeout(3000)
+
+    select_activity_dialog = page.get_by_text("What do you want to do today?")
+    if select_activity_dialog.count() > 0:
+        select_activity(page, user_info["first_name"], user_info["last_name"], activity_text)
+
+
+def launch_app(pw, headless=False, device=None, geolocation=None):
+    browser = pw.chromium.launch(headless = headless, 
+                                proxy = {"server": "http://127.0.0.1:8080/"}, slow_mo = 1000,
+                                args=[
+                                    "--ignore-certificate-errors",
+                                    "--disable-web-security", 
+                                    "--disable-features=IsolateOrigins,site-per-process"
+                                    ]
+                            )
+
+    context_args = {"viewport": {"width": 1024, "height": 640}}
+    if device:
+        context_args.update(pw.devices[device])
+    if geolocation:
+        context_args["geolocation"] = geolocation
+        context_args["permissions"] = ["geolocation"]
+    context = browser.new_context(**context_args)
+    page = context.new_page()
+    return browser, context, page
+
+    
+def test_55462():
+    with sync_playwright() as p:
+        
+        user_info = get_test_user_info()
+
+        delete_email_inbox(user_info["email"], user_info["password"], retries=6, delay=5)
+
+        browser, context, page = launch_app(p)
+        login_user(page, user_info)
+
+        # prerequisite - user should be invited by another acc in to the workspace
+        page.wait_for_timeout(3000)
+
+        page.get_by_label("My settings").click()
+        page.wait_for_timeout(1000)
+        page.get_by_test_id("InitialSettingsPage").get_by_label("Workspaces").click()
+        page.wait_for_timeout(3000)
+        page.get_by_label("row").click()
+        page.wait_for_timeout(3000)
+        
+        text_locator = page.get_by_text("Leave")
+        expect(text_locator).to_be_visible()
+
         page.close()
         browser.close()

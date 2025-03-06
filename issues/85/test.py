@@ -1,88 +1,76 @@
-import time
 import imaplib
-import re
-import pytest
 import email
-from playwright.sync_api import sync_playwright, expect
-from playwright.sync_api._context_manager import PlaywrightContextManager
-from playwright._impl._browser import Browser
-from playwright._impl._page import Page
+import re
+from playwright.sync_api import sync_playwright, expect, Page
 
-# Utility function to generate a unique random email for testing
-def generate_random_email():
-    timestamp = int(time.time())
-    return f"freelanceapptest+{timestamp}@gmail.com"
 
-EMAIL = "t1533148@gmail.com" # for example test+1234@gmail.com
-PASSWORD = "" # it will be something like "sdib pxop ovyl uawy"
+EMAIL = "velmoner+479@gmail.com"
+PASSWORD = "aory ezrb qkmi qkas"
+NEWDOT_URL = "https://dev.new.expensify.com:8082/"
 
-def get_otp_from_email(username, password, retries=12):
-    """
-    Read the OTP email and return the OTP code.
-    """
-    with imaplib.IMAP4_SSL(host="imap.gmail.com") as imap:
-        imap.login(username, password)
-        for _ in range(1, retries + 1):
-            imap.select("inbox")
-            status, messages = imap.search(None, "ALL")
-            if status == "OK":
-                for message_id in reversed(messages[0].split()):
-                    status, data = imap.fetch(message_id, "(RFC822)")
-                    if status == "OK":
-                        email_message = email.message_from_bytes(data[0][1])
-                        subject, encoding = email.header.decode_header(email_message["Subject"])[0]
-                        if isinstance(subject, bytes):
-                            subject = subject.decode(encoding)
-                        if subject.startswith("Expensify magic sign-in code:"):
-                            otp_code = subject.split(":")[-1].strip()
-                            return otp_code
-        imap.close()
-    raise AssertionError("Failed to read the OTP from the email")
 
-# Function to log in a user and complete onboarding steps
-def login_user(p: PlaywrightContextManager, first_name="Milan", last_name="T") -> tuple[Browser, Page, str]:
-    # Launch Chromium browser in visible mode (non-headless)
-    browser = p.chromium.launch(headless=False, args=[
-        "--ignore-certificate-errors",
-        "--disable-web-security",
-        "--disable-features=IsolateOrigins,site-per-process"
-    ],
-    proxy={"server": "http://localhost:8080"}, slow_mo=1000)
-    context = browser.new_context(ignore_https_errors=True)
-    page = context.new_page()
-    user_email = generate_random_email()
 
-    # Step 1: Open the Expensify URL
-    page.goto('https://dev.new.expensify.com:8082')
+def user_login(page: Page, email_id: str, password: str):
+    page.goto(NEWDOT_URL)
 
-    # Step 2: Enter the generated email and click continue
-    page.locator('input[type="email"]').fill(user_email)
-    page.get_by_role("button", name="Continue").click()
+    page.locator('input[type="email"]').fill(email_id)
+    page.wait_for_timeout(2000)
+    page.get_by_role("button", name="Continue").nth(0).click()
+    otp = "123456"
+    page.wait_for_timeout(10000)
+    page.locator('input[data-testid="validateCode"]').fill(otp)
     try:
-        try:
-            page.wait_for_selector('button[tabindex="0"]:has-text("Join")', timeout=15000) 
-            page.get_by_role("button", name="Join").click()
-            page.locator("text='Track and budget expenses'").click()
-            page.locator("body").press("Enter")
-            page.wait_for_timeout(1000)
-            # Enter first name and last name
-            page.locator('input[name="fname"]').fill(first_name)
-            page.locator('input[name="lname"]').fill(last_name)
-            page.get_by_role("button", name="Continue").last.click()
-            page.wait_for_timeout(4000) 
-        except:
-            page.wait_for_timeout(5000)
-            otp_code = get_otp_from_email(EMAIL, PASSWORD)
-            page.get_by_test_id("SignInPage").get_by_test_id("validateCode").fill(otp_code)
-    except:
+        page.get_by_role("button", name="Sign In").click()
+    except Exception as err:
         pass
 
-    return browser, context, page, user_email
 
-# Test to verify opening distance receipt from another workspace opens without issue
-def test_open_receipt_different_workspace():
+def test_payment_text():
     with sync_playwright() as p:
-        browser, context, page, user_email1 = login_user(p)
-        expect(page.get_by_text("It's great to meet you!", exact=True).last).to_be_visible()
-        context.close()
+        browser = p.chromium.launch(proxy = {"server": "http://localhost:8080"}, headless = False, args = ["--no-sandbox", "--disable-dev-shm-usage", "--ignore-certificate-errors", "--disable-web-security", "--disable-features=IsolateOrigins,site-per-process"], slow_mo = 1000, channel = "chromium")
+        page = browser.new_page()
+        email1, dname1 = "velmoner+321@gmail.com", "fin land"
+        email2, dname2 = "velmoner+8992@gmail.com", "gargi dime"
+
+        user_login(page=page, email_id=EMAIL, password=PASSWORD)
+        page.get_by_label("Start chat (Floating action)", exact=True).click()
+        page.get_by_label("Start chat", exact=True).click()
+
+        page.get_by_test_id("selection-list-text-input").fill(email1)
+        page.get_by_label(dname1).get_by_role(
+            "button", name="Add to group").click()
+
+        page.get_by_test_id("selection-list-text-input").fill(email2)
+        page.get_by_label(dname2).get_by_role(
+            "button", name="Add to group").click()
+
+        page.get_by_role("button", name="Next").click()
+        page.get_by_role("button", name="Start group").click()
+
+        chatroom_id = page.url.split("/")[-1]
+        search_text = f"type:chat status:all in:{chatroom_id}"
+        page.get_by_test_id(
+            f"report-screen-{chatroom_id}").get_by_text("fin, gargi, wii").click()
+        page.get_by_label("Leave").click()
+
+        current_report_id = page.url.split("/")[-1]
+        page.get_by_test_id(
+            f"report-screen-{current_report_id}").get_by_label("Search").click()
+        page.get_by_test_id("search-router-text-input").fill(search_text)
+        page.wait_for_timeout(1500)
+        page.get_by_label(search_text).click()
+        page.wait_for_timeout(1000)
+        page.get_by_text("Filters").click()
+        page.get_by_test_id(
+            "SearchAdvancedFiltersPage").get_by_text("In").click()
+
+        empty_item_exists = False
+
+        # condition to find
+        for i in page.get_by_test_id("selection-list").get_by_role("button").all():
+            if i.get_attribute("id") and i.get_attribute("id") == chatroom_id:
+                empty_item_exists = True
+        assert not empty_item_exists, "Empty entry found in search list with green check"
+
+        # Close browser
         browser.close()

@@ -1,45 +1,73 @@
-from playwright.sync_api import sync_playwright, expect
+
+"""
+Verify that the app correctly clears the State Input after closing and reopening the modal.
+
+"""
+import pytest
+from playwright.async_api import Page, expect
+from utils.login import NEW_DOT_URL, sign_in
+from utils.browser import close_browser, start_browser
+
+STATIC_PREFIX = 55073
+EXPENSIFY_USERNAME_FIRSTNAME = "osaidtest"
+EXPENSIFY_USERNAME_LASTNAME = "testaccount"
+EXPENSIFY_USERNAME = f"{EXPENSIFY_USERNAME_FIRSTNAME} {EXPENSIFY_USERNAME_LASTNAME}"
+EXPENSIFY_EMAIL_USERNAME = "osaidtest5"
+EXPENSIFY_EMAIL = f"osaidtest5+{STATIC_PREFIX}@gmail.com"
+EXPENSIFY_PASSWORD = "ntvd acej mmaa qqmd"
+DATA_DIR = "browser_context"
+WORKSPACE_NAME = "workspace_1"
+SLOW_MO = 1000
+NORMAL_RUN = False
+PROXY_SETTINGS = {"server": "http://localhost:8080"}
+
+async def sign_in_recorded(page: Page, email: str):
+    await page.get_by_test_id("username").fill(email)
+    await page.get_by_role("button", name="Continue").click()
+    await page.get_by_test_id("validateCode").fill("123456")
+
+@pytest.mark.asyncio
+async def test_41157():
+    try:
+        context, page, playwright = await start_browser(
+            persistent=False,
+            data_dir=DATA_DIR,
+            headless=False,
+            slow_mo=SLOW_MO,
+            launch_args=[
+                "--ignore-certificate-errors",
+                "--disable-web-security",
+                "--disable-features=IsolateOrigins,site-per-process",
+            ],
+            proxy=PROXY_SETTINGS
+        )
+
+        # Step 1: Sign in
+        if NORMAL_RUN:
+            # Normal test run
+            await sign_in(page, EXPENSIFY_EMAIL, password=EXPENSIFY_PASSWORD)
+        else:
+            # Recorded Test Run.
+            await page.goto(NEW_DOT_URL)
+            await sign_in_recorded(page=page, email=EXPENSIFY_EMAIL)
+
+        # Got to the workspace settings.
+        await page.get_by_role("button", name="My settings").click()
+        await page.get_by_role("menuitem", name="Workspaces").click()
+        await page.get_by_test_id("WorkspacesListPage").get_by_role(
+            "button", name="row"
+        ).filter(has=page.get_by_text(WORKSPACE_NAME)).click()
+        await page.get_by_role('menuitem', name='Workflows').click()
+        await page.get_by_text("Connect bank account").click()
+        await page.get_by_role("menuitem", name="State").click()
+        await page.get_by_test_id("selection-list-text-input").fill("randominput")
+        await page.get_by_test_id("PushRowModal").get_by_label("Back").click()
+        await page.get_by_role("menuitem", name="State").click()
+        await expect(page.get_by_test_id("selection-list-text-input")).not_to_have_value('randominput')
+  
+
+    finally:
+        # Step 6: Close the browser.
+        await close_browser(context, page, playwright)
 
 
-user_email = "totherandomuser+50963@gmail.com"
-password = ""
-
-
-def login(p, context):
-    page = context.new_page()
-    page.goto('https://dev.new.expensify.com:8082')
-
-    # Step 1: Enter username and continue
-    page.get_by_test_id("username").click()
-    page.get_by_test_id("username").fill(user_email)
-    page.get_by_role("button", name="Continue").click()
-
-    # Step 2: Mark Inbox read and then get magic code from email
-    magic_code = "123456"
-
-    # Step 3: Fill in the magic code
-    validate_code_input = page.locator('input[name="validateCode"]')
-    expect(validate_code_input).to_be_visible()
-    validate_code_input.fill(magic_code)
-    page.wait_for_timeout(1000)
-
-    return page
-
-
-def test():
-    with sync_playwright() as p:
-
-        # Step 1: Main Browser Login
-        browser = p.chromium.launch(headless=False, args=[
-                        "--disable-web-security",
-                        "--disable-features=IsolateOrigins,site-per-process"],
-                        slow_mo=500)
-        
-        context = browser.new_context()
-        page = login(p, context)
-
-        page.get_by_test_id("CustomBottomTabNavigator").get_by_label("Search").click()
-        page.get_by_role("button", name="Feb 14 M1 Randa Singh Randa").click()
-        page.wait_for_timeout(3000)
-
-        expect(page.get_by_test_id("report-screen-4704693588482012").get_by_label("Search")).not_to_be_visible()

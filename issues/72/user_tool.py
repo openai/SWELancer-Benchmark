@@ -1,138 +1,117 @@
-from playwright.sync_api import sync_playwright, expect
-from playwright.sync_api._context_manager import PlaywrightContextManager
-from playwright._impl._browser import Browser
-from playwright._impl._page import Page
+import os
+
+import pytest
+from playwright.async_api import Page, TimeoutError, async_playwright
 from utils.trace_cleaner import trace_cleaner
 
-
-# Utility to generate an email
-def generate_email():
-    timestamp = '52202001'
-    return f"freelanceapptest+{timestamp}@gmail.com"
-
-
-# Function to log in the user and complete onboarding steps
-def login_user(p: PlaywrightContextManager, first_name="Milan", last_name="T") -> tuple[Browser, Page, str]:
-    # Launch Chromium and open a new page in a mobile device view
-    device = p.devices["iPhone 13"]
-    browser = p.chromium.launch(
-        channel="chrome",
-        headless=False,
-        args=[
-            "--ignore-certificate-errors",
-            "--disable-web-security",
-            "--disable-features=IsolateOrigins,site-per-process"
-        ],
-        proxy={"server": "http://localhost:8080"},
-        slow_mo=1000
-    )
-
-    context = browser.new_context(ignore_https_errors=True, **device)
-    page = context.new_page()
-    user_email = generate_email()
-
-    # Step 1: Open the Expensify URL
-    page.goto('https://dev.new.expensify.com:8082/') 
-
-    # Step 2: Enter a generated email and click continue
-    page.locator('input[type="email"]').fill(user_email)
-    page.locator('button[tabindex="0"]').click()
-    page.wait_for_timeout(1000) 
-
-    # Step 3: Click the join button if available otherwise skip
-    try: 
-        page.locator('button[tabindex="0"]').click() 
-        page.wait_for_timeout(1000) 
-    except Exception:
-        pass
-
-    # Step 4: Ensure that the user reaches the dashboard by checking for visible text
-    expect(page.locator("text=What do you want to do today?")).to_be_visible()
-        
-    # Step 5: Select 'Track and budget expenses' on the onboarding page and click Continue
-    page.locator("text='Track and budget expenses'").click()
-    page.wait_for_timeout(1000) 
-
-    # Step 6: Enter first name last name, and continue
-    page.locator('input[name="fname"]').fill(first_name)
-    page.locator('input[name="lname"]').fill(last_name)
-    page.get_by_role("button", name="Continue").last.click()
-    page.wait_for_timeout(1000) 
-
-    return browser, page
+EMAIL_USERNAME = "xecuycismfsga"
+EMAIL_ALIAS = "8ita506t"
+USER_EMAIL = f"{EMAIL_USERNAME}+{EMAIL_ALIAS}@gmail.com"
+PASSWORD = "uwgb zzoc cofa kaaq"
+SLOW_MO: int | None = 500
+PROXY_URL = os.getenv("PROXY_URL")
 
 
-def submit_multiple_expenses(page, amounts, emails):
+async def get_magic_code(
+    page: Page, user_email: str = USER_EMAIL, password: str = PASSWORD
+):
+    return "123456"
+
+
+async def create_user(page: Page, firstname: str = "User", lastname: str = EMAIL_ALIAS):
+    await page.get_by_role("button", name="Join").click()
+
+    # Update profile
+    await page.get_by_text("Track and budget expenses").click()
+    await page.get_by_role("textbox", name="First name").fill(firstname)
+    await page.get_by_role("textbox", name="Last name").fill(lastname)
+    await page.get_by_role("button", name="Continue").click()
+
+
+async def login(page: Page):
+    # get current timestamp
+    magic_code = await get_magic_code(page)
+
+    if magic_code is None:
+        raise ValueError("Failed to retrieve magic code")
+
+    await page.get_by_role("textbox").fill(magic_code)
+
+
+async def login_or_create_user(
+    page: Page,
+    firstname: str = "User",
+    lastname: str = EMAIL_ALIAS,
+    user_email: str = USER_EMAIL,
+):
+    await page.goto("https://dev.new.expensify.com:8082/")
+    await page.get_by_test_id("username").fill(user_email)
+    await page.get_by_role("button", name="Continue").click()
+
+    try:
+        await page.get_by_role("button", name="Join").wait_for(
+            state="visible", timeout=2000
+        )
+        await create_user(page, firstname=firstname, lastname=lastname)
+    except TimeoutError:
+        await login(page)
+
+    await page.get_by_label("Inbox").wait_for(state="visible", timeout=10000)
+
+
+async def close_button_if_present(page: Page):
     """
-    Creates and submits multiple expenses using the provided lists of amounts and emails.
-
-    :param amounts: List of amounts (e.g., [100, 200])
-    :param emails: List of recipient emails (e.g., ["test01@gmail.com", "test02@gmail.com"])
+    Occasionally, there is a close button that prevents any clicks on the page as
+    it covers most of the screen. This button cannot be seen visually.
     """
-
-    for amount, email in zip(amounts, emails):
-        # Step 1: Navigate to start a new expense submission
-        page.get_by_label("Start chat (Floating action)").click()
-        page.get_by_text("Submit expense").first.click()
-
-        # Step 2: Choose Manual Expense
-        page.get_by_label("Manual").click()
-
-        # Step 3: Select the currency
-        page.get_by_label("Select a currency").click()
-        page.get_by_test_id("selection-list-text-input").fill("USD")
-        page.get_by_label("USD - $").click()
-
-        # Step 4: Enter the expense amount
-        page.get_by_placeholder("0").fill(str(amount))
-        page.locator("#numPadContainerView").get_by_role("button", name="Next").click()
-
-        # Step 5: Enter the recipient email
-        page.get_by_test_id("selection-list-text-input").fill(email)
-        page.get_by_label(email).click()
-
-        # Step 6: Submit the expense
-        page.get_by_role("button", name="Submit $").click()
-
-        # Step 7: Navigate back to submit another expense
-        page.get_by_label("Back").last.click()
+    close_button = page.locator('button[aria-label="Close"]')
+    if await close_button.is_visible():
+        await close_button.click()
 
 
-def test_select_expense_by_tapping_and_holding():
-    with sync_playwright() as p:
-        browser, page = login_user(p)
-        context = page.context
-        # Start tracing
-        context.tracing.start(screenshots=True, snapshots=True, sources=True)
+@pytest.mark.asyncio
+async def test_scroll_to_comments():
+    async with async_playwright() as p:
+        browser = await p.chromium.launch(
+            proxy={"server": PROXY_URL} if PROXY_URL else None,
+            headless=False,
+            args=[
+                "--no-sandbox",
+                "--disable-dev-shm-usage",
+                "--ignore-certificate-errors",
+                "--disable-web-security",
+                "--disable-features=IsolateOrigins,site-per-process",
+            ],
+            slow_mo=SLOW_MO,
+        )
+
+        context = await browser.new_context()
+        # Start tracing with screenshots, snapshots, and sources
+        await context.tracing.start(screenshots=True, snapshots=True, sources=True)
 
         try:
-            # Step 1: Login as a new user and return to the main navigation page
-            if page.get_by_text("Welcome to Expensify").is_visible():
-                page.get_by_label("Back").click()
+            page = await context.new_page()
 
-            # Step 2: Submit multiple expenses
-            amounts = [100, 250, 500, 800]
-            emails = ["test01@gmail.com", "test02@gmail.com", "test03@gmail.com"]
+            # admin login
+            await login_or_create_user(page)
+            await close_button_if_present(page)
+            await page.get_by_role("button", name="Search").click()
 
-            submit_multiple_expenses(page, amounts, emails)
+            header = page.locator('div[data-drag-area="false"]').filter(has_text="Expenses")
+            fifth_sibling = header.locator("xpath=following-sibling::*[5]")
+            first_child_of_second_sibling = fifth_sibling.locator("xpath=descendant::*[1]")
 
-            # Step 3: Go to the Expensify search page, tap and hold one of the expenses
-            page.get_by_role("button", name="Search").click()
-            expense = page.get_by_role("button", name="Milan T test02@gmail.com $")
-            expense.hover()
-            page.mouse.down(button="left")
-            page.wait_for_timeout(2000)
-            page.mouse.up(button="left")
+            scroll_bar_width = await first_child_of_second_sibling.evaluate(
+                'el => getComputedStyle(el).getPropertyValue("scrollbar-width")'
+            )
+            assert scroll_bar_width == "none", "There MUST not be a scrollbar"
 
-            # Step 4: Assert that the select button is visible
-            assert page.get_by_text("Select").is_visible(), "Unable to select expenses by tapping and holding on the expense"
+            # Close all tabs if necessary
+            await page.close()
+
         finally:
-            # Stop tracing and export the trace file
-            trace_file_path = "/app/expensify/user_tool/output_browser1.zip"
-            context.tracing.stop(path=trace_file_path)
-            trace_cleaner(trace_file_path)
-            browser.close()
-
-
-if __name__ == "__main__":
-    test_select_expense_by_tapping_and_holding()
+            trace_path = "/app/expensify/user_tool/output_browser1.zip"
+            await context.tracing.stop(path=trace_path)
+            trace_cleaner(trace_path)
+            await context.close()
+            await browser.close()

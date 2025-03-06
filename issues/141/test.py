@@ -1,81 +1,106 @@
-import re
-from playwright.sync_api import sync_playwright
+import pytest_asyncio
+import pytest
 
+from playwright.async_api import async_playwright, expect, Page
+from utils.login import EmailHandler, complete_onboarding
 
-# Expensify app URL
-EXPENSIFY_URL = "https://dev.new.expensify.com:8082/"
+NEWDOT_URL = "http://dev.new.expensify.com:8082/"
+EXPENSIFY_EMAIL = "testingq186+52140@gmail.com"
+EXPENSIFY_PASSWORD = "kkfr hqiv yuxq rbso"
+FIRST_NAME = "Testing"
+LAST_NAME = "52140"
 
-# Email login credentials
-EMAIL_USERNAME = "naturesv057+52198_1@gmail.com"
+TESTING_FLOW = True
 
-def launch_browser(pw, device=None, geolocation=None):
+@pytest_asyncio.fixture
+async def page():
     """
-    Launch the browser.
+    Launch the Expensify app.
     """
-    browser = pw.chromium.launch(
+    pw = await async_playwright().start()
+    browser = await pw.chromium.launch(
+        channel="chrome",
         headless=False,
-        proxy = {"server": "http://127.0.0.1:8080/"},
         args=[
             "--ignore-certificate-errors",
             "--disable-web-security",
-            "--disable-features=IsolateOrigins,site-per-process",
+            "--disable-features=IsolateOrigins,site-per-process"
         ],
+        proxy={"server": "http://localhost:8080"},
         slow_mo=500
     )
-    context_args = {}
-    if device:
-        context_args.update(pw.devices[device])
-    if geolocation:
-        context_args["geolocation"] = geolocation
-        context_args["permissions"] = ["geolocation"]
-    context = browser.new_context(**context_args)
-    page = context.new_page()
-    return browser, context, page
 
+    context = await browser.new_context(ignore_https_errors=True)
+    context.set_default_timeout(30_000)
+    page = await context.new_page()
 
-def login_user(page):
-    """
-    Login to the Expensify app and complete the onboarding.
-    """
-    # Open the Expensify app
-    page.goto(EXPENSIFY_URL)
+    yield page
+    await browser.close()
+    await pw.stop()
 
-    # Login user
-    page.get_by_role("textbox", name="Phone or email").fill(EMAIL_USERNAME)
-    page.locator("div", has_text="Continue").last.click()
-    
-    # Get the OTP code from the email
-    otp = "123456"
-    
-    # Enter the OTP code
-    page.keyboard.type(otp)
+async def new_dot_login(page: Page, email, password):
+    await page.goto(NEWDOT_URL)
+    with EmailHandler(email, password) as email_handler:
+        if not TESTING_FLOW :
+            email_handler.clean_inbox()  # Clean inbox
 
+        # Enter email
+        await page.get_by_role("textbox", name="Phone or email").fill(email)
+        await page.get_by_role("button", name="Continue").click()
+        
+        try:
+            await expect(page.locator('input[name="validateCode"]').first).to_be_visible()
+            otp = email_handler.read_otp_code() if not TESTING_FLOW else "123456"
+            await page.locator('input[name="validateCode"]').first.fill(str(otp))
+            # Wait sign in to complete
+            await page.get_by_text("Please enter the magic code").wait_for(state="hidden")
+        except Exception:
+            await page.get_by_role("button", name="Join").click()
+            await expect(page.get_by_label("My settings")).to_be_visible(timeout=10_000)
+            # Force onboarding modal to pop up
+            await page.goto("https://dev.new.expensify.com:8082/onboarding/purpose")
+            await complete_onboarding(page, FIRST_NAME, LAST_NAME)
 
-def test_52198():
-    with sync_playwright() as p:
-        # Step 1: Login user
-        browser, context, page = launch_browser(p)
-        login_user(page)
-        page.wait_for_timeout(5000)
+async def create_workspace_and_add_company_card(page: Page):
+    await page.get_by_label("My settings").click()
+    await page.get_by_test_id("InitialSettingsPage").get_by_label("Workspaces").click()
+    try:
+        # Check if the workspace already exists
+        await expect(page.get_by_label("row").get_by_text(f"{FIRST_NAME} {LAST_NAME}'s Workspace", exact=True)).to_be_visible(timeout=5000)
+        await page.get_by_label("row").get_by_text(f"{FIRST_NAME} {LAST_NAME}'s Workspace", exact=True).click()
+        await page.get_by_test_id("WorkspaceInitialPage").get_by_label("Company cards").click()
+    except Exception:
+        # Create a new workspace and add a card
+        await page.get_by_label("New workspace").click()
+        await expect(page.get_by_test_id("WorkspaceInitialPage").get_by_text(f"{FIRST_NAME} {LAST_NAME}'s Workspace", exact=True)).to_be_visible()
+        await page.get_by_label("More features").click()
+        await page.get_by_label("Import spend from existing").click()
+        await page.get_by_role("button", name="Upgrade").click()
+        await page.get_by_role("button", name="Got it, thanks").click()
+        await page.get_by_test_id("WorkspaceInitialPage").get_by_label("Company cards").click()
+        await page.get_by_label("Add company cards").click()
+        await page.get_by_label("American Express").click()
+        await page.get_by_role("button", name="Next").click()
+        await page.get_by_label("American Express Corporate").click()
+        await page.get_by_role("button", name="Next").click()
+        await page.get_by_role("button", name="Next").click()
+        await page.get_by_role("textbox").click()
+        await page.get_by_role("textbox").fill("Delivery file name")
+        await page.get_by_role("button", name="Submit").click()
+    finally:
+        await expect(page.get_by_label("American Express cards")).to_be_visible(timeout=10_000)
 
-        # Step 2: Reintroduce scenario
-        # Define the locators
-        locator1 = page.locator("div").filter(has_text=re.compile(r"^\.expensify-app-icon_svg__st1\{fill:#002e22\}DEV/Inbox$")).first
-        locator2 = page.get_by_test_id("2721644976521748")
+@pytest.mark.asyncio
+async def test_correct_card_name_displayed_after_refresh(page: Page):
+    await new_dot_login(page, EXPENSIFY_EMAIL, EXPENSIFY_PASSWORD)
+    await create_workspace_and_add_company_card(page)
+    await page.get_by_role("button", name="Settings", exact=True).click()
+    await page.get_by_text("Card feed name").click()
+    # Correct name before reload
+    await expect(page.get_by_role("textbox", name="Name")).to_have_value("American Express cards")
+    await page.reload()
 
-        # Get bounding boxes
-        box1 = locator1.bounding_box()
-        box2 = locator2.bounding_box()
-
-        # Ensure both elements exist
-        assert box1 is not None and box2 is not None, "One or both elements were not found on the page."
-
-        # Calculate space between elements
-        bottom_of_locator1 = box1["y"] + box1["height"]
-        top_of_locator2 = box2["y"]
-
-        # Compute the gap
-        gap = top_of_locator2 - bottom_of_locator1
-
-        # Step 3: Check if the issue is resolved
-        assert gap == 12, f"Expected gap to be 12px but found {gap}px." # Assert the gap is exactly 12px
+    # Should not show 'undefined'
+    await expect(page.get_by_role("textbox", name="Name")).not_to_have_value("undefined cards")
+    # Should show the correct name
+    await expect(page.get_by_role("textbox", name="Name")).to_have_value("American Express cards")

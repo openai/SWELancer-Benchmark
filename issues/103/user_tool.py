@@ -1,247 +1,176 @@
-import os
-import random
-import re
-import string
-
+from playwright.sync_api import TimeoutError, expect, sync_playwright
 from utils.trace_cleaner import trace_cleaner
 
-import pytest
-from playwright.async_api import Page, TimeoutError, async_playwright, expect
+# Expensify app URL
+EXPENSIFY_URL = "https://dev.new.expensify.com:8082/"
 
-EMAIL_USERNAME = "xecuycismfsga"
-EMAIL_ALIAS = "kypqxmbx"
-USER_EMAIL = f"{EMAIL_USERNAME}+{EMAIL_ALIAS}@gmail.com"
-PASSWORD = ""
-SLOW_MO: int | None = 500
-PROXY_URL = os.getenv("PROXY_URL")
+# Email login credentials
+EMAIL_USERNAME = "expensifytesting1@gmail.com"
+EMAIL_PASSWORD = ""
 
-WORKSPACE_NAME = "BltGot0t"
+# Email username postfix
+EMAIL_USERNAME_POSTFIX = "52678.4"
 
 
-async def create_workspace(page: Page, workspace_name: str = WORKSPACE_NAME):
+def generate_user_email(user_id=None):
     """
-    Create a workspace if it does not already exist
+    Generate an email address for user login.
     """
-    await page.get_by_label("My settings").click()
-    await page.get_by_test_id("InitialSettingsPage").get_by_label("Workspaces").click()
+    temp = EMAIL_USERNAME.rsplit("@", 1)
+    username = temp[0].strip()
+    domain = temp[1].strip()
+    return f"{username}+{EMAIL_USERNAME_POSTFIX}{user_id or ''}@{domain}"
 
+
+def launch_browser(pw, headless=False, device=None, permissions=None, geolocation=None):
+    """
+    Launch the browser.
+    """
+    browser = pw.chromium.launch(
+        channel="chrome",
+        headless=False,
+        args=[
+            "--ignore-certificate-errors",
+            "--disable-web-security",
+            "--disable-features=IsolateOrigins,site-per-process",
+        ],
+        slow_mo=1000,
+    )
+    context_args = {"permissions": permissions or []}
+    if device:
+        context_args.update(pw.devices[device])
+    if geolocation:
+        context_args["geolocation"] = geolocation
+        context_args["permissions"].append("geolocation")
+    context = browser.new_context(**context_args)
+    page = context.new_page()
+    return browser, context, page
+
+
+def login_user(page, user_email, first_name="John", last_name="Doe"):
+    """
+    Log into the Expensify app.
+    """
+    # Open the Expensify app
+    page.goto(EXPENSIFY_URL)
+    # Login user
+    page.get_by_test_id("username").fill(user_email)
+    page.get_by_role("button", name="Continue").click()
+    # Check if OTP is required for the login
     try:
-        await (
-            page.locator('button[aria-label="row"]')
-            .filter(has_text=workspace_name)
-            .last.wait_for(timeout=3000)
-        )
-    except TimeoutError:
-        await page.get_by_label("New workspace").last.click()
-
-        await page.get_by_text("Name", exact=True).click()
-        name_input = page.get_by_role("textbox", name="Name")
-        await name_input.clear()
-        await name_input.type(workspace_name, delay=200)
-        await page.get_by_role("button", name="Save").click()
-        await (
-            page.get_by_test_id("WorkspaceInitialPage")
-            .get_by_label("Back")
-            .first.click()
-        )
-
-    await page.get_by_label("Inbox").click()
-
-
- def generate_random_string(length=6, case="mixed"):
-    if case == "lower":
-        characters = string.ascii_lowercase
-    elif case == "upper":
-        characters = string.ascii_uppercase
-    elif case == "mixed":
-        characters = string.ascii_letters
+        expect(page.get_by_test_id("SignInPage").get_by_test_id("validateCode")).to_be_visible(timeout=7000)
+    except (AssertionError, TimeoutError):
+        # If not required, expect the join button to appear and click the button
+        page.get_by_test_id("SignInPage").get_by_role("button", name="Join").click()
     else:
-        raise ValueError("Case must be 'lower', 'upper', or 'mixed'")
-
-    random_string = "".join(random.choice(characters) for _ in range(length))
-    return random_string
-
-
-async def get_magic_code(
-    page: Page, user_email: str = USER_EMAIL, password: str = PASSWORD
-):
-    return "123456"
-
-
-async def create_user(page: Page, firstname: str = "User", lastname: str = EMAIL_ALIAS):
-    await page.get_by_role("button", name="Join").click()
-
-    # Update profile
-    await page.get_by_text("Track and budget expenses").click()
-    await page.get_by_role("textbox", name="First name").fill(firstname)
-    await page.get_by_role("textbox", name="Last name").fill(lastname)
-    await page.get_by_role("button", name="Continue").click()
-
-
-async def login(page: Page):
-    # get current timestamp
-    magic_code = await get_magic_code(page)
-
-    if magic_code is None:
-        raise ValueError("Failed to retrieve magic code")
-
-    await page.get_by_role("textbox").fill(magic_code)
-
-
-async def login_or_create_user(
-    page: Page,
-    firstname: str = "User",
-    lastname: str = EMAIL_ALIAS,
-    user_email: str = USER_EMAIL,
-):
-    await page.goto("https://dev.new.expensify.com:8082/")
-    await page.get_by_test_id("username").fill(user_email)
-    await page.get_by_role("button", name="Continue").click()
-
-    try:
-        await page.get_by_role("button", name="Join").wait_for(
-            state="visible", timeout=2000
-        )
-        await create_user(page, firstname=firstname, lastname=lastname)
-    except TimeoutError:
-        await login(page)
-
-    await page.get_by_label("Inbox").wait_for(state="visible", timeout=10000)
-
-
-async def submit_expense(page: Page):
-    expense_preview = (
-        page.get_by_role("button", name="View details")
-        .filter(has_text=f"{WORKSPACE_NAME} owes:")
-        .last
-    )
-
-    try:
-        await expense_preview.wait_for(state="visible", timeout=3000)
-    except TimeoutError:
-        await page.get_by_label("Create").last.click()
-        await page.get_by_text("Submit expense", exact=True).click()
-        await page.get_by_label("Manual").click()
-        await page.get_by_placeholder("0").fill("100")
-        await (
-            page.locator("#numPadContainerView")
-            .get_by_role("button", name="Next")
-            .click()
-        )
-        await page.get_by_text("Merchant").click()
-        await page.get_by_role("textbox", name="Merchant").fill("test")
-        await page.get_by_role("button", name="Save").click()
-        await page.get_by_role("button", name="Submit").click()
-
-    return expense_preview
-
-
-async def enable_custom_fields_and_rules(page: Page):
-    await page.get_by_label("My settings").click()
-    await page.get_by_role("menuitem", name="Workspaces").click()
-
-    await (
-        page.locator('button[aria-label="row"]')
-        .filter(has_text=WORKSPACE_NAME)
-        .last.click(timeout=3000)
-    )
-
-    await page.get_by_label("More features").click()
-    custom_fields = page.get_by_label("Set up custom fields for spend.")
-
-    if not await custom_fields.is_checked():
-        await custom_fields.click()
-
-    try:
-        await page.get_by_role("button", name="Upgrade").click(timeout=3000)
-        await page.get_by_role("button", name="Got it, thanks").click()
-    except TimeoutError:
-        pass
-
-    rules = page.get_by_label("Require receipts, flag high spend, and more.")
-    if not await rules.is_checked():
-        await rules.click()
-
-
-async def add_custom_report_name(page: Page):
-    await page.get_by_role("menuitem", name="Rules").click()
-    custom_report_names = page.get_by_role(
-        "switch", name="Custom report names", exact=True
-    )
-    if not await custom_report_names.is_checked():
-        await custom_report_names.click()
-
-    await page.get_by_role("menuitem", name="report", exact=True).click()
-    await page.locator('input[aria-label="Name"]').fill("report")
-    await page.get_by_role("button", name="Save").click()
-
-
-@pytest.mark.asyncio
-async def test_search_bar_spacing():
-    async with async_playwright() as p:
-        browser = await p.chromium.launch(
-            proxy={"server": PROXY_URL} if PROXY_URL else None,
-            headless=False,
-            args=[
-                "--no-sandbox",
-                "--disable-dev-shm-usage",
-                "--ignore-certificate-errors",
-                "--disable-web-security",
-                "--disable-features=IsolateOrigins,site-per-process",
-            ],
-            slow_mo=SLOW_MO,
-        )
-
-        context = await browser.new_context()
-        await context.tracing.start(screenshots=True, snapshots=True, sources=True)
-        page = await context.new_page()
-
+        # Get the OTP and complete verification
+        otp_code = "123456"
+        page.get_by_test_id("SignInPage").get_by_test_id("validateCode").fill(otp_code)
         try:
-            await login_or_create_user(page)
+            page.get_by_test_id("SignInPage").get_by_role("button", name="Sign in").click(timeout=2000)
+        except (AssertionError, TimeoutError):
+            pass
+    # Check if onboarding is required
+    try:
+        expect(page.get_by_text("What do you want to do today?")).to_be_visible(timeout=5000)
+    except (AssertionError, TimeoutError):
+        pass
+    else:
+        # Complete the onboarding
+        page.get_by_label("Track and budget expenses").click()
+        page.get_by_role("button", name="Continue").first.click()
+        page.get_by_role("textbox", name="First name").fill(first_name)
+        page.get_by_role("textbox", name="Last name").fill(last_name)
+        page.get_by_role("button", name="Continue").last.click()
+    # Dismiss get started dialog if appears
+    try:
+        page.get_by_role("button", name="Get started").click(timeout=3000)
+    except (AssertionError, TimeoutError):
+        pass
+    # Expect the main screen to appear
+    expect(page.get_by_test_id("BaseSidebarScreen")).to_be_visible(timeout=7000)
 
-            await create_workspace(page)
 
-            workspace_chat = (
-                page.locator(
-                    'button[aria-label="Navigates to a chat"]',
-                    has_text=WORKSPACE_NAME,
-                )
-                .filter(has_not_text="#admins")
-                .first
-            )
-            await workspace_chat.click()
+def test_approver_field_in_tag_editor_shows_user_name():
+    """
+    Verify that the approver field in the tag editor shows the user name instead of user email.
+    """
+    with sync_playwright() as pw:
+        # Login user
+        user_email = generate_user_email()
+        fname, lname = "John", "Doe"
+        user_name = " ".join([fname, lname]).strip()
+        browser, context, page = launch_browser(pw)
+        
+        # Start tracing
+        context.tracing.start(screenshots=True, snapshots=True, sources=True)
+        
+        try:
+            login_user(page, user_email, first_name=fname, last_name=lname)
 
-            expense_preview = await submit_expense(page)
-            await expense_preview.click()
+            # Create a new workspace, if one is not already created
+            page.get_by_role("button", name="My settings").click()
+            page.get_by_test_id("InitialSettingsPage").get_by_role("menuitem", name="Workspaces", exact=True).click()
+            texts = page.get_by_test_id("WorkspacesListPage").get_by_label("row").all_inner_texts()
+            if not texts:
+                page.get_by_test_id("WorkspacesListPage").get_by_role("button", name="New workspace").first.click()
+            else:
+                page.get_by_test_id("WorkspacesListPage").get_by_label("row").first.click()
 
-            await enable_custom_fields_and_rules(page)
-            await add_custom_report_name(page)
+            # Enable workflows, rules, and tags, if not already enabled
+            page.get_by_test_id("WorkspaceInitialPage").get_by_role("menuitem", name="More features").click()
+            ws_workflows = page.get_by_test_id("WorkspaceMoreFeaturesPage").get_by_label("Configure how spend is approved")
+            if not ws_workflows.is_checked():
+                ws_workflows.click()
+            ws_rules = page.get_by_test_id("WorkspaceMoreFeaturesPage").get_by_label("Require receipts, flag high spend")
+            if not ws_rules.is_checked():
+                ws_rules.click()
+                if page.get_by_test_id("workspaceUpgradePage").is_visible():
+                    page.get_by_test_id("workspaceUpgradePage").get_by_role("button", name="Upgrade").click()
+                    page.get_by_test_id("workspaceUpgradePage").get_by_role("button", name="Got it").click()
+            ws_tags = page.get_by_test_id("WorkspaceMoreFeaturesPage").get_by_label("Classify costs and track billable")
+            if not ws_tags.is_checked():
+                ws_tags.click()
 
-            await (
-                page.get_by_test_id("WorkspaceInitialPage")
-                .get_by_label("Back")
-                .first.click()
-            )
-            await page.get_by_label("Inbox").click()
+            # Enable approvals, if not already enabled
+            page.get_by_test_id("WorkspaceInitialPage").get_by_role("menuitem", name="Workflows").click()
+            ws_approvals = page.get_by_test_id("WorkspacePageWithSections").get_by_label("Require additional approval")
+            if not ws_approvals.is_checked():
+                ws_approvals.click()
 
-            report_details = (
-                page.locator('div[data-testid="DisplayNamesWithTooltip"]')
-                .filter(has_text=re.compile(r"Expense Report #\d+"))
-                .last
-            )
-            report_title = await report_details.inner_text(timeout=5000)
+            # Delete, if the tag already exists
+            tag_name = "Tag 1"
+            page.get_by_test_id("WorkspaceInitialPage").get_by_role("menuitem", name="Tags").click()
+            tag = page.get_by_test_id("WorkspaceTagsPage").get_by_role("button", name=tag_name).first
+            if tag.is_visible():
+                tag.click()
+                page.get_by_test_id("TagSettingsPage").get_by_role("menuitem", name="Delete").click()
+                page.get_by_role("button", name="Delete").click()
 
-            await page.get_by_text("Title").last.click()
-            await page.locator('input[aria-label="Title"]').fill(generate_random_string())
-            await page.get_by_role("button", name="Save").click()
+            # Create tag
+            page.get_by_test_id("WorkspaceTagsPage").get_by_role("button", name="Add tag").click()
+            page.get_by_test_id("CreateTagPage").get_by_role("textbox", name="Name").fill(tag_name)
+            page.get_by_test_id("CreateTagPage").get_by_role("button", name="Save").click()
 
-            await expect(
-                page.locator('div[data-testid="DisplayNamesWithTooltip"]')
-                .filter(has_text=report_title)
-                .last
-            ).to_be_visible()
+            # Assign approver to the tag
+            tag.click()
+            page.get_by_test_id("TagSettingsPage").get_by_text("Approver").click()
+            page.get_by_test_id("TagApproverPage").get_by_role("button", name=user_name).click()
+
+            # Verify approver field in tag editor shows user name
+            expect(
+                page.get_by_test_id("TagSettingsPage").get_by_role("menuitem", name=user_name),
+                "User name should be visible in the approver field",
+            ).to_be_visible(timeout=2000)
 
         finally:
-            await context.tracing.stop(path="/app/expensify/user_tool/output_browser1.zip")
-            trace_cleaner("/app/expensify/user_tool/output_browser1.zip")
-            await browser.close()
+            # Stop tracing, export the trace, call trace_cleaner and close the browser
+            trace_output_path = "/app/expensify/user_tool/output_browser1.zip"
+            context.tracing.stop(path=trace_output_path)
+            trace_cleaner(trace_output_path)
+            context.close()
+            browser.close()
+
+
+if __name__ == "__main__":
+    test_approver_field_in_tag_editor_shows_user_name()

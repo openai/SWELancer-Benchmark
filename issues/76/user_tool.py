@@ -1,159 +1,245 @@
+import os
+import random
 import re
-from playwright.sync_api import sync_playwright
+import string
+
+import pytest
+from playwright.async_api import Page, TimeoutError, async_playwright
 from utils.trace_cleaner import trace_cleaner
 
-SITE_URL = "https://dev.new.expensify.com:8082/"
-PRIMARY_EMAIL = "expensifyolddot+1739802802@gmail.com"
-FIRST_NAME = "Random"
-LAST_NAME = "Name"
-AMOUNT = 100
+EMAIL_USERNAME = "xecuycismfsga"
+EMAIL_ALIAS = "6nvqaqhy"
+USER_EMAIL = f"{EMAIL_USERNAME}+{EMAIL_ALIAS}@gmail.com"
+PASSWORD = "uwgb zzoc cofa kaaq"
+SLOW_MO: int | None = 500
+PROXY_URL = os.getenv("PROXY_URL")
 
 
-# Function to create an account and log in to Expensify
-def create_new_account_and_login(page, user_email, first_name, last_name):
-    # Create a new account as a random user
-    phone_or_email_input = page.locator('input[type="email"]')
-    phone_or_email_input.fill(user_email)
-    page.wait_for_timeout(1000)
+async def get_magic_code(
+    page: Page, user_email: str = USER_EMAIL, password: str = PASSWORD
+):
+    return "123456"
 
-    # Click Continue
-    continue_button = page.get_by_role("button", name="Continue")
-    continue_button.click()
-    page.wait_for_timeout(1000)
 
-    # Click join button if it appears
+async def create_user(page: Page, firstname: str = "User", lastname: str = EMAIL_ALIAS):
+    await page.get_by_role("button", name="Join").click()
+
+    # Update profile
+    await page.get_by_text("Track and budget expenses").click()
+    await page.get_by_role("textbox", name="First name").fill(firstname)
+    await page.get_by_role("textbox", name="Last name").fill(lastname)
+    await page.get_by_role("button", name="Continue").click()
+
+
+async def login(page: Page):
+    # get current timestamp
+    magic_code = await get_magic_code(page)
+
+    if magic_code is None:
+        raise ValueError("Failed to retrieve magic code")
+
+    await page.get_by_role("textbox").fill(magic_code)
+
+
+async def login_or_create_user(
+    page: Page,
+    firstname: str = "User",
+    lastname: str = EMAIL_ALIAS,
+    user_email: str = USER_EMAIL,
+):
+    await page.goto("https://dev.new.expensify.com:8082/")
+    await page.get_by_test_id("username").fill(user_email)
+    await page.get_by_role("button", name="Continue").click()
+
     try:
-        print("Clicking the join button again if needed")
-        join_button = page.get_by_role("button", name="Join")
-        join_button.click()
-    except Exception as e:
+        await page.get_by_role("button", name="Join").wait_for(
+            state="visible", timeout=2000
+        )
+        await create_user(page, firstname=firstname, lastname=lastname)
+    except TimeoutError:
+        await login(page)
+
+    await page.get_by_label("Inbox").wait_for(state="visible", timeout=10000)
+
+
+async def create_workspace(page: Page, workspace_name: str):
+    """
+    Create a workspace if it does not already exist
+    """
+    try:
+        await (
+            page.locator('button[aria-label="row"]')
+            .filter(has_text=workspace_name)
+            .last.click(timeout=3000)
+        )
+    except TimeoutError:
+        await page.get_by_label("New workspace").last.click()
+
+        await (
+            page.get_by_test_id("WorkspacePageWithSections")
+            .get_by_text("Workspace name", exact=True)
+            .click()
+        )
+        name_input = page.get_by_role("textbox", name="Name")
+        await name_input.clear()
+        await name_input.type(workspace_name, delay=200)
+        await page.get_by_role("button", name="Save").click()
+
+
+def generate_random_string(length: int = 8) -> str:
+    return "".join(random.choices(string.ascii_letters + string.digits, k=length))
+
+
+def generate_random_number(minimum=1, maximum=1000):
+    return random.randint(minimum, maximum)
+
+
+async def submit_expense(page: Page, workspace_name: str):
+    workspace_chat = (
+        page.get_by_text("Submit expenses using your workspace chat below:")
+        .locator("xpath=following-sibling::div[1]")
+        .get_by_label(workspace_name)
+    )
+    await workspace_chat.click()
+
+    await page.get_by_label("Create").last.click()
+    await page.get_by_text("Submit expense", exact=True).click()
+    await page.get_by_label("Manual").click()
+    await page.get_by_placeholder("0").fill(str(generate_random_number()))
+    await (
+        page.locator("#numPadContainerView").get_by_role("button", name="Next").click()
+    )
+    await page.get_by_text("Merchant").click()
+    await page.get_by_role("textbox", name="Merchant").last.fill(
+        generate_random_string()
+    )
+    await page.get_by_role("button", name="Save").click()
+    await page.get_by_role("button", name="Submit").click()
+
+
+async def close_button_if_present(page: Page):
+    """
+    Occasionally, there is a close button that prevents any clicks on the page as
+    it covers most of the screen. This button cannot be seen visually.
+    """
+    close_button = page.locator('button[aria-label="Close"]')
+    if await close_button.is_visible():
+        await close_button.click()
+
+
+async def delete_workspaces(page: Page):
+    await page.get_by_label("My settings").click()
+    await page.get_by_role("menuitem", name="Workspaces").click()
+    # Loop until no more rows are found
+    while True:
+        row = (
+            page.get_by_test_id("WorkspacesListPage")
+            .locator('button[aria-label="row"]')
+            .filter(has=page.locator('button[aria-label="More"]'))
+        )
+
+        if await row.count() == 0:
+            break  # Exit loop when no more rows with "More" button are found
+
+        await row.last.get_by_label("More").click()
+
+        await page.get_by_label("Delete workspace").click()
+        await page.get_by_role("button", name="Delete").click()
+
+
+async def pay_elsewhere(page: Page, workspace_name: str):
+    expense_preview = page.get_by_role("button", name="View details").filter(
+        has_text=f"{workspace_name} owes:"
+    )
+    await expense_preview.click()
+
+    try:
+        await page.get_by_role("button", name="Got it").click(timeout=2000)
+    except TimeoutError:
         pass
 
-    # Complete the onboarding popup
-    page.wait_for_timeout(1000)
-    page.locator('text="Track and budget expenses"').click()
-    page.locator('input[name="fname"]').fill(first_name)
-    page.locator('input[name="lname"]').fill(last_name)
-    page.get_by_role("button", name="Continue").last.click()
-    page.wait_for_timeout(1000)
+    await (
+        page.get_by_role("button", name="Pay")
+        .locator("xpath=../following-sibling::*[1]")
+        .click()
+    )
+    await page.get_by_role("menuitem", name="elsewhere").click()
+    await page.get_by_role("button", name=re.compile(r".* elsewhere")).click()
+
+    try:
+        await page.get_by_role("button", name="Pay").last.click(timeout=2000)
+    except TimeoutError:
+        pass
 
 
-# Function to create a new workspace and return back to inbox
-def create_new_workspace(page, mobile_browser=False, back_to_inbox=False):
-    # Step 1: Click my settings button
-    setting_button = page.locator("button[aria-label='My settings']")
-    setting_button.click()
+async def cancel_payment(page: Page, workspace_name: str):
+    payment_details = page.locator(
+        f'div[data-testid="DisplayNamesWithTooltip"]:has-text("{workspace_name} paid")'
+    ).last
+    await payment_details.click()
 
-    # Step 2: Click the Workspaces menu
-    preferences_div = page.locator("div[aria-label='Workspaces']:has(div:has-text('Workspaces'))")
-    preferences_div.click()
-
-    # Step 3: Click the New workspace button
-    new_workspace_button = page.locator('button[aria-label="New workspace"]').last
-    new_workspace_button.click()
-
-    # Case for going back to Inbox
-    if back_to_inbox:
-        # Step 4: Click the back button
-        back_button = page.locator('button[aria-label="Back"]')
-        back_button.click()
-
-        # For mobile browser we need to press back again to go back to inbox
-        if mobile_browser:
-            page.locator('button[aria-label="Back"]').last.click()
-
-        # Step 5: Click the inbox button
-        inbox_button = page.locator('button[aria-label="Inbox"]')
-        inbox_button.click()
+    await page.get_by_role("menuitem", name="Cancel payment").click()
+    await page.get_by_role("button", name="Cancel payment").click()
 
 
-# Function to create self track expense
-def create_self_track_expense(page, first_name, last_name, amount=100):
-    # Step 1: Click self chat button
-    page.get_by_role('button', name='Navigates to a chat').get_by_text(f'{first_name} {last_name} (you)').click()
-
-    # Step 2: Click the '+' button to submit a new expense
-    page.locator('button[aria-label="Create"]').locator("visible=true").click()
-
-    # Step 3: Click the 'Create expense' option
-    page.get_by_role('menuitem', name='Track expense').click()
-
-    # Step 4: Click on "Manual" button
-    page.get_by_role('button', name='Manual').click()
-
-    # Step 5: Enter the amount and press enter to submit the expense
-    page.locator('input[type="text"]').fill(str(amount))
-    page.keyboard.press("Enter")
-    page.keyboard.press("Enter")
+async def assert_scroll_to_comments(page: Page):
+    messages = page.get_by_label("List of chat messages").last
+    scroll_top = await messages.evaluate("el => el.scrollTop")
+    assert scroll_top == 0, "Last message is not visible; didn't scroll"
 
 
-# Rename the function based on your task name
-def test_expensify_52240():
-    with sync_playwright() as p:
-        # Launch browser web settings
-        browser = p.chromium.launch(
-            proxy={"server": "http://localhost:8080"}, 
-            headless=False, 
-            args=["--no-sandbox", "--disable-dev-shm-usage", "--ignore-certificate-errors", "--disable-web-security", "--disable-features=IsolateOrigins,site-per-process"], 
-            slow_mo=500, 
+async def send_messages(page: Page):
+    for message in [f"Message {i}" for i in range(7)]:
+        await page.get_by_placeholder("Write something...").last.fill(message)
+        await page.get_by_role("button", name="Send").click()
+
+    messages = page.get_by_label("List of chat messages").last
+    await messages.evaluate(
+        "el => el.scrollTop = 1000;"  # scroll to the top of the container
+    )
+
+
+@pytest.mark.asyncio(scope='session')
+async def test_scroll_to_comments():
+    async with async_playwright() as p:
+        browser = await p.chromium.launch(
+            proxy={"server": "http://localhost:8080"},
+            headless=False,
+            args=["--no-sandbox", "--disable-dev-shm-usage", "--ignore-certificate-errors", "--disable-web-security", "--disable-features=IsolateOrigins,site-per-process"],
+            slow_mo=SLOW_MO,
             channel="chromium"
         )
-        
-        # Create a new browser context and start tracing
-        context = browser.new_context()
-        context.tracing.start(screenshots=True, snapshots=True, sources=True)
 
-        # Create a new page in the appropriate context
-        page = context.new_page()
-        
+        context = await browser.new_context()
+        await context.tracing.start(screenshots=True, snapshots=True, sources=True)
+        page = await context.new_page()
+        trace_path = "/app/expensify/user_tool/output_browser1.zip"
+
         try:
-            # Generate new email and create a new account
-            page.goto(SITE_URL)
-            create_new_account_and_login(page, PRIMARY_EMAIL, FIRST_NAME, LAST_NAME)
+            # admin login
+            await login_or_create_user(page)
+            await close_button_if_present(page)
 
-            # Create a new workspace
-            create_new_workspace(page, back_to_inbox=True)
+            await delete_workspaces(page)
+            workspace_name = "SdiPDTAc"  # replay workspace_name is hardcoded
+            # workspace_name = generate_random_string()
+            await create_workspace(page, workspace_name)
 
-            # Submit self expense
-            create_self_track_expense(page, FIRST_NAME, LAST_NAME, AMOUNT)
+            await submit_expense(page, workspace_name)
+            await pay_elsewhere(page, workspace_name)
 
-            # Go to search, click submitted expenses and view detail
-            page.locator('button[aria-label="Search"]').click()
-            page.get_by_test_id('selection-list').get_by_role('button', name='View').last.click()
-            pattern = re.compile(rf"^Tracking\s+.*\b{AMOUNT}\b.*$")
-            page.get_by_test_id(re.compile(r"^report-screen-")).get_by_role("button", name=pattern).last.click()
+            await send_messages(page)
 
-            # Categorize the expense
-            page.get_by_role('menuitem', name='Categorize it').click()
-            page.get_by_role('button', name=f"{FIRST_NAME} {LAST_NAME}'s Workspace").first.click()
-            page.get_by_role('button', name='Benefits').last.click()
-            page.get_by_role('menuitem', name='Merchant').click()
-            page.locator('input[name="moneyRequestMerchant"]').fill("Test Merchant")
-            page.keyboard.press("Enter")
-            page.keyboard.press("Enter")
+            await cancel_payment(page, workspace_name)
 
-            # Go back to the expense detail
-            page.get_by_test_id('selection-list').get_by_role('button', name='View').last.click()
-            page.get_by_test_id(re.compile(r"^report-screen-")).get_by_role("button", name=pattern).last.click()
+            await page.wait_for_timeout(5000)  # wait for notification event to propagate
 
-            # TEST: Verify that after categorization the track expense option is not available
-            categorize_it_menu = page.get_by_role('menuitem', name='Categorize it')
-            assert categorize_it_menu.count() == 0, "Categorize it menu item is still visible"
+            await assert_scroll_to_comments(page)
 
-            submit_into_someone = page.get_by_role('menuitem', name='Submit it to someone')
-            assert submit_into_someone.count() == 0, "Submit it to someone menu item is still visible"
-
+            # Close page and context if everything went well
+            await page.close()
+            await context.close()
         finally:
-            # Stop tracing and export it
-            trace_path = "/app/expensify/user_tool/output_browser1.zip"
-            context.tracing.stop(path=trace_path)
-            
-            # Clean the trace file
+            await context.tracing.stop(path=trace_path)
             trace_cleaner(trace_path)
-            
-            # Close the browser
-            browser.close()
-
-
-if __name__ == '__main__':
-    test_expensify_52240()
+            await browser.close()

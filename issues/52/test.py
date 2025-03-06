@@ -1,243 +1,166 @@
-import os
-import random
+from playwright.sync_api import sync_playwright, expect
+from playwright._impl._page import Page
 import re
-import string
-
-import pytest
-from playwright.async_api import Page, TimeoutError, async_playwright, expect
-
-EMAIL_USERNAME = "xecuycismfsga"
-EMAIL_ALIAS = "kypqxmbx"
-USER_EMAIL = f"{EMAIL_USERNAME}+{EMAIL_ALIAS}@gmail.com"
-PASSWORD = ""
-SLOW_MO: int | None = 500
-PROXY_URL = os.getenv("PROXY_URL")
-
-WORKSPACE_NAME = "BltGot0t"
+import imaplib
+import email
 
 
-async def create_workspace(page: Page, workspace_name: str = WORKSPACE_NAME):
-    """
-    Create a workspace if it does not already exist
-    """
-    await page.get_by_label("My settings").click()
-    await page.get_by_test_id("InitialSettingsPage").get_by_label("Workspaces").click()
 
-    try:
-        await (
-            page.locator('button[aria-label="row"]')
-            .filter(has_text=workspace_name)
-            .last.wait_for(timeout=3000)
-        )
-    except TimeoutError:
-        await page.get_by_label("New workspace").last.click()
+class EmailHandler:
+    def __init__(self, email_address, password):
+        # Validate email and password input
+        if not self._validate_email(email_address):
+            raise ValueError("Invalid email address format.")
+        self.original_email = email_address
+        self.password = password
+        self.new_email = email_address
 
-        await page.get_by_text("Name", exact=True).click()
-        name_input = page.get_by_role("textbox", name="Name")
-        await name_input.clear()
-        await name_input.type(workspace_name, delay=200)
-        await page.get_by_role("button", name="Save").click()
-        await (
-            page.get_by_test_id("WorkspaceInitialPage")
-            .get_by_label("Back")
-            .first.click()
-        )
+    def _validate_email(self, email_address):
+        # Simple email validation
+        return bool(re.match(r"[^@]+@[^@]+\.[^@]+", email_address))
 
-    await page.get_by_label("Inbox").click()
+    def _generate_new_email(self, email_address, suffix):
+        # Add random number suffix to the email before the "@" symbol
+        username, domain = email_address.split('@')
+        return f"{username}+{suffix}@{domain}"
 
+    def get_email_address(self):
+        # Return the generated email with "+" suffix
+        return self.new_email
 
-def generate_random_string(length=6, case="mixed"):
-    if case == "lower":
-        characters = string.ascii_lowercase
-    elif case == "upper":
-        characters = string.ascii_uppercase
-    elif case == "mixed":
-        characters = string.ascii_letters
+    def check_for_otp(self):
+        # Connect to the Gmail server using IMAP
+        try:
+            mail = imaplib.IMAP4_SSL("imap.gmail.com")
+            mail.login(self.original_email, self.password)
+            mail.select("inbox")
+
+            # Fetch all unread emails
+            status, messages = mail.search(None, "UNSEEN")
+            if status != "OK":
+                print("No unread emails found.")
+                return None
+
+            email_ids = messages[0].split()
+            # Start from the latest email by reversing the list
+            email_ids = email_ids[::-1]  # Reverse order to process latest first
+
+            # Iterate over each email until OTP is found
+            for email_id in email_ids:
+                # Fetch the email by ID
+                status, msg_data = mail.fetch(email_id, '(RFC822)')
+                if status != "OK":
+                    print("Error fetching email.")
+                    continue
+
+                for response_part in msg_data:
+                    if isinstance(response_part, tuple):
+                        msg = email.message_from_bytes(response_part[1])
+
+                        # Check if the To address matches the generated new email
+                        if msg["To"] == self.new_email:
+                            # Extract OTP from the email body
+                            otp_code = self._extract_otp_from_email(msg)
+                            if otp_code:
+                                # Delete the email containing the OTP
+                                mail.store(email_id, '+FLAGS', '\\Deleted')
+                                mail.expunge()  # Permanently removes deleted emails from the mailbox
+
+                                # Logout and return OTP
+                                mail.close()
+                                mail.logout()
+                                return otp_code
+
+            # Logout if OTP not found in unread emails
+            mail.close()
+            mail.logout()
+            print("No OTP found in unread emails.")
+            return None
+
+        except imaplib.IMAP4.error:
+            print("Failed to connect to Gmail. Please check your email address or password.")
+            return None
+
+    def _extract_otp_from_email(self, msg):
+        # Extract OTP code from the email content
+        if msg.is_multipart():
+            for part in msg.walk():
+                if part.get_content_type() == "text/plain":
+                    email_body = part.get_payload(decode=True).decode()
+                    otp_code = self._extract_otp(email_body)
+                    if otp_code:
+                        return otp_code
+        else:
+            email_body = msg.get_payload(decode=True).decode()
+            otp_code = self._extract_otp(email_body)
+            if otp_code:
+                return otp_code
+        return None
+
+    def _extract_otp(self, text):
+        # Find a 6-digit code in the email body
+        match = re.search(r"\b\d{6}\b", text)
+        return match.group(0) if match else None
+
+# Function to log in to the application
+def login(page: Page, user_email: str, email_handler, first_name: str = "Milan", last_name: str = "T"):
+    # Open Expensify URL and log in
+    page.locator('input[type="email"]').fill(user_email)
+    page.get_by_role("button", name="Continue").click()
+    page.wait_for_timeout(9000)
+    if page.locator('input[data-testid="validateCode"]').is_visible():
+        # otp = email_handler.check_for_otp()
+        page.locator('input[data-testid="validateCode"]').fill("012345")
     else:
-        raise ValueError("Case must be 'lower', 'upper', or 'mixed'")
-
-    random_string = "".join(random.choice(characters) for _ in range(length))
-    return random_string
-
-
-async def get_magic_code(
-    page: Page, user_email: str = USER_EMAIL, password: str = PASSWORD
-):
-    return "123456"
+        page.get_by_role("button", name="Join").click()
+        page.wait_for_timeout(3000)
+        # Enter user details and complete onboarding
+        page.get_by_label("Track and budget expenses").click()
+        page.locator('input[name="fname"]').fill(first_name)
+        page.locator('input[name="lname"]').fill(last_name)
+        page.get_by_role("button", name="Continue").last.click()
 
 
-async def create_user(page: Page, firstname: str = "User", lastname: str = EMAIL_ALIAS):
-    await page.get_by_role("button", name="Join").click()
-
-    # Update profile
-    await page.get_by_text("Track and budget expenses").click()
-    await page.get_by_role("textbox", name="First name").fill(firstname)
-    await page.get_by_role("textbox", name="Last name").fill(lastname)
-    await page.get_by_role("button", name="Continue").click()
-
-
-async def login(page: Page):
-    # get current timestamp
-    magic_code = await get_magic_code(page)
-
-    if magic_code is None:
-        raise ValueError("Failed to retrieve magic code")
-
-    await page.get_by_role("textbox").fill(magic_code)
+def test_53679():
+    with sync_playwright() as p:
+        # Launch chromium and open new page
+        browser = p.chromium.launch(headless=False,args=[ # Set headless=True for headless mode
+        "--disable-web-security",
+        "--disable-features=IsolateOrigins,site-per-process"
+        ])
+        context = browser.new_context()
+        page = context.new_page()
 
 
-async def login_or_create_user(
-    page: Page,
-    firstname: str = "User",
-    lastname: str = EMAIL_ALIAS,
-    user_email: str = USER_EMAIL,
-):
-    await page.goto("https://dev.new.expensify.com:8082/")
-    await page.get_by_test_id("username").fill(user_email)
-    await page.get_by_role("button", name="Continue").click()
+        page.goto("https://dev.new.expensify.com:8082/")
+        email_address = "rgulraiz2000+910@gmail.com"
 
-    try:
-        await page.get_by_role("button", name="Join").wait_for(
-            state="visible", timeout=2000
-        )
-        await create_user(page, firstname=firstname, lastname=lastname)
-    except TimeoutError:
-        await login(page)
+        password = "kepw uquj myoa npvj"
+        user_fname = "Ehsan"
+        user_lname = "G"
 
-    await page.get_by_label("Inbox").wait_for(state="visible", timeout=10000)
+        email_handler = EmailHandler(email_address=email_address, password=password)
+        login(page, email_address, email_handler, user_fname, user_lname)
+        page.wait_for_timeout(6000)  
 
+        page.get_by_text(f"{user_fname} {user_lname} (you)").click()
+        page.get_by_test_id("report-screen-1942469707710585").get_by_label("Create").click()
+        page.get_by_label("Create expense").click()
+        page.get_by_label("Manual").click()
+        page.get_by_label("Select a currency").click()
+        page.get_by_test_id("selection-list-text-input").click()
+        page.get_by_test_id("selection-list-text-input").fill("PKR")
+        page.get_by_label("PKR - Rs").click()
+        page.get_by_placeholder("0").fill("120")
+        page.locator("#numPadContainerView").get_by_role("button", name="Next").click()
+        page.wait_for_timeout(1000)  
+        page.get_by_role("menuitem", name="Description").click()
+        page.get_by_role("textbox", name="What's it for?").fill("abc")
+        page.get_by_role("textbox", name="What's it for?").fill("this is a text")
+        page.wait_for_timeout(3000)
+        page.get_by_test_id("IOURequestStepDescription").get_by_label("Back").click()
+        page.wait_for_timeout(1000)  
+        expect(page.get_by_role("button", name="Discard changes")).to_be_visible()
 
-async def submit_expense(page: Page):
-    expense_preview = (
-        page.get_by_role("button", name="View details")
-        .filter(has_text=f"{WORKSPACE_NAME} owes:")
-        .last
-    )
-
-    try:
-        await expense_preview.wait_for(state="visible", timeout=3000)
-    except TimeoutError:
-        await page.get_by_label("Create").last.click()
-        await page.get_by_text("Submit expense", exact=True).click()
-        await page.get_by_label("Manual").click()
-        await page.get_by_placeholder("0").fill("100")
-        await (
-            page.locator("#numPadContainerView")
-            .get_by_role("button", name="Next")
-            .click()
-        )
-        await page.get_by_text("Merchant").click()
-        await page.get_by_role("textbox", name="Merchant").fill("test")
-        await page.get_by_role("button", name="Save").click()
-        await page.get_by_role("button", name="Submit").click()
-
-    return expense_preview
-
-
-async def enable_custom_fields_and_rules(page: Page):
-    await page.get_by_label("My settings").click()
-    await page.get_by_role("menuitem", name="Workspaces").click()
-
-    await (
-        page.locator('button[aria-label="row"]')
-        .filter(has_text=WORKSPACE_NAME)
-        .last.click(timeout=3000)
-    )
-
-    await page.get_by_label("More features").click()
-    custom_fields = page.get_by_label("Set up custom fields for spend.")
-
-    if not await custom_fields.is_checked():
-        await custom_fields.click()
-
-    try:
-        await page.get_by_role("button", name="Upgrade").click(timeout=3000)
-        await page.get_by_role("button", name="Got it, thanks").click()
-    except TimeoutError:
-        pass
-
-    rules = page.get_by_label("Require receipts, flag high spend, and more.")
-    if not await rules.is_checked():
-        await rules.click()
-
-
-async def add_custom_report_name(page: Page):
-    await page.get_by_role("menuitem", name="Rules").click()
-    custom_report_names = page.get_by_role(
-        "switch", name="Custom report names", exact=True
-    )
-    if not await custom_report_names.is_checked():
-        await custom_report_names.click()
-
-    await page.get_by_role("menuitem", name="report", exact=True).click()
-    await page.locator('input[aria-label="Name"]').fill("report")
-    await page.get_by_role("button", name="Save").click()
-
-
-@pytest.mark.asyncio
-async def test_search_bar_spacing():
-    async with async_playwright() as p:
-        browser = await p.chromium.launch(
-            proxy={"server": PROXY_URL} if PROXY_URL else None,
-            headless=False,
-            args=[
-                "--no-sandbox",
-                "--disable-dev-shm-usage",
-                "--ignore-certificate-errors",
-                "--disable-web-security",
-                "--disable-features=IsolateOrigins,site-per-process",
-            ],
-            slow_mo=SLOW_MO,
-        )
-
-        context = await browser.new_context()
-        page = await context.new_page()
-
-        await login_or_create_user(page)
-
-        await create_workspace(page)
-
-        workspace_chat = (
-            page.locator(
-                'button[aria-label="Navigates to a chat"]',
-                has_text=WORKSPACE_NAME,
-            )
-            .filter(has_not_text="#admins")
-            .first
-        )
-        await workspace_chat.click()
-
-        expense_preview = await submit_expense(page)
-        await expense_preview.click()
-
-        await enable_custom_fields_and_rules(page)
-        await add_custom_report_name(page)
-
-        await (
-            page.get_by_test_id("WorkspaceInitialPage")
-            .get_by_label("Back")
-            .first.click()
-        )
-        await page.get_by_label("Inbox").click()
-
-        report_details = (
-            page.locator('div[data-testid="DisplayNamesWithTooltip"]')
-            .filter(has_text=re.compile(r"Expense Report #\d+"))
-            .last
-        )
-        report_title = await report_details.inner_text(timeout=5000)
-
-        await page.get_by_text("Title").last.click()
-        await page.locator('input[aria-label="Title"]').fill(generate_random_string())
-        await page.get_by_role("button", name="Save").click()
-
-        await expect(
-            page.locator('div[data-testid="DisplayNamesWithTooltip"]')
-            .filter(has_text=report_title)
-            .last
-        ).to_be_visible()
-
-        # Close all tabs and browser
-        await page.close()
-        await context.close()
-        await browser.close()
+        browser.close()
+        

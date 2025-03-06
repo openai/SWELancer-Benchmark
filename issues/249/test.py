@@ -1,107 +1,121 @@
-import os
+import sys, os
+
+base_path = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
+sys.path.insert(0, base_path)
 
 import pytest
-from playwright.async_api import Page, TimeoutError, async_playwright
-
-EMAIL_USERNAME = "xecuycismfsga"
-EMAIL_ALIAS = "8ita506t"
-USER_EMAIL = f"{EMAIL_USERNAME}+{EMAIL_ALIAS}@gmail.com"
-PASSWORD = ""
-SLOW_MO: int | None = 500
-PROXY_URL = os.getenv("PROXY_URL")
+from playwright.async_api import expect, async_playwright, Browser, Page
+from utils.login import sign_in, NEW_DOT_URL, check_if_logged_in
+from utils.browser import close_browser
 
 
-async def get_magic_code(
-    page: Page, user_email: str = USER_EMAIL, password: str = PASSWORD
-):
-    return "123456"
+USER_EMAILA = "doorsqueaky+3182311@gmail.com"
+USERNAME_A = 'John Doe'
+PASSWORD_A = ""
+USER_EMAILB = "windowsqueaky+3919211@gmail.com"
+PASSWORD_B = ""
+USERNAME_B = 'Jane Doe'
 
 
-async def create_user(page: Page, firstname: str = "User", lastname: str = EMAIL_ALIAS):
-    await page.get_by_role("button", name="Join").click()
-
-    # Update profile
-    await page.get_by_text("Track and budget expenses").click()
-    await page.get_by_role("textbox", name="First name").fill(firstname)
-    await page.get_by_role("textbox", name="Last name").fill(lastname)
-    await page.get_by_role("button", name="Continue").click()
-
-
-async def login(page: Page):
-    # get current timestamp
-    magic_code = await get_magic_code(page)
-
-    if magic_code is None:
-        raise ValueError("Failed to retrieve magic code")
-
-    await page.get_by_role("textbox").fill(magic_code)
+async def start_browser_with_proxy():
+    playwright = await async_playwright().start()
+    browser = await playwright.chromium.launch(
+        slow_mo=500,
+        headless=True,
+        proxy={
+            'server': 'http://127.0.0.1:8080'
+        },
+        args=[
+            '--disable-web-security',
+            '--disable-features=IsolateOrigins,site-per-process'
+        ]
+    )
+    context = await browser.new_context(ignore_https_errors=True)
+    page = await context.new_page()
+    return context, page, playwright
 
 
-async def login_or_create_user(
-    page: Page,
-    firstname: str = "User",
-    lastname: str = EMAIL_ALIAS,
-    user_email: str = USER_EMAIL,
-):
-    await page.goto("https://dev.new.expensify.com:8082/")
-    await page.get_by_test_id("username").fill(user_email)
-    await page.get_by_role("button", name="Continue").click()
+async def send_message(page: Page, recepient_email: str, message: str):
 
-    try:
-        await page.get_by_role("button", name="Join").wait_for(
-            state="visible", timeout=2000
-        )
-        await create_user(page, firstname=firstname, lastname=lastname)
-    except TimeoutError:
-        await login(page)
-
-    await page.get_by_label("Inbox").wait_for(state="visible", timeout=10000)
+    await page.locator('button[aria-label="Start chat (Floating action)"]').click()
+    await page.locator('div[aria-label="Start chat"][role="menuitem"]').click()
 
 
-async def close_button_if_present(page: Page):
-    """
-    Occasionally, there is a close button that prevents any clicks on the page as
-    it covers most of the screen. This button cannot be seen visually.
-    """
-    close_button = page.locator('button[aria-label="Close"]')
-    if await close_button.is_visible():
-        await close_button.click()
+    await page.locator('input[aria-label="Name, email, or phone number"]').fill(recepient_email)
+    await page.get_by_test_id('selection-list').locator(f'button:has-text("{recepient_email}")').click()
+    await page.wait_for_timeout(1000)
+
+
+    message_editor = page.locator('div[contenteditable="true"][placeholder="Write something..."]').last
+    await message_editor.fill(message)
+    await message_editor.press("Enter")
+
+
+async def create_draft_reply_in_thread(page: Page, username: str, sender_email: str, message: str, reply: str):
+
+    if await page.locator('button[aria-label="Navigates to a chat"]', has_text=sender_email).is_visible():
+        await page.locator('button[aria-label="Navigates to a chat"]', has_text=sender_email).click()
+    else:
+        await page.locator('button[aria-label="Navigates to a chat"]', has_text=username).click()
+
+
+    await page.locator('div[aria-label="Chat message"]', has_text=message).click(button="right")
+    await page.locator('div[aria-label="Reply in thread"][role="menuitem"]').click()
+
+    await page.wait_for_timeout(1000)
+
+
+    message_editor = page.locator('div[contenteditable="true"][placeholder="Write something..."]').last
+    await message_editor.fill(reply)
+
+
+async def navigate_away_check_draft(page: Page, username: str, sender_email: str):
+
+    if await page.locator('button[aria-label="Navigates to a chat"]', has_text=sender_email).is_visible():
+        await page.locator('button[aria-label="Navigates to a chat"]', has_text=sender_email).click()
+    else:
+        await page.locator('button[aria-label="Navigates to a chat"]', has_text=username).click()
+
+
+    await page.wait_for_timeout(2000)
+
+
+    draft_reply_LHN_btn = page.locator('button[aria-label="Navigates to a chat"]', has_text="No activity yet")
+    await expect(draft_reply_LHN_btn).to_be_visible()
+
+
+async def enter_dummy_otp_if_not_logged_in(page: Page, email: str):
+    if not await check_if_logged_in(page=page, url=NEW_DOT_URL):
+        await page.get_by_test_id("username").fill(email)
+        await page.get_by_role("button", name="Continue").click()
+        await page.get_by_test_id("validateCode").fill("123456")
+
 
 
 @pytest.mark.asyncio
-async def test_scroll_to_comments():
-    async with async_playwright() as p:
-        browser = await p.chromium.launch(
-            proxy={"server": PROXY_URL} if PROXY_URL else None,
-            headless=False,
-            args=[
-                "--no-sandbox",
-                "--disable-dev-shm-usage",
-                "--ignore-certificate-errors",
-                "--disable-web-security",
-                "--disable-features=IsolateOrigins,site-per-process",
-            ],
-            slow_mo=SLOW_MO,
-        )
+async def test_workspace_switch_on_reload():
+    try:
+        contextA, pageA, playwrightA = await start_browser_with_proxy()
 
-        context = await browser.new_context()
-        page = await context.new_page()
+        await enter_dummy_otp_if_not_logged_in(pageA, USER_EMAILA)
 
-        # admin login
-        await login_or_create_user(page)
-        await close_button_if_present(page)
-        await page.get_by_role("button", name="Search").click()
 
-        header = page.locator('div[data-drag-area="false"]').filter(has_text="Expenses")
-        fifth_sibling = header.locator("xpath=following-sibling::*[5]")
-        first_child_of_second_sibling = fifth_sibling.locator("xpath=descendant::*[1]")
+        await expect(pageA.get_by_label("Inbox")).to_be_visible()
 
-        scroll_bar_width = await first_child_of_second_sibling.evaluate(
-            'el => getComputedStyle(el).getPropertyValue("scrollbar-width")'
-        )
-        assert scroll_bar_width == "none", "There MUST not be a scrollbar"
+        message = "Hello How are you"
+        await send_message(pageA, USER_EMAILB, message)
 
-        # Close all tabs and browser
-        await page.close()
-        await context.close()
-        await browser.close()
+        contextB, pageB, playwrightB = await start_browser_with_proxy()
+
+        await enter_dummy_otp_if_not_logged_in(pageB, USER_EMAILB)
+
+
+        await expect(pageA.get_by_label("Inbox")).to_be_visible()
+
+        reply = "Hey I am good. What about you?"
+        await create_draft_reply_in_thread(pageB, USERNAME_A, USER_EMAILA, message, reply)
+        await navigate_away_check_draft(pageB, USERNAME_A, USER_EMAILA)
+
+    finally:
+        await close_browser(contextA, pageA, playwrightA)
+        await close_browser(contextB, pageB, playwrightB)

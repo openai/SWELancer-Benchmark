@@ -1,75 +1,66 @@
-import time
-from playwright.sync_api import sync_playwright, expect
-from playwright.sync_api._context_manager import PlaywrightContextManager
-from playwright._impl._browser import Browser
-from playwright._impl._page import Page
+from playwright.sync_api import sync_playwright
 from utils.trace_cleaner import trace_cleaner
 
-# Utility to generate a random email
-def generate_random_email():
-    return f"testerbro7077+45756976678@gmail.com"
+NEWDOT_URL = "https://dev.new.expensify.com:8082/"
 
-# Login as member and fill in personal details
-def login_member_a(p, membera_first_name: str, membera_last_name: str) -> tuple:
-    browser = p.chromium.launch(
-        proxy={"server": "http://localhost:8080"}, headless=False, args=["--ignore-certificate-errors", "--disable-web-security", "--disable-features=IsolateOrigins,site-per-process"], slow_mo=500, channel="chromium")
 
-    context = browser.new_context()
-    page = context.new_page()
+def new_dot_login(page, email):
+    page.goto(NEWDOT_URL)  
+    
+    page.locator('input[type="email"]').fill(email)
+    page.keyboard.press('Enter')
 
-    user_email2 = generate_random_email()
+    # Magic code entry
+    page.wait_for_timeout(3000)
+    my_otp_code = '123456'
 
-    page.goto('https://dev.new.expensify.com:8082/')
-    page.locator('input[type="email"]').fill(user_email2)
-    page.get_by_role("button", name="Continue").click()
-    page.wait_for_timeout(1000)
-
+    page.keyboard.type(my_otp_code)
     try:
-        page.get_by_role("button", name="Join").click()
-        page.wait_for_timeout(1000)
+        page.get_by_role("button", name="Sign in").click()
     except Exception:
         pass
-    expect(page.locator("text=What do you want to do today?")).to_be_visible()
-    page.wait_for_timeout(1000)
-
-    page.get_by_text("Track and budget expenses").click()
-
-    page.locator('input[name="fname"]').fill(membera_first_name)
-    page.locator('input[name="lname"]').fill(membera_last_name)
-    page.get_by_role("button", name="Continue").last.click()
-    page.wait_for_timeout(1000)
-
-    return browser, page, user_email2
 
 
-def added_features_check(page):
-    page.get_by_label("My settings").click()
-    page.get_by_test_id("InitialSettingsPage").get_by_label("Workspaces").get_by_text("Workspaces").click()
-    page.get_by_label("New workspace").click()
-    assert page.get_by_test_id("WorkspaceInitialPage").get_by_text("Workspace profile").is_visible(), "profile is not chnged to Workspace profile in the LHN"
-    assert page.get_by_test_id("WorkspacePageWithSections").get_by_text("Workspace profile").is_visible(), "Profile is not changed to Workspace profile in title"
-    assert page.locator("#simple-illustration__building_svg__Layer_1 path").first.is_visible(), "Workspace profile is not changed in the illustration"
-    ws_name = page.get_by_test_id("WorkspacePageWithSections").get_by_text("Workspace name")
-    assert ws_name.is_visible(), "Name is not changed to Workspace name"
-    ws_name.click()
-    assert page.get_by_text("Workspace name").nth(2).is_visible(), "Name is not changed to Workspace name in name edit page"
-
-
-def test_run(membera_first_name="Sai", membera_last_name="Yagna"):
+def test_same_tab():
     with sync_playwright() as p:
-        browser_membera, page_membera, user_email2 = login_member_a(p, membera_first_name, membera_last_name)
-        # Capture the context from the page
-        context = page_membera.context
-        # Start tracing
+        browser = p.chromium.launch(channel="chrome", headless=False, 
+                                     proxy={"server": "http://127.0.0.1:8080/"},
+                                     args=[
+                                         "--disable-web-security",
+                                         "--disable-features=IsolateOrigins,site-per-process"
+                                     ])
+        context = browser.new_context()
         context.tracing.start(screenshots=True, snapshots=True, sources=True)
-        trace_file = "/app/expensify/user_tool/output_browser1.zip"
+        page = context.new_page()
+
         try:
-            added_features_check(page_membera)
+            email = 't2815719+2893@gmail.com'
+            # login user
+            new_dot_login(page, email)
+
+            new_pages = []
+            context.on("page", lambda new_page: new_pages.append(new_page))
+            
+            # navigate to settings
+            page.get_by_label("My settings").click()
+            page.get_by_label("Switch to Expensify Classic").click()
+
+            # fillout necessary info to continue with operation
+            page.get_by_label("I don't understand how to use").click()
+            page.get_by_role("button", name="Next").click()
+            page.get_by_role("textbox", name="Your response").fill("test")
+            page.get_by_role("button", name="Next").click()
+            page.get_by_role("button", name="Switch to Expensify Classic").click()
+            page.wait_for_timeout(50000)  # waiting for page to load and fail
+           
+            # test title of page is loading
+            assert len(new_pages) == 0, 'Switch to classic should open in same tab'
         finally:
-            context.tracing.stop(path=trace_file)
-            trace_cleaner(trace_file)
-            browser_membera.close()
+            trace_output = "/app/expensify/user_tool/output_browser1.zip"
+            context.tracing.stop(path=trace_output)
+            trace_cleaner(trace_output)
+            browser.close()
 
 
-if __name__ == "__main__":
-    test_run()
+if __name__ == '__main__':
+    test_same_tab()

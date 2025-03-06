@@ -1,170 +1,170 @@
-"""
-Test for the issue: https://github.com/Expensify/App/issues/52678
-"""
+from playwright.sync_api import sync_playwright
+import time
+import imaplib
+import email
+import re
+import random
+import pytest
 
-from playwright.sync_api import TimeoutError, expect, sync_playwright
-
-# Expensify app URL
-EXPENSIFY_URL = "https://dev.new.expensify.com:8082/"
-
-# Email login credentials
-EMAIL_USERNAME = "expensifytesting1@gmail.com"
-EMAIL_PASSWORD = ""
-
-# Email username postfix
-EMAIL_USERNAME_POSTFIX = "52678.4"
+# Constants for URLs and credentials
+NEWDOT_URL = "https://dev.new.expensify.com:8082/"
+OLDDOT_URL = "http://localhost:9000/"
+EMAIL = "ikhanle001+36@gmail.com"
+PASSWORD = ""
 
 
-def generate_user_email(user_id=None):
-    """
-    Generate an email address for user login.
-    """
-    temp = EMAIL_USERNAME.rsplit("@", 1)
-    username = temp[0].strip()
-    domain = temp[1].strip()
-    return f"{username}+{EMAIL_USERNAME_POSTFIX}{user_id or ''}@{domain}"
+class IMAPOTPExtractor:
+    def __init__(self, email_address, password):
+        if not self._validate_email(email_address):
+            raise ValueError("Invalid email address format.")
+        self.original_email = email_address
+        self.password = password
 
+        random_suffix = random.randint(1000, 9999)
+        current_timestamp = int(time.time())
+        random_suffix = f"{current_timestamp}{random_suffix}"
 
-def launch_browser(pw, headless=False, device=None, permissions=None, geolocation=None):
-    """
-    Launch the browser.
-    """
-    browser = pw.chromium.launch(
-        channel="chrome",
-        headless=False,
-        args=[
-            "--ignore-certificate-errors",
-            "--disable-web-security",
-            "--disable-features=IsolateOrigins,site-per-process",
-        ],
-        slow_mo=1000,
-    )
-    context_args = {"permissions": permissions or []}
-    if device:
-        context_args.update(pw.devices[device])
-    if geolocation:
-        context_args["geolocation"] = geolocation
-        context_args["permissions"].append("geolocation")
-    context = browser.new_context(**context_args)
-    page = context.new_page()
-    return browser, context, page
+    def _validate_email(self, email_address):
+        return bool(re.match(r"[^@]+@[^@]+\.[^@]+", email_address))
 
+    def set_new_email(self, email):
+        self.new_email = email
 
-def login_user(page, user_email, first_name="John", last_name="Doe"):
-    """
-    Log into the Expensify app.
-    """
-    # Open the Expensify app
-    page.goto(EXPENSIFY_URL)
-    # Login user
-    page.get_by_test_id("username").fill(user_email)
-    page.get_by_role("button", name="Continue").click()
-    # Check if OTP is required for the login
-    try:
-        expect(page.get_by_test_id("SignInPage").get_by_test_id("validateCode")).to_be_visible(timeout=7000)
-    except (AssertionError, TimeoutError):
-        # If not required, expect the join button to appear and click the button
-        page.get_by_test_id("SignInPage").get_by_role("button", name="Join").click()
-    else:
-        # Get the OTP and complete verification
-        otp_code = "123456"
-        page.get_by_test_id("SignInPage").get_by_test_id("validateCode").fill(otp_code)
+    def check_for_otp(self):
         try:
-            page.get_by_test_id("SignInPage").get_by_role("button", name="Sign in").click(timeout=2000)
-        except (AssertionError, TimeoutError):
-            pass
-    # Check if onboarding is required
-    try:
-        expect(page.get_by_text("What do you want to do today?")).to_be_visible(timeout=5000)
-    except (AssertionError, TimeoutError):
-        pass
-    else:
-        # Complete the onboarding
-        page.get_by_label("Track and budget expenses").click()
-        page.get_by_role("button", name="Continue").first.click()
-        page.get_by_role("textbox", name="First name").fill(first_name)
-        page.get_by_role("textbox", name="Last name").fill(last_name)
-        page.get_by_role("button", name="Continue").last.click()
-    # Dismiss get started dialog if appears
-    try:
-        page.get_by_role("button", name="Get started").click(timeout=3000)
-    except (AssertionError, TimeoutError):
-        pass
-    # Expect the main screen to appear
-    expect(page.get_by_test_id("BaseSidebarScreen")).to_be_visible(timeout=7000)
+            mail = imaplib.IMAP4_SSL("imap.gmail.com")
+            mail.login(self.original_email, self.password)
+            mail.select("inbox")
 
+            status, messages = mail.search(None, "UNSEEN")
+            if status != "OK":
+                return None
 
-def test_approver_field_in_tag_editor_shows_user_name():
-    """
-    Verify that the approver field in the tag editor shows the user name instead of user email.
-    """
-    with sync_playwright() as pw:
-        # Login user
-        user_email = generate_user_email()
-        fname, lname = "John", "Doe"
-        user_name = " ".join([fname, lname]).strip()
-        browser, context, page = launch_browser(pw)
-        login_user(page, user_email, first_name=fname, last_name=lname)
+            email_ids = messages[0].split()
+            email_ids = email_ids[::-1]
 
-        # Create a new workspace, if one is not already created
-        page.get_by_role("button", name="My settings").click()
-        page.get_by_test_id("InitialSettingsPage").get_by_role("menuitem", name="Workspaces", exact=True).click()
-        texts = page.get_by_test_id("WorkspacesListPage").get_by_label("row").all_inner_texts()
-        if not texts:
-            page.get_by_test_id("WorkspacesListPage").get_by_role("button", name="New workspace").first.click()
+            for email_id in email_ids:
+                status, msg_data = mail.fetch(email_id, '(RFC822)')
+                if status != "OK":
+                    continue
+
+                for response_part in msg_data:
+                    if isinstance(response_part, tuple):
+                        msg = email.message_from_bytes(response_part[1])
+
+                        if self.new_email in msg["To"]:
+                            otp_code = self._extract_otp_from_email(msg)
+                            if otp_code:
+                                mail.store(email_id, '+FLAGS', '\\Deleted')
+                                mail.expunge()
+                                mail.close()
+                                mail.logout()
+                                return otp_code
+
+            mail.close()
+            mail.logout()
+            return None
+
+        except imaplib.IMAP4.error:
+            return None
+
+    def _extract_otp_from_email(self, msg):
+        if msg.is_multipart():
+            for part in msg.walk():
+                if part.get_content_type() == "text/plain":
+                    email_body = part.get_payload(decode=True).decode()
+                    otp_code = self._extract_otp(email_body)
+                    if otp_code:
+                        return otp_code
         else:
-            page.get_by_test_id("WorkspacesListPage").get_by_label("row").first.click()
+            email_body = msg.get_payload(decode=True).decode()
+            otp_code = self._extract_otp(email_body)
+            if otp_code:
+                return otp_code
+        return None
 
-        # Enable workflows, rules, and tags, if not already enabled
-        page.get_by_test_id("WorkspaceInitialPage").get_by_role("menuitem", name="More features").click()
-        ws_workflows = page.get_by_test_id("WorkspaceMoreFeaturesPage").get_by_label("Configure how spend is approved")
-        if not ws_workflows.is_checked():
-            ws_workflows.click()
-        ws_rules = page.get_by_test_id("WorkspaceMoreFeaturesPage").get_by_label("Require receipts, flag high spend")
-        if not ws_rules.is_checked():
-            ws_rules.click()
-            if page.get_by_test_id("workspaceUpgradePage").is_visible():
-                page.get_by_test_id("workspaceUpgradePage").get_by_role("button", name="Upgrade").click()
-                page.get_by_test_id("workspaceUpgradePage").get_by_role("button", name="Got it").click()
-        ws_tags = page.get_by_test_id("WorkspaceMoreFeaturesPage").get_by_label("Classify costs and track billable")
-        if not ws_tags.is_checked():
-            ws_tags.click()
+    def _extract_otp(self, text):
+        match = re.search(r"\b\d{6}\b", text)
+        return match.group(0) if match else None
 
-        # Enable approvals, if not already enabled
-        page.get_by_test_id("WorkspaceInitialPage").get_by_role("menuitem", name="Workflows").click()
-        ws_approvals = page.get_by_test_id("WorkspacePageWithSections").get_by_label("Require additional approval")
-        if not ws_approvals.is_checked():
-            ws_approvals.click()
 
-        # Delete, if the tag already exists
-        tag_name = "Tag 1"
-        page.get_by_test_id("WorkspaceInitialPage").get_by_role("menuitem", name="Tags").click()
-        tag = page.get_by_test_id("WorkspaceTagsPage").get_by_role("button", name=tag_name).first
-        if tag.is_visible():
-            tag.click()
-            page.get_by_test_id("TagSettingsPage").get_by_role("menuitem", name="Delete").click()
-            page.get_by_role("button", name="Delete").click()
+# Initialize the OTP extractor
+gmail_account_helper = IMAPOTPExtractor(EMAIL, PASSWORD)
 
-        # Create tag
-        page.get_by_test_id("WorkspaceTagsPage").get_by_role("button", name="Add tag").click()
-        page.get_by_test_id("CreateTagPage").get_by_role("textbox", name="Name").fill(tag_name)
-        page.get_by_test_id("CreateTagPage").get_by_role("button", name="Save").click()
 
-        # Assign approver to the tag
-        tag.click()
-        page.get_by_test_id("TagSettingsPage").get_by_text("Approver").click()
-        page.get_by_test_id("TagApproverPage").get_by_role("button", name=user_name).click()
+# Login helper function
+def new_dot_login(page, email):
+    page.goto(NEWDOT_URL)
+    page.locator('input[type="email"]').fill(email)
+    page.wait_for_timeout(2000)
+    page.get_by_role("button", name="Continue").nth(0).click()
+    # page.wait_for_timeout(10000)
+    # gmail_account_helper.set_new_email(email)
+    # otp = gmail_account_helper.check_for_otp()
+    otp = '123456'
+    page.locator('input[data-testid="validateCode"]').fill(otp)
+    try:
+        page.get_by_role("button", name="Sign In").click()
+    except:
+        pass
 
-        # Verify approver field in tag editor shows user name
-        expect(
-            page.get_by_test_id("TagSettingsPage").get_by_role("menuitem", name=user_name),
-            "User name should be visible in the approver field",
-        ).to_be_visible(timeout=2000)
-
-        # Cleanup
-        context.close()
+@pytest.fixture(scope="module")
+def setup_browser():
+    """Initialize browser and page context for all tests within a single session."""
+    with sync_playwright() as p:
+        browser = p.chromium.launch(
+            headless=False,
+            args=[
+                "--ignore-certificate-errors",
+                "--disable-web-security",
+                "--disable-features=IsolateOrigins,site-per-process"
+            ],
+            slow_mo=1000
+        )
+        context = browser.new_context(ignore_https_errors=True)
+        page = context.new_page()
+        yield page
         browser.close()
 
 
-if __name__ == "__main__":
-    test_approver_field_in_tag_editor_shows_user_name()
+@pytest.fixture(scope="module")
+def login_to_new_dot(setup_browser):
+    """Log into the Expensify application with the provided email."""
+    page = setup_browser
+    new_dot_login(page, EMAIL)
+    return page
+
+def create_room(page):
+    room_name = f"testroom-1739573689-abc"
+    page.wait_for_timeout(2000)
+    page.get_by_label("Start chat (Floating action)").click()
+    page.get_by_label("Start chat", exact=True).click()
+    page.get_by_label("Room", exact=True).click()
+    page.get_by_placeholder("social").fill(room_name)
+    page.wait_for_timeout(2000)
+    page.get_by_role("button", name="Create room").click()
+    return room_name
+
+def set_room_description(page, room_name):
+    page.locator(f'//button[@aria-label="#{room_name}"]').last.click()
+    room_setting_page = page.locator('//div[@data-testid="ReportDetailsPage"]')
+    room_setting_page.locator('//div[contains(text(), "Room description")]').click()
+    page.locator('//div[@aria-label="Room description"]').last.fill('@test')
+    page.wait_for_timeout(2000)
+    page.locator('//div[contains(text(), "Save")]').last.click()
+    room_setting_page.locator('//button[@aria-label="Back"]').last.click()
+
+
+def verify_description_text(page):
+    room_description_text = page.locator('//div[@aria-label="Room description"]').last.text_content()
+
+    assert room_description_text == "@test", "Room description text mismatch"
+
+def test_search_icon_is_present_on_company_address(login_to_new_dot):
+    """Verify that the payment complete message is displayed in Spanish when language preference is set to Spanish."""
+
+    page = login_to_new_dot
+    page.wait_for_timeout(5000)
+    room_name = create_room(page)
+    set_room_description(page, room_name)
+    verify_description_text(page)

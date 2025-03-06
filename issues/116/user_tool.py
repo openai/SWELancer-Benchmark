@@ -1,134 +1,133 @@
+import time
 import pytest
-import os
-from playwright.async_api import Page, expect, async_playwright
+from playwright.sync_api import (
+    sync_playwright,
+    Page,
+    TimeoutError as PlaywrightTimeoutError,
+)
 from utils.trace_cleaner import trace_cleaner
-from utils.login import NEW_DOT_URL, sign_in
-from utils.browser import close_browser, start_browser
-
-STATIC_PREFIX = 53036
-EXPENSIFY_USERNAME_FIRSTNAME = "osaidtest"
-EXPENSIFY_USERNAME_LASTNAME = "testaccount"
-EXPENSIFY_USERNAME = f"{EXPENSIFY_USERNAME_FIRSTNAME} {EXPENSIFY_USERNAME_LASTNAME}"
-EXPENSIFY_EMAIL_USERNAME = "osaidtest5"
-EXPENSIFY_EMAIL = f"osaidtest5+{STATIC_PREFIX}@gmail.com"
-EXPENSIFY_PASSWORD = ""
-DATA_DIR = "browser_context"
-WORKSPACE_NAME = "workspace1"
-SLOW_MO = 1000
-NORMAL_RUN = False
-PROXY_SETTINGS = {"server": "http://localhost:8080"}
-SEARCH_QUERY = "type:expense status:all from:osaidtest5+530366@gmail.com to:osaidtest5+53036@gmail.com"
-SECOND_USER_USERNAME = 'second usr'
 
 
-async def sign_in_recorded(page: Page, email: str):
-    await page.get_by_test_id("username").fill(email)
-    await page.get_by_role("button", name="Continue").click()
-    await page.get_by_test_id("validateCode").fill("123456")
+def generate_random_email():
+    # return f"t56826807+{int(time.time())}@gmail.com"
+    return "t56826807+1739876351@gmail.com"
+   
 
+@pytest.fixture
+def setup_playwright():
+    playwright = sync_playwright().start()
 
-async def start_browser(
-    headless=False,
-    persistent=False,
-    data_dir=None,
-    slow_mo=500,
-    launch_args=["--ignore-certificate-errors"],
-    proxy=None,
-):
-    """
-    Start a browser instance with the given parameters.
+    browser = playwright.chromium.launch(
+        headless=False,
+        args=[
+            "--ignore-certificate-errors",
+            "--disable-web-security",
+            "--disable-features=IsolateOrigins,site-per-process",
+        ],
+        proxy={"server": "http://localhost:8080"},
+        slow_mo=500,
+    )
+    context = browser.new_context(
+        locale="en-US",
+    )
+    # Start tracing with screenshots, snapshots and sources
+    context.tracing.start(screenshots=True, snapshots=True, sources=True)
 
-    :param headless: Boolean to specify if the browser should run in headless mode.
-    :param persistent: Boolean to specify if the browser context should be persistent.
-    :param data_dir: Directory to store browser data for persistent context.
-    :return: A tuple of (context, page, playwright).
-    """
+    page = context.new_page()
 
-    # Initialize Playwright
-    playwright = await async_playwright().start()
-    device = playwright.devices["Desktop Safari"]
-    context, page = None, None
-    if persistent:
-        if data_dir is None:
-            data_dir = "browser_context"
-        if not os.path.exists(data_dir):
-            os.makedirs(data_dir)
-
-        context = await playwright.chromium.launch_persistent_context(
-            data_dir,
-            proxy=proxy,
-            headless=headless,
-            args=launch_args,
-            slow_mo=slow_mo,
-            timezone_id="Asia/Karachi",
-            **device
-        )
-        page = context.pages[0]
-    else:
-        browser = await playwright.chromium.launch(
-            headless=headless, args=launch_args, slow_mo=slow_mo, proxy=proxy,
-        )
-        context = await browser.new_context(
-            ignore_https_errors=True, timezone_id="Asia/Karachi", permissions=["clipboard-read", "clipboard-write"], **device
-        )
-        page = await context.new_page()
-
-    return context, page, playwright  # Return playwright to close later
-
-
-@pytest.mark.asyncio
-async def test_53036():
     try:
-        context, page, playwright = await start_browser(
-            persistent=False,
-            data_dir=DATA_DIR,
-            headless=False,
-            slow_mo=SLOW_MO,
-            launch_args=[
-                "--ignore-certificate-errors",
-                "--disable-web-security",
-                "--disable-features=IsolateOrigins,site-per-process",
-            ],
-            proxy=PROXY_SETTINGS
-        )
-
-        # Start tracing
-        await context.tracing.start(screenshots=True, snapshots=True, sources=True)
-
-        try:
-            # Step 1: Sign in
-            if NORMAL_RUN:
-                # Normal test run
-                await sign_in(page, EXPENSIFY_EMAIL, password=EXPENSIFY_PASSWORD)
-            else:
-                # Recorded Test Run.
-                await page.goto(NEW_DOT_URL)
-                await sign_in_recorded(page=page, email=EXPENSIFY_EMAIL)
-
-            await page.get_by_test_id("CustomBottomTabNavigator").get_by_label("Search").click()
-
-            # Cleanup (Reset Filters if present)
-            await page.get_by_role("button", name="Filters").click()
-            if await page.get_by_role("link", name="Reset filters").is_visible():
-                await page.get_by_role("link", name="Reset filters").click()
-            await page.get_by_label("Back").click()
-            
-            await page.get_by_test_id("Search").get_by_label("Search").click()
-            await page.get_by_test_id("search-router-text-input").fill(SEARCH_QUERY)
-            await page.get_by_test_id("search-router-text-input").press("Enter")
-
-            await page.get_by_role("button", name="Filters").click()
-
-            # Assert that the filters are correctly applied.
-            await expect(page.get_by_test_id("SearchAdvancedFiltersPage").get_by_text(SECOND_USER_USERNAME)).to_be_visible()
-            await expect(page.get_by_test_id("SearchAdvancedFiltersPage").get_by_text(EXPENSIFY_USERNAME)).to_be_visible()
-            await expect(page.get_by_role("button", name="Save search")).to_be_visible()
-
-        finally:
-            # Stop tracing and export the trace file, then clean the trace
-            await context.tracing.stop(path="/app/expensify/user_tool/output_browser1.zip")
-            trace_cleaner("/app/expensify/user_tool/output_browser1.zip")
-
+        yield page
     finally:
-        # Step 6: Close the browser.
-        await close_browser(context, page, playwright)
+        try:
+            context.tracing.stop(path="/app/expensify/user_tool/output_browser1.zip")
+        except Exception as e:
+            print(f"Error stopping tracing: {e}")
+        trace_cleaner("/app/expensify/user_tool/output_browser1.zip")
+        browser.close()
+        playwright.stop()
+
+
+def login_user(page: Page, email: str):
+    page.goto("https://dev.new.expensify.com:8082/")
+    page.locator('input[type="email"]').fill(email)
+    page.locator("button", has_text="Continue").click()
+    page.locator("button", has_text="Join").click()
+
+
+def complete_onboarding(page: Page, first_name: str, last_name: str = ""):
+    page.locator("text='Track and budget expenses'").click()
+    page.locator('input[name="fname"]').fill(first_name)
+    page.locator('input[name="lname"]').fill(last_name)
+    page.get_by_role("button", name="Continue").last.click()
+
+
+def get_header_text(page: Page):
+    siblings = page.locator('button[id="backButton"]').last.locator("xpath=following-sibling::*").all()
+    inner_text = ""
+    for sibling in siblings:
+        inner_text += sibling.inner_text()
+
+    return inner_text
+
+
+def test(setup_playwright):
+    page = setup_playwright
+
+    email_user, name_user = generate_random_email(), "User A"
+    
+    try:
+        login_user(page, email_user)
+        
+        complete_onboarding(page, name_user)
+
+        page.get_by_label("Start chat (Floating action)").click()
+        try:
+            page.get_by_label("Submit expense").click(timeout=1000)
+        except Exception:
+            page.get_by_label("Create expense").click()
+        page.get_by_label("Manual").click()
+
+        assert ("Create expense" in get_header_text(page)) or ("Submit expense" in get_header_text(page))
+
+        page.locator('input[placeholder="0"]').fill('100')
+        page.locator("#numPadContainerView").get_by_role("button", name="Next").click()
+
+        assert "Choose recipient" in get_header_text(page)
+        
+        page.get_by_test_id("selection-list-text-input").fill("t56826807+11@gmail.com")
+        page.get_by_test_id("selection-list").get_by_label("Approver").click()
+
+        assert "Confirm details" in get_header_text(page)
+        
+        page.keyboard.press("Escape")
+
+        page.get_by_label("Start chat (Floating action)").click()
+        page.get_by_label("Start chat", exact=True).click()
+        page.get_by_test_id("selection-list-text-input").fill("t56826807+11@gmail.com")
+        page.get_by_label("Approver").click()
+
+        page.get_by_label("Create").click()
+        page.get_by_label("Pay Approver").click()
+
+        assert "Pay Approver" in get_header_text(page)
+
+        page.locator('input[placeholder="0"]').fill('100')
+        page.get_by_role("button", name="Next").click()
+
+        assert "Confirm details" in get_header_text(page)
+
+        page.keyboard.press("Escape")
+
+        page.get_by_label("Create").click()
+        page.get_by_label("Split expense").click()
+        page.get_by_label("Manual").click()
+
+        assert "Create expense" in get_header_text(page)
+
+        page.locator('input[placeholder="0"]').fill('100')
+        page.locator("#numPadContainerView").get_by_role("button", name="Next").click()
+
+        assert "Confirm details" in get_header_text(page)
+    finally:
+        # In case any additional cleanup is needed in the test level, it would go here
+        pass

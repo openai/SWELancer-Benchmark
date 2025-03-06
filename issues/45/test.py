@@ -1,42 +1,136 @@
-PROXY = True
-PROXY_OTP = False
+import imaplib
+import random
+import re
+import time
+import email
 
-"""
-The test verifies if the expected image is visible after clicking on the attachment from a markdown message through the search page.
-"""
+from playwright.sync_api import sync_playwright, expect 
+from playwright._impl._page import Page
 
-import pytest
-from playwright.async_api import expect
 
-from utils.login import sign_up, complete_onboarding
-from utils.browser import start_browser, close_browser
-from utils.email_handler import get_unique_derived_email
+NEWDOT_URL = "https://dev.new.expensify.com:8082/"
+OLDDOT_URL = "http://localhost:9000/"
+EMAIL = "turingsampleopen+53916@gmail.com"
+PASSWORD = "dmyi iqgn znbg kqii"
 
-# Email
-BASE_EMAIL = "testerfreelancer555@gmail.com"
 
-@pytest.mark.asyncio
-async def test_image_on_search_page():
-    proxy = {"server":  "http://127.0.0.1:8080/"} if PROXY else None
-    launch_args=[
-    "--ignore-certificate-errors",
-    "--disable-web-security",
-    "--disable-features=IsolateOrigins,site-per-process"
-    ]
-    context, page, playwright = await start_browser(launch_args=launch_args, slow_mo=500, proxy=proxy)
-    try:
-        # Log in the user
-        # email = get_unique_derived_email(email=BASE_EMAIL)
-        email = "testerfreelancer555+1739550397@gmail.com"
-        await sign_up(page, email=email)
-        await complete_onboarding(page, "Test", "User")
-        await page.get_by_text("Test User (you)").click()
-        await page.locator("#composer").fill("*test* ![demo image](https://camo.githubusercontent.com/4848d0f965f332077b77a1a0488c3e66b4769032104f4de6890bae218b4add8d/68747470733a2f2f70696373756d2e70686f746f732f69642f313036372f3230302f333030) _test_")
-        await page.get_by_label("Send").click()
-        await page.get_by_test_id("CustomBottomTabNavigator").get_by_label("Search").click()
-        await page.get_by_text("Chats").click()
-        await page.get_by_test_id("selection-list").get_by_label("View attachment").click()
-        await expect(page.get_by_label("68747470733a2f2f70696373756d2e70686f746f732f69642f313036372f3230302f333030.jpg").locator("img")).to_be_visible()
+class IMAPOTPExtractor:
+    def __init__(self, email_address, password):
+        if not self._validate_email(email_address):
+            raise ValueError("Invalid email address format.")
+        self.original_email = email_address
+        self.password = password
 
-    finally:
-        await close_browser(context, page, playwright)
+        random_suffix = random.randint(1000, 9999)
+        current_timestamp = int(time.time())
+        random_suffix = f"{current_timestamp}{random_suffix}"
+    
+    def _validate_email(self, email_address):
+        return bool(re.match(r"[^@]+@[^@]+\.[^@]+", email_address))
+    
+    def set_new_email(self, email):
+        self.new_email = email
+    
+    def check_for_otp(self):
+        try:
+            mail = imaplib.IMAP4_SSL("imap.gmail.com")
+            mail.login(self.original_email, self.password)
+            mail.select("inbox")
+            
+            status, messages = mail.search(None, "UNSEEN")
+            if status != "OK":
+                return None
+            
+            email_ids = messages[0].split()            
+            email_ids = email_ids[::-1]
+
+            for email_id in email_ids:
+                status, msg_data = mail.fetch(email_id, '(RFC822)')
+                if status != "OK":
+                    continue
+                
+                for response_part in msg_data:
+                    if isinstance(response_part, tuple):
+                        msg = email.message_from_bytes(response_part[1])
+
+                        if self.new_email in msg["To"]:
+                            otp_code = self._extract_otp_from_email(msg)
+                            if otp_code:
+                                mail.store(email_id, '+FLAGS', '\\Deleted')
+                                mail.expunge()
+                                mail.close()
+                                mail.logout()
+                                return otp_code
+            
+            mail.close()
+            mail.logout()
+            return None
+
+        except imaplib.IMAP4.error:
+            return None
+
+    def _extract_otp_from_email(self, msg):
+        if msg.is_multipart():
+            for part in msg.walk():
+                if part.get_content_type() == "text/plain":
+                    email_body = part.get_payload(decode=True).decode()
+                    otp_code = self._extract_otp(email_body)
+                    if otp_code:
+                        return otp_code
+        else:
+            email_body = msg.get_payload(decode=True).decode()
+            otp_code = self._extract_otp(email_body)
+            if otp_code:
+                return otp_code
+        return None
+
+    def _extract_otp(self, text):
+        match = re.search(r"\b\d{6}\b", text)
+        return match.group(0) if match else None
+
+gmail_account_helper = IMAPOTPExtractor(EMAIL, PASSWORD)
+
+def new_dot_login(page):
+    email = EMAIL
+    page.goto(NEWDOT_URL)  
+    page.locator('input[type="email"]').fill(email)
+    page.wait_for_timeout(2000)
+    page.get_by_role("button", name="Continue").nth(0).click()
+    page.wait_for_timeout(5000)
+    gmail_account_helper.set_new_email(email)
+    otp = gmail_account_helper.check_for_otp()
+    page.locator('input[data-testid="validateCode"]').fill(otp)
+
+
+def test_expensify_53916():
+     with sync_playwright() as p:
+        browser = p.chromium.launch(headless=False, args=[
+                "--ignore-certificate-errors",
+                "--disable-web-security",
+                "--disable-features-IsolateOrigins,site-per-process"
+                ])
+        context = browser.new_context()
+        page = context.new_page()
+
+        new_dot_login(page)
+
+        page.get_by_label("My settings").click()
+        page.wait_for_timeout(1000)
+
+        page.get_by_label("Preferences").click()
+        page.wait_for_timeout(1000)
+
+        page.get_by_label("English").click()
+        page.wait_for_timeout(1000)
+
+        page.get_by_label("Spanish").click()
+        page.wait_for_timeout(1000)
+
+        page.get_by_label("Espacios de trabajo").click()
+        page.wait_for_timeout(1000)
+
+        page.get_by_role("button", name="row").click()
+        page.wait_for_timeout(1000)
+
+        expect(page.get_by_test_id("WorkspaceInitialPage").get_by_text("US$")).to_contain_text("0,00 US$")
+

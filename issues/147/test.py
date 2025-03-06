@@ -1,59 +1,71 @@
-
-from playwright.sync_api import  sync_playwright
-
-NEWDOT_URL = "https://dev.new.expensify.com:8082/"
+from playwright.sync_api import sync_playwright, expect
 
 
-def new_dot_login(page, email):
-    page.goto(NEWDOT_URL)  
+# Expensify app URL
+EXPENSIFY_URL = "https://dev.new.expensify.com:8082/"
+
+# Email login credentials
+EMAIL_USERNAME = "naturesv057+52030_1@gmail.com"
+
+def launch_browser(pw, device=None, geolocation=None):
+    """
+    Launch the browser.
+    """
+    browser = pw.chromium.launch(
+        headless=False,
+        proxy = {"server": "http://127.0.0.1:8080/"},
+        args=[
+            "--ignore-certificate-errors",
+            "--disable-web-security",
+            "--disable-features=IsolateOrigins,site-per-process",
+        ],
+        slow_mo=500
+    )
+    context_args = {}
+    if device:
+        context_args.update(pw.devices[device])
+    if geolocation:
+        context_args["geolocation"] = geolocation
+        context_args["permissions"] = ["geolocation"]
+    context = browser.new_context(**context_args)
+    page = context.new_page()
+    return browser, context, page
+
+
+def login_user(page):
+    """
+    Login to the Expensify app and complete the onboarding.
+    """
+    # Open the Expensify app
+    page.goto(EXPENSIFY_URL)
+
+    # Login user
+    page.get_by_role("textbox", name="Phone or email").fill(EMAIL_USERNAME)
+    page.locator("div", has_text="Continue").last.click()
     
-    page.locator('input[type="email"]').fill(email)
-    page.keyboard.press('Enter')
-
-    # Magic code entry
-    page.wait_for_timeout(3000)
-    my_otp_code = '123456'
-
-    page.keyboard.type(my_otp_code)
-    try:
-        page.get_by_role("button", name="Sign in").click()
-    except Exception:
-        pass
-
-
-
-def test_same_tab():
+    # Get the OTP code from the email
+    otp = "123456"
     
+    # Enter the OTP code
+    page.keyboard.type(otp)
+
+
+def test_52030():
     with sync_playwright() as p:
-        browser = p.chromium.launch(channel="chrome", headless=False, 
-         proxy = {"server": "http://127.0.0.1:8080/"},args=[
-                            "--disable-web-security",
-                             "--disable-features=IsolateOrigins,site-per-process"
-        ])
-        context = browser.new_context()
-        page = context.new_page()
+        # Step 1: Login user
+        browser, context, page = launch_browser(p)
+        login_user(page)
+        page.wait_for_timeout(5000)
 
-        email = 't2815719+2893@gmail.com'
-         # login user
-        new_dot_login(page, email)
+        # Step 2: Reintroduce scenario
+        try:
+            page.get_by_label("Workspaces").click(timeout=2000)
+        except:
+            page.get_by_label("Track and budget expenses").click()
+            page.get_by_role("textbox", name="First name").fill("John")
+            page.get_by_role("textbox", name="Last name").fill("Doe")
+            page.get_by_role("button", name="Continue").click()
+            page.get_by_label("Workspaces").click()
 
-        new_pages = []
-        context.on("page", lambda new_page: new_pages.append(new_page))
-        
-        #navigate to settings
-        page.get_by_label("My settings").click()
-        page.get_by_label("Switch to Expensify Classic").click()
-
-        #fillout neccessary info to continue with operation
-        page.get_by_label("I don't understand how to use").click()
-        page.get_by_role("button", name="Next").click()
-        page.get_by_role("textbox", name="Your response").fill("test")
-        page.get_by_role("button", name="Next").click()
-        page.get_by_role("button", name="Switch to Expensify Classic").click()
-        page.wait_for_timeout(50000) #waiting for page to load and fail
-       
-
-        #test title of page is loading
-        assert  len(new_pages) == 0 ,'Switch to classic should open in same tab'
-        
-        browser.close()
+        #Step 3: Check if the issue is resolved
+        expect(page.get_by_label("New workspace")).not_to_be_visible()

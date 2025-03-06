@@ -1,0 +1,6 @@
+{
+    "price": 250.0,
+    "title": "[HOLD for payment 2024-11-29] [$250] Add a loader to the cards page while waiting for cards collection and feed settings ",
+    "issue_repo_steps": "One pattern we use extensively in other pages is a little spinner to help the user understand that we don't quite yet have all the data, and then one we do, the spinner disappears and the content shows. Here's how that looks for the categories page in the workspace editor. \r\n\r\n![CleanShot 2024-11-14 at 14 28 44](https://github.com/user-attachments/assets/73f6c944-c232-4b2e-be88-c954b4d7a11d)\r\n\r\nAll in all, we need to:\r\n\r\n - **If the user is online**: Show a spinner while we wait for a 200 response from cards collection and feed settings\r\n - **If the user is offline**: Don't show the spinner and show whatever data we have. \n<details><summary>Upwork Automation - Do Not Edit</summary>\n    <ul>\n        <li>Upwork Job URL: https://www.upwork.com/jobs/~021857059797769493830</li>\n        <li>Upwork Job ID: 1857059797769493830</li>\n        <li>Last Price Increase: 2024-11-14</li>\n<li>Automatic offers: </li>\n<ul>\n<li>allgandalf | Contributor | 104898980</li>\n</ul></li>\n    </ul>\n</details>\n\n<details><summary>Issue Owner</summary>Current Issue Owner: @JmillsExpensify</details>",
+    "_issue_id": "52559"
+}

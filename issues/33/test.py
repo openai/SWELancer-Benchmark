@@ -1,128 +1,60 @@
+import os
 import time
-from playwright.sync_api import Page, sync_playwright
+import pytest
+from playwright.sync_api import sync_playwright, expect
+from playwright.sync_api._context_manager import PlaywrightContextManager
+from playwright._impl._browser import Browser
+from playwright._impl._page import Page
+from playwright.sync_api import sync_playwright, expect
+import re, time
+import os
+import imaplib
+import email
+import re
+import random
+import numpy as np
+import platform
 
 
-EXPENSIFY_URL = "https://dev.new.expensify.com:8082/"
-FIRST_NAME = "Asaad"
-LAST_NAME = "I"
-SLOW_MO = 500
-PROXY_SERVER = "http://localhost:8080"
+NEWDOT_URL = "https://dev.new.expensify.com:8082/"
+OLDDOT_URL = "http://localhost:9000/"
+EMAIL = "test"+ str(random.randint(2234,78987))+"@yahoo.com"
+PASSWORD = "uotx fzkt kfeg dehz"
 
 
-def generate_random_email(username="expensify66", domain="gmail.com", seed=None):
-    if seed is None:
-        seed = int(time.time())
-    return f"{username}+{seed}@{domain}"
-
-
-def login(page: Page):
-    # Step 1: Open expensify url
-    page.goto(EXPENSIFY_URL)
-
-    email = generate_random_email()
-
-    # Step 2: Enter email and click continue
-    page.get_by_test_id("username").fill(email)
-    page.get_by_role("button", name="Continue").click()
-
-    # Step 3: Click join button
-    page.get_by_role("button", name="Join").click()
-
-    # Step 4: Select 'Track and budget expenses' in onobarding page and click Continue
-    page.get_by_text("Track and budget expenses").click()
-    page.get_by_role("button", name="Continue").click()
-
-    # Step 5: Enter first name, last name and click continue
-    page.get_by_role("textbox", name="First name").fill(FIRST_NAME)
-    page.get_by_role("textbox", name="Last name").fill(LAST_NAME)
-    page.get_by_role("form").get_by_role("button", name="Continue").click()
-
-    # Step 6: Get ahead of welcome to expensify by clicking get started
-    try:
-        page.get_by_role("button", name="Get started").last.click(timeout=3000)
-    except:
-        # ignore the error  and proceed
-        pass
-
-
-def verify_search_LHN_items_height(page: Page):
-    # Step 1: Open Search page
-    page.get_by_test_id("CustomBottomTabNavigator").get_by_label("Search").click()
-
-    # Step 2: Verify that the height of the LHN options in search is correct
-    LHN_options = page.get_by_test_id("SearchPageBottomTab").get_by_role("menuitem")
-    for i in range(LHN_options.count()):
-        option = LHN_options.nth(i)
-        assert (
-            option.bounding_box()["height"] == 52
-        ), f"Height of LHN items in search is not 52"
-
-
-def verify_settings_LHN_items_height(page: Page):
-    # Step 1: Open Settings page
-    page.get_by_test_id("CustomBottomTabNavigator").get_by_label("Settings").click()
-
-    # Step 2: Verify that the height of the LHN options in settings is correct
-    LHN_options = page.get_by_test_id("InitialSettingsPage").get_by_role("menuitem")
-    for i in range(LHN_options.count()):
-        option = LHN_options.nth(i)
-        assert (
-            option.bounding_box()["height"] == 52
-        ), f"Height of LHN items in settings is not 52"
-
-
-def verify_workspace_LHN_items_height(page: Page):
-    # Step 1: Open Workspace page
-    page.get_by_test_id("CustomBottomTabNavigator").get_by_label(
-        "Start chat (Floating action)"
-    ).click()
-
-    page.get_by_label("New workspace").click()
-
-    # Step 2: Verify that the height of the LHN options in workspace is correct
-    LHN_options = page.get_by_test_id("WorkspaceInitialPage").get_by_role("menuitem")
-    for i in range(LHN_options.count()):
-        option = LHN_options.nth(i)
-        assert (
-            option.bounding_box()["height"] == 52
-        ), f"Height of LHN items in workspace is not 52"
-
-
-def test_search_LHN_options_height():
+def launch_browser(pw, headless=False, device=None, geolocation=None):
     """
-    This test verifies that the height of the LHN options is correct.
+    Launch the browser.
     """
+    browser = pw.chromium.launch(headless=headless)
+    context_args = {}
+    if device:
+        context_args.update(pw.devices[device])
+    if geolocation:
+        context_args["geolocation"] = geolocation
+        context_args["permissions"] = ["geolocation"]
+    context = browser.new_context(**context_args)
+    page = context.new_page()
+    return browser, context, page
+
+def test_check_expense_title() -> None: 
     with sync_playwright() as p:
-        browser = p.chromium.launch(
-            headless=False,
-            slow_mo=SLOW_MO,
-            args=(
-                [
-                    "--ignore-certificate-errors",
-                    "--disable-web-security",
-                    "--disable-features=IsolateOrigins,site-per-process",
-                ]
-                if PROXY_SERVER
-                else None
-            ),
-            proxy={"server": PROXY_SERVER} if PROXY_SERVER else None,
-        )
-        context = browser.new_context()
-        page = context.new_page()
+        browser = p.chromium.launch(headless=False, args=[
+            "--disable-web-security",
+            "--disable-features=IsolateOrigins,site-per-process"
+        ],proxy={"server": "http://127.0.0.1:8080/"})
 
-        # Step 1: Login to expensify
-        login(page)
-
-        # Step 2: Verify that the height of the LHN options in search is correct
-        verify_search_LHN_items_height(page)
-
-        # Step 3: Verify that the height of the LHN options in settings is correct
-        verify_settings_LHN_items_height(page)
-
-        # Step 4: Verify that the height of the LHN options in workspace is correct
-        verify_workspace_LHN_items_height(page)
-
-        # Step 5: Cleanup
+        first_user_context = browser.new_context(ignore_https_errors=True)
+        page = first_user_context.new_page()     
+        page.goto(NEWDOT_URL)  
+        page.wait_for_timeout(3000)
+        page.locator('input[type="email"]').fill(EMAIL)
+        page.locator('button[tabindex="0"]').click()
+        page.wait_for_timeout(1000)
+        page.locator('button[tabindex="0"]').click() 
+        page.wait_for_timeout(1000)
+        expect(page.get_by_text("What do you want to do today? Track and budget expenses.simple-")).to_be_visible()
+        
+        page.wait_for_timeout(1500)
         page.close()
-        context.close()
         browser.close()

@@ -1,0 +1,58 @@
+diff --git a/src/pages/workspace/WorkspacesListPage.tsx b/src/pages/workspace/WorkspacesListPage.tsx
+index 1dd3ee4a74d..9d6b1d6f8da 100755
+--- a/src/pages/workspace/WorkspacesListPage.tsx
++++ b/src/pages/workspace/WorkspacesListPage.tsx
+@@ -349,18 +349,7 @@ function WorkspacesListPage() {
+                 };
+             })
+             .sort((a, b) => localeCompare(a.title, b.title));
+-    }, [reimbursementAccount?.errors, policies, isOffline, theme.textLight, policyRooms, session?.email, allConnectionSyncProgresses]);
+-
+-    const getHeaderButton = () => (
+-        <Button
+-            accessibilityLabel={translate('workspace.new.newWorkspace')}
+-            success
+-            text={translate('workspace.new.newWorkspace')}
+-            onPress={() => interceptAnonymousUser(() => App.createWorkspaceWithPolicyDraftAndNavigateToIt())}
+-            icon={Expensicons.Plus}
+-            style={[shouldUseNarrowLayout && styles.flexGrow1, shouldUseNarrowLayout && styles.mb3]}
+-        />
+-    );
++    }, [reimbursementAccount?.errors, policies, isOffline, theme.textLight, policyRooms]);
+ 
+     if (isEmptyObject(workspaces)) {
+         return (
+@@ -378,9 +367,14 @@ function WorkspacesListPage() {
+                     onBackButtonPress={() => Navigation.goBack()}
+                     icon={Illustrations.BigRocket}
+                 >
+-                    {!shouldUseNarrowLayout && getHeaderButton()}
++                    <Button
++                        accessibilityLabel={translate('workspace.new.newWorkspace')}
++                        success
++                        medium
++                        text={translate('workspace.new.newWorkspace')}
++                        onPress={() => interceptAnonymousUser(() => App.createWorkspaceWithPolicyDraftAndNavigateToIt())}
++                    />
+                 </HeaderWithBackButton>
+-                {shouldUseNarrowLayout && <View style={[styles.pl5, styles.pr5]}>{getHeaderButton()}</View>}
+                 <ScrollView contentContainerStyle={styles.pt3}>
+                     <View style={[styles.flex1, isLessThanMediumScreen ? styles.workspaceSectionMobile : styles.workspaceSection]}>
+                         <FeatureList
+@@ -415,9 +409,14 @@ function WorkspacesListPage() {
+                     onBackButtonPress={() => Navigation.goBack()}
+                     icon={Illustrations.BigRocket}
+                 >
+-                    {!shouldUseNarrowLayout && getHeaderButton()}
++                    <Button
++                        accessibilityLabel={translate('workspace.new.newWorkspace')}
++                        success
++                        medium
++                        text={translate('workspace.new.newWorkspace')}
++                        onPress={() => interceptAnonymousUser(() => App.createWorkspaceWithPolicyDraftAndNavigateToIt())}
++                    />
+                 </HeaderWithBackButton>
+-                {shouldUseNarrowLayout && <View style={[styles.pl5, styles.pr5]}>{getHeaderButton()}</View>}
+                 <FlatList
+                     data={workspaces}
+                     renderItem={getMenuItem}

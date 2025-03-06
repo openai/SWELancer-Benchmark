@@ -1,163 +1,130 @@
-from playwright.sync_api import sync_playwright, expect
-from playwright._impl._page import Page
+import pytest_asyncio
+import pytest
+from moviepy import VideoClip
+import numpy as np
+from PIL import Image, ImageDraw
+import io
+import tempfile
+import os
 import re
-import imaplib
-import email
 
+from playwright.async_api import async_playwright, expect
+from utils.login import EmailHandler, complete_onboarding
 
+NEWDOT_URL = "http://dev.new.expensify.com:8082/"
+EXPENSIFY_EMAIL = "testingq186+52114@gmail.com"
+EXPENSIFY_PASSWORD = ""
 
-class EmailHandler:
-    def __init__(self, email_address, password):
-        # Validate email and password input
-        if not self._validate_email(email_address):
-            raise ValueError("Invalid email address format.")
-        self.original_email = email_address
-        self.password = password
-        self.new_email = email_address
+TESTING_FLOW = True
 
-    def _validate_email(self, email_address):
-        # Simple email validation
-        return bool(re.match(r"[^@]+@[^@]+\.[^@]+", email_address))
+@pytest_asyncio.fixture
+async def page():
+    """
+    Launch the Expensify app.
+    """
+    pw = await async_playwright().start()
+    browser = await pw.chromium.launch(
+        channel="chrome",
+        headless=False,
+        args=[
+            "--ignore-certificate-errors",
+            "--disable-web-security",
+            "--disable-features=IsolateOrigins,site-per-process"
+        ],
+        proxy={"server": "http://localhost:8080"},
+        slow_mo=500
+    )
 
-    def _generate_new_email(self, email_address, suffix):
-        # Add random number suffix to the email before the "@" symbol
-        username, domain = email_address.split('@')
-        return f"{username}+{suffix}@{domain}"
+    context = await browser.new_context(ignore_https_errors=True,viewport={'width': 400, 'height': 600})
+    page = await context.new_page()
 
-    def get_email_address(self):
-        # Return the generated email with "+" suffix
-        return self.new_email
+    yield page
+    await browser.close()
+    await pw.stop()
 
-    def check_for_otp(self):
-        # Connect to the Gmail server using IMAP
+async def create_video():
+    """
+    Create a WebM video using moviepy, save it temporarily, and return it as a BytesIO buffer.
+    """
+    def make_frame(t):
+        """Generate a frame for the video at time `t`."""
+        frame_index = int(t * 30)  # Assuming 30 FPS
+        img = Image.new("RGB", (640, 480), "white")
+        draw = ImageDraw.Draw(img)
+        draw.rectangle((50, 50, 590, 430), outline="red", width=5)
+        draw.text((240, 220), f"Frame {frame_index + 1}", fill="blue")
+        return np.array(img)
+
+    # Create the video clip using moviepy
+    video_clip = VideoClip(make_frame, duration=5)  # 5-second video
+
+    # Create a temporary file to store the WebM video
+    with tempfile.NamedTemporaryFile(suffix=".webm", delete=False) as temp_video_file:
+        temp_file_path = temp_video_file.name
+        video_clip.write_videofile(temp_file_path, codec="libvpx", fps=30, preset="ultrafast", audio=False)
+
+    # Read the temporary file into a BytesIO buffer
+    video_buffer = io.BytesIO()
+    with open(temp_file_path, "rb") as f:
+        video_buffer.write(f.read())
+
+    # Ensure cleanup by removing the temporary file
+    os.remove(temp_file_path)
+    video_buffer.seek(0)
+    return video_buffer
+
+async def new_dot_login(page, email, password):
+    await page.goto(NEWDOT_URL)
+    with EmailHandler(email, password) as email_handler:
+        if not TESTING_FLOW :
+            email_handler.clean_inbox()  # Clean inbox
+
+        # Enter email
+        await page.get_by_role("textbox", name="Phone or email").fill(email)
+        await page.get_by_role("button", name="Continue").click()
+        
         try:
-            mail = imaplib.IMAP4_SSL("imap.gmail.com")
-            mail.login(self.original_email, self.password)
-            mail.select("inbox")
+            await expect(page.locator('input[name="validateCode"]').first).to_be_visible()
+            otp = email_handler.read_otp_code() if not TESTING_FLOW else "123456"
+            await page.locator('input[name="validateCode"]').first.fill(otp)
+            # Wait sign in to complete
+            await page.get_by_text("Please enter the magic code").wait_for(state="hidden")
+        except Exception:
+            await page.get_by_role("button", name="Join").click()
+            await complete_onboarding(page, "Testing", "52114")
 
-            # Fetch all unread emails
-            status, messages = mail.search(None, "UNSEEN")
-            if status != "OK":
-                print("No unread emails found.")
-                return None
+@pytest.mark.asyncio
+async def test_scrollable_playback_speeds(page):
+    await new_dot_login(page, EXPENSIFY_EMAIL, EXPENSIFY_PASSWORD)
 
-            email_ids = messages[0].split()
-            # Start from the latest email by reversing the list
-            email_ids = email_ids[::-1]  # Reverse order to process latest first
+    try:
+        # Need to press back for sign up
+        await page.get_by_label("Back").click(timeout=5000)
+    except Exception:
+        pass
+    await page.get_by_label("Navigates to a chat").get_by_text("Testing 52114 (you)").click(timeout=10_000)
+    await page.get_by_label("Create").last.click()
+    async with page.expect_file_chooser() as fc:
+        await page.get_by_label("Add attachment").click()
+    file_chooser = await fc.value
 
-            # Iterate over each email until OTP is found
-            for email_id in email_ids:
-                # Fetch the email by ID
-                status, msg_data = mail.fetch(email_id, '(RFC822)')
-                if status != "OK":
-                    print("Error fetching email.")
-                    continue
+    video_buffer = await create_video()
+    await file_chooser.set_files({
+      "name": "test.webm",
+      "mimeType": "video/webm",
+      "buffer": video_buffer.getvalue()
+    })
+    await page.get_by_role("dialog").get_by_role("button", name="Send").click()
+    
+    # Click the video
+    await page.wait_for_timeout(3000)
+    await page.get_by_label(re.compile(r".*\.webm$")).first.click()
+    await page.get_by_role("dialog").get_by_role("button").last.hover()
+    await page.get_by_label("More").click()
+    await page.get_by_label("Playback speed").click()
+    await page.mouse.wheel(0, 200)
 
-                for response_part in msg_data:
-                    if isinstance(response_part, tuple):
-                        msg = email.message_from_bytes(response_part[1])
-
-                        # Check if the To address matches the generated new email
-                        if msg["To"] == self.new_email:
-                            # Extract OTP from the email body
-                            otp_code = self._extract_otp_from_email(msg)
-                            if otp_code:
-                                # Delete the email containing the OTP
-                                mail.store(email_id, '+FLAGS', '\\Deleted')
-                                mail.expunge()  # Permanently removes deleted emails from the mailbox
-
-                                # Logout and return OTP
-                                mail.close()
-                                mail.logout()
-                                return otp_code
-
-            # Logout if OTP not found in unread emails
-            mail.close()
-            mail.logout()
-            print("No OTP found in unread emails.")
-            return None
-
-        except imaplib.IMAP4.error:
-            print("Failed to connect to Gmail. Please check your email address or password.")
-            return None
-
-    def _extract_otp_from_email(self, msg):
-        # Extract OTP code from the email content
-        if msg.is_multipart():
-            for part in msg.walk():
-                if part.get_content_type() == "text/plain":
-                    email_body = part.get_payload(decode=True).decode()
-                    otp_code = self._extract_otp(email_body)
-                    if otp_code:
-                        return otp_code
-        else:
-            email_body = msg.get_payload(decode=True).decode()
-            otp_code = self._extract_otp(email_body)
-            if otp_code:
-                return otp_code
-        return None
-
-    def _extract_otp(self, text):
-        # Find a 6-digit code in the email body
-        match = re.search(r"\b\d{6}\b", text)
-        return match.group(0) if match else None
-
-# Function to log in to the application
-def login(page: Page, user_email: str, email_handler, first_name: str = "Milan", last_name: str = "T"):
-    # Open Expensify URL and log in
-    page.locator('input[type="email"]').fill(user_email)
-    page.get_by_role("button", name="Continue").click()
-    page.wait_for_timeout(9000)
-    if page.locator('input[data-testid="validateCode"]').is_visible():
-        # otp = email_handler.check_for_otp()
-        page.locator('input[data-testid="validateCode"]').fill("012345")
-    else:
-        page.get_by_role("button", name="Join").click()
-        page.wait_for_timeout(3000)
-        # Enter user details and complete onboarding
-        page.get_by_label("Track and budget expenses").click()
-        page.locator('input[name="fname"]').fill(first_name)
-        page.locator('input[name="lname"]').fill(last_name)
-        page.get_by_role("button", name="Continue").last.click()
-
-
-def test_28820():
-    with sync_playwright() as p:
-        # Launch chromium and open new page
-        browser = p.chromium.launch(headless=False,args=[ # Set headless=True for headless mode
-        "--disable-web-security",
-        "--disable-features=IsolateOrigins,site-per-process"
-        ])
-        context = browser.new_context()
-        page = context.new_page()
-
-
-        page.goto("https://dev.new.expensify.com:8082/")
-        # In broken state, this will not show the "track expense" button
-        email_address_1 = "rgulraiz2000+4084013@gmail.com"
-        # In broken state, this will show the "track expense" button
-        email_address_2 = "rgulraiz2000+204@gmail.com"
-
-        password = ""
-        user_fname = "Ehsan"
-        user_lname = "G"
-
-        email_handler = EmailHandler(email_address=email_address_1, password=password)
-        login(page, email_address_1, email_handler, user_fname, user_lname)
-        page.wait_for_timeout(6000)
-        
-        page.get_by_label("Start chat (Floating action)").click()    
-        expect(page.get_by_label("Track expense")).not_to_be_visible()
-        
-        page.get_by_label("Inbox").click()
-        page.get_by_label("My settings").click()
-        page.get_by_label("Sign out").click()
-
-        email_handler = EmailHandler(email_address=email_address_2, password=password)
-        login(page, email_address_2, email_handler, user_fname, user_lname)
-        page.wait_for_timeout(6000)
-        page.get_by_label("Start chat (Floating action)").click()    
-        expect(page.get_by_label("Track expense")).not_to_be_visible()
-
-        browser.close()
-        
+    await expect(page.get_by_label("1.25", exact=True)).to_be_in_viewport()
+    await expect(page.get_by_label("1.5", exact=True)).to_be_in_viewport()
+    await expect(page.get_by_label("1.75", exact=True)).to_be_in_viewport()
+    await expect(page.get_by_label("2", exact=True)).to_be_in_viewport()

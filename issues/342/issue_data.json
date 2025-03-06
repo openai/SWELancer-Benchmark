@@ -1,0 +1,6 @@
+{
+    "price": 500.0,
+    "title": "[HOLD for payment 2023-10-23][$500] Edit box and compose box slides over a bit when editing an existing comment",
+    "issue_repo_steps": "Action performed: 1. Open any report\r\n2. Click edit comment\n\nExpected result: Edit box should match the compose box as nearly as possible\n\nActual result: None",
+    "_issue_id": "28663_630"
+}

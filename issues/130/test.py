@@ -1,138 +1,132 @@
-"""
-Test for the issue: https://github.com/Expensify/App/issues/53382
-"""
+import re
+from playwright.sync_api import sync_playwright
 
-from playwright.sync_api import TimeoutError, expect, sync_playwright
+SITE_URL = "https://dev.new.expensify.com:8082/"
+PRIMARY_EMAIL = "expensifyolddot+1739802802@gmail.com"
+FIRST_NAME = "Random"
+LAST_NAME = "Name"
+AMOUNT = 100
 
-# Expensify app URL
-EXPENSIFY_URL = "https://dev.new.expensify.com:8082/"
+# Function to create an account and log in to Expensify
+def create_new_account_and_login(page, user_email, first_name, last_name):
+    # Create a new account as a random user
+    phone_or_email_input = page.locator('input[type="email"]')
+    phone_or_email_input.fill(user_email)
+    page.wait_for_timeout(1000)
 
-# Email login credentials
-EMAIL_USERNAME = "expensifytesting1@gmail.com"
-EMAIL_PASSWORD = ""
+    # Click Continue
+    continue_button = page.get_by_role("button", name="Continue")
+    continue_button.click()
+    page.wait_for_timeout(1000)
 
-# Email username postfix
-EMAIL_USERNAME_POSTFIX = "53382.6"
-
-
-def generate_user_email(user_id=None):
-    """
-    Generate an email address for user login.
-    """
-    temp = EMAIL_USERNAME.rsplit("@", 1)
-    username = temp[0].strip()
-    domain = temp[1].strip()
-    return f"{username}+{EMAIL_USERNAME_POSTFIX}{user_id or ''}@{domain}"
-
-
-def launch_browser(pw, headless=False, device=None, permissions=None, geolocation=None):
-    """
-    Launch the browser.
-    """
-    browser = pw.chromium.launch(
-        channel="chrome",
-        headless=headless,
-        args=[
-            "--ignore-certificate-errors",
-            "--disable-web-security",
-            "--disable-features=IsolateOrigins,site-per-process",
-        ],
-        slow_mo=1000,
-    )
-    context_args = {"permissions": permissions or []}
-    if device:
-        context_args.update(pw.devices[device])
-    if geolocation:
-        context_args["geolocation"] = geolocation
-        context_args["permissions"].append("geolocation")
-    context = browser.new_context(**context_args)
-    page = context.new_page()
-    return browser, context, page
-
-
-def login_user(page, user_email, first_name="John", last_name="Doe"):
-    """
-    Log into the Expensify app.
-    """
-    # Open the Expensify app
-    page.goto(EXPENSIFY_URL)
-    # Login user
-    page.get_by_test_id("username").fill(user_email)
-    page.get_by_role("button", name="Continue").click()
-    # Check if OTP is required for the login
+    # Click join button if it appears
     try:
-        expect(page.get_by_test_id("SignInPage").get_by_test_id("validateCode")).to_be_visible(timeout=7000)
-    except (AssertionError, TimeoutError):
-        # If not required, expect the join button to appear and click the button
-        page.get_by_test_id("SignInPage").get_by_role("button", name="Join").click()
-    else:
-        # Get the OTP and complete verification
-        otp_code = "123456"
-        page.get_by_test_id("SignInPage").get_by_test_id("validateCode").fill(otp_code)
-        try:
-            page.get_by_test_id("SignInPage").get_by_role("button", name="Sign in").click(timeout=2000)
-        except (AssertionError, TimeoutError):
-            pass
-    # Check if onboarding is required
-    try:
-        expect(page.get_by_text("What do you want to do today?")).to_be_visible(timeout=5000)
-    except (AssertionError, TimeoutError):
-        pass
-    else:
-        # Complete the onboarding
-        page.get_by_label("Manage my team's expenses").click()
-        page.get_by_role("button", name="More than 1,000 employees").click()
-        page.get_by_role("button", name="Continue").first.click()
-        page.get_by_role("button", name="None of the above").first.click()
-        page.get_by_role("button", name="Continue").last.click()
-    # Dismiss get started dialog if appears
-    try:
-        page.get_by_role("button", name="Get started").click(timeout=3000)
-    except (AssertionError, TimeoutError):
-        pass
-    # Expect the main screen to appear
-    expect(page.get_by_test_id("BaseSidebarScreen")).to_be_visible(timeout=7000)
-    # Close the info message if appears
-    try:
-        page.get_by_role("button", name="Close").click(timeout=2000)
-    except (AssertionError, TimeoutError):
+        print("Clicking the join button again if needed")
+        join_button = page.get_by_role("button", name="Join")
+        join_button.click()
+    except Exception as e:
         pass
 
+    # Complete the onboarding popup
+    page.wait_for_timeout(1000)
+    page.locator('text="Track and budget expenses"').click()
+    page.locator('input[name="fname"]').fill(first_name)
+    page.locator('input[name="lname"]').fill(last_name)
+    page.get_by_role("button", name="Continue").last.click()
+    page.wait_for_timeout(1000)
 
-def test_allow_disabling_auto_renew_freely():
-    """
-    Verify allow disabling auto renew freely if you haven't been billed at least once.
-    """
-    with sync_playwright() as pw:
-        # Login user
-        user_email = generate_user_email()
-        browser, context, page = launch_browser(pw)
-        login_user(page, user_email)
+# Function to create a new workspace and return back to inbox
+def create_new_workspace(page, mobile_browser=False, back_to_inbox=False):
+    # Step 1: Click my settings button
+    setting_button = page.locator("button[aria-label='My settings']")
+    setting_button.click()
 
-        # Go to Settings -> Subscription
-        page.get_by_test_id("CustomBottomTabNavigator").get_by_role("button", name="My settings").click()
-        page.get_by_test_id("InitialSettingsPage").get_by_role("menuitem", name="Subscription").click()
+    # Step 2: Click the Workspaces menu
+    preferences_div = page.locator("div[aria-label='Workspaces']:has(div:has-text('Workspaces'))")
+    preferences_div.click()
 
-        # Enable auto-renew toggle, if disabled
-        auto_renew = page.get_by_test_id("SubscriptionSettingsPage").get_by_label("Auto-renew").first
-        if not auto_renew.is_checked():
-            auto_renew.click()
+    # Step 3: Click the New workspace button
+    new_workspace_button = page.locator('button[aria-label="New workspace"]').last
+    new_workspace_button.click()
 
-        # Disable auto-renew toggle, verify that the survey form does not appear, and auto-renew is disabled
-        auto_renew.click()
-        expect(
-            page.get_by_test_id("DisableAutoRenewSurveyPage"),
-            "Survey form must not be shown",
-        ).not_to_be_visible(timeout=3000)
-        expect(
-            auto_renew,
-            "Auto-renew toggle must be disabled",
-        ).not_to_be_checked(timeout=3000)
+    # Case for going back to Inbox
+    if back_to_inbox:
+        # Step 4: Click the back button
+        back_button = page.locator('button[aria-label="Back"]')
+        back_button.click()
 
-        # Cleanup
+        # For mobile browser we need to press back again to go back to inbox
+        if mobile_browser:
+            page.locator('button[aria-label="Back"]').last.click()
+
+        # Step 5: Click the inbox button
+        inbox_button = page.locator('button[aria-label="Inbox"]')
+        inbox_button.click()
+
+# Function to create self track expense
+def create_self_track_expense(page, first_name, last_name, amount=100):
+    # Step 1: Click self chat button
+    page.get_by_role('button', name='Navigates to a chat').get_by_text(f'{first_name} {last_name} (you)').click()
+
+    # Step 2: Click the '+' button to submit a new expense
+    page.locator('button[aria-label="Create"]').locator("visible=true").click()
+
+    # Step 3: Click the 'Create expense' option
+    page.get_by_role('menuitem', name='Track expense').click()
+
+    # Step 4: Click on "Manual" button
+    page.get_by_role('button', name='Manual').click()
+
+    # Step 5: Enter the amount and press enter to submit the expense
+    page.locator('input[type="text"]').fill(str(amount))
+    page.keyboard.press("Enter")
+    page.keyboard.press("Enter")
+
+# Rename the function based on your task name
+def test_expensify_52240():
+    with sync_playwright() as p:
+        # Launch browser web settings
+        context = p.chromium.launch(
+            proxy = {"server": "http://localhost:8080"}, headless = False, args = ["--no-sandbox", "--disable-dev-shm-usage", "--ignore-certificate-errors", "--disable-web-security", "--disable-features=IsolateOrigins,site-per-process"], slow_mo = 500, channel = "chromium")
+
+        # Create a new page in the appropriate context
+        page = context.new_page()
+    
+        # Generate new email and create a new account
+        page.goto(SITE_URL)
+        create_new_account_and_login(page, PRIMARY_EMAIL, FIRST_NAME, LAST_NAME)
+
+        # Create a new workspace
+        create_new_workspace(page, back_to_inbox=True)
+
+        # Submit self expense
+        create_self_track_expense(page, FIRST_NAME, LAST_NAME, AMOUNT)
+
+        # Go to serach, click submitted expenses and view detail
+        page.locator('button[aria-label="Search"]').click()
+        page.get_by_test_id('selection-list').get_by_role('button', name='View').last.click()
+        pattern = re.compile(rf"^Tracking\s+.*\b{AMOUNT}\b.*$")
+        page.get_by_test_id(re.compile(r"^report-screen-")).get_by_role("button", name=pattern).last.click()
+
+        # Categorize the expense
+        page.get_by_role('menuitem', name='Categorize it').click()
+        page.get_by_role('button', name=f"{FIRST_NAME} {LAST_NAME}'s Workspace").first.click()
+        page.get_by_role('button', name='Benefits').last.click()
+        page.get_by_role('menuitem', name='Merchant').click()
+        page.locator('input[name="moneyRequestMerchant"]').fill("Test Merchant")
+        page.keyboard.press("Enter")
+        page.keyboard.press("Enter")
+
+        # Go back to the expense detail
+        page.get_by_test_id('selection-list').get_by_role('button', name='View').last.click()
+        page.get_by_test_id(re.compile(r"^report-screen-")).get_by_role("button", name=pattern).last.click()
+
+        # TEST: Verify that after categorization the track expense option is not available
+        categorize_it_menu = page.get_by_role('menuitem', name='Categorize it')
+        assert categorize_it_menu.count() == 0, "Categorize it menu item is still visible"
+
+        submit_into_someone = page.get_by_role('menuitem', name='Submit it to someone')
+        assert submit_into_someone.count() == 0, "Submit it to someone menu item is still visible"
+
+        # Close the browser
         context.close()
-        browser.close()
-
-
-if __name__ == "__main__":
-    test_allow_disabling_auto_renew_freely()

@@ -183,12 +183,12 @@ def set_full_name(page, first_name, last_name):
     if page.get_by_label("Back").count() > 0:
         page.get_by_label("Back").last.click()
     page.get_by_label("Inbox").click()
+    
 
-
-def test_51468():
+def test_53931():
     with sync_playwright() as p:
         # Login user 
-        user_info = get_test_user_info(seed=51468)
+        user_info = get_test_user_info(seed=53931)
         # Step 1: Login
         browser, page = login(p, user_info, False)
         # Step 2: Skip onboarding/start pages if any
@@ -200,27 +200,27 @@ def test_51468():
         
         page.get_by_label("My settings").click()
         page.get_by_test_id("InitialSettingsPage").get_by_label("Workspaces").click()
-        page.get_by_label("row").click()
+        page.get_by_label("New workspace").click()
+        page.get_by_label("More features").click()
+        page.get_by_label("Configure how spend is").click()
         page.get_by_label("Workflows").click()
-        page.locator("body").press("ControlOrMeta+d")
-        page.get_by_label("Force offline").click()
-        page.get_by_label("Workflows").press("Escape")
-        page.get_by_label("Add approvals").click()
-        page.get_by_test_id("WorkspaceWorkflowsApprovalsEditPage").get_by_text("Approver", exact=True).click()
-        page.get_by_test_id("selection-list").get_by_label("caraxxes555+51468 Test").click()
-        wait(page)
-        page.get_by_test_id("selection-list").get_by_label("caraxxes555+51468 Test").click()
-        wait(page)
-        page.get_by_role("button", name="Save").click()
-        wait(page)
-        page.get_by_role("button", name="Save").click()
-        wait(page)
-        page.get_by_label("Add approvals").click()
+        page.get_by_label("Require additional approval").click()
+        page.get_by_label("Add approval workflow").click()
+        page.get_by_test_id("upgrade-button").click()
+        page.get_by_test_id("confirmation-button").click()
+        page.get_by_label("Members").click()
         page.locator("body").press("ControlOrMeta+d")
         page.get_by_label("Force offline").click()
         page.get_by_label("Force offline").press("Escape")
+        page.get_by_role("button", name="Invite member").click()
+        page.get_by_test_id("selection-list-text-input").fill("jay207803+53931@gmail.com")
         wait(page)
-        expect(page.get_by_label("Everyone")).to_contain_text("Expenses fromEveryone")
-        
-              
+        page.get_by_label("jay207803+53931@gmail.com").last.click()
+        page.get_by_role("button", name="Next").click()
+        page.get_by_test_id("WorkspaceInviteMessagePage").get_by_role("button", name="Invite").click()
+        page.get_by_label("Workflows").click()
+        page.get_by_label("Add approval workflow").click()
+    
+        expect(page.get_by_test_id("selection-list")).to_contain_text("jay207803+53931@gmail.com")
+    
         browser.close()

@@ -1,141 +1,190 @@
-'''
-Test for the issue: https://github.com/Expensify/App/issues/52904
-'''
+import sys, os
 
-from playwright.sync_api import TimeoutError, expect, sync_playwright
+base_path = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
+sys.path.insert(0, base_path)
+
+import time
+import imaplib
+import email
+import re
+import os
+from email.header import decode_header
+from playwright.sync_api import sync_playwright, expect
+from playwright.sync_api._context_manager import PlaywrightContextManager
 from utils.trace_cleaner import trace_cleaner
 
-# Expensify app URL
-EXPENSIFY_URL = "https://dev.new.expensify.com:8082/"
 
-# Email login credentials
-EMAIL_USERNAME = "expensifytesting1@gmail.com"
-EMAIL_PASSWORD = ""
-
-# Email username postfix
-EMAIL_USERNAME_POSTFIX = "52904.3"
+GMAIL_NAME = "nomandevtur+50163"
+GMAIL_APP_PASSWORD = ""
 
 
-def generate_user_email(user_id=None):
-    """
-    Generate an email address for user login.
-    """
-    temp = EMAIL_USERNAME.rsplit("@", 1)
-    username = temp[0].strip()
-    domain = temp[1].strip()
-    return f"{username}+{EMAIL_USERNAME_POSTFIX}{user_id or ''}@{domain}"
+def get_test_user_info(seed = None, first_name = None, last_name = None):
+    if first_name is None:
+        first_name = GMAIL_NAME
+
+    if last_name is None:
+        last_name = ""
+
+    email = f"{GMAIL_NAME}+{seed}@gmail.com" if seed is not None else f"{GMAIL_NAME}@gmail.com"
+    
+    return {"email": email, "password": GMAIL_APP_PASSWORD, "first_name": first_name, "last_name": last_name}
 
 
-def launch_browser(pw, headless=False, device=None, permissions=None, geolocation=None):
-    """
-    Launch the browser.
-    """
-    browser = pw.chromium.launch(
-        channel="chrome",
-        headless=headless,
-        args=[
-            "--ignore-certificate-errors",
+def delete_email_inbox(user_email, password, retries=5, delay=10):
+    imap = imaplib.IMAP4_SSL("imap.gmail.com")
+    imap.login(user_email, password)
+
+
+
+    imap.select("inbox")
+    status, all_emails = imap.search(None, "ALL")
+    if status == "OK":
+        for email_id in all_emails[0].split():
+            imap.store(email_id, "+FLAGS", "\\Deleted")
+        imap.expunge()
+
+
+def get_magic_code(user_email, password, retries=5, delay=5):
+    code = '167554'
+
+    imap = imaplib.IMAP4_SSL("imap.gmail.com")
+    imap.login(user_email, password)
+
+    for _ in range(retries):
+        imap.select("inbox")
+        status, messages = imap.search(None, '(UNSEEN SUBJECT "Expensify magic sign-in code:")')
+
+        if status == "OK":
+            email_ids = messages[0].split()
+            print(email_ids)
+
+            if email_ids:
+                latest_email_id = email_ids[-1]
+                status, msg_data = imap.fetch(latest_email_id, "(RFC822)")
+
+                for response_part in msg_data:
+                    if isinstance(response_part, tuple):
+                        msg = email.message_from_bytes(response_part[1])
+                        subject, encoding = decode_header(msg["Subject"])[0]
+                        if isinstance(subject, bytes):
+                            subject = subject.decode(encoding or "utf-8")
+
+
+                        match = re.search(r"Expensify magic sign-in code: (\d+)", subject)
+                        if match:
+                            code = match.group(1)
+                            imap.logout()
+                            return code
+            else:
+                print("No unread emails found with the subject. Retrying...")
+        else:
+            print("Failed to retrieve emails. Retrying...")
+
+
+        time.sleep(delay)
+
+    
+    imap.logout()
+    print("Max retries reached. Email not found.")
+    return code
+
+
+def select_activity(page, first_name, last_name, activity_text):
+    expect(page.get_by_text("What do you want to do today?")).to_be_visible()
+    
+
+    page.get_by_label(activity_text).click()
+
+
+    page.get_by_role("textbox", name="First name").fill(first_name)
+    page.get_by_role("textbox", name="Last name").fill(last_name)
+    page.get_by_role("button", name="Continue").last.click()
+
+
+def login_user(page, user_info, activity_text="Track and budget expenses"):
+
+    page.context.clear_cookies()
+
+    page.goto('https://dev.new.expensify.com:8082/')
+    page.wait_for_load_state('load')
+    
+    try:
+
+        expect(page.get_by_label("Inbox")).to_be_visible(timeout=10000)
+        return
+    except:
+        pass
+
+    page.get_by_test_id("username").fill(user_info["email"])
+    page.get_by_role("button", name="Continue").click()
+
+    join_button = page.get_by_role("button", name="Join")
+    validate_code_input = page.locator('input[data-testid="validateCode"]')
+    expect(join_button.or_(validate_code_input)).to_be_visible()
+
+    if (join_button.is_visible()):
+        join_button.click(timeout=3000)
+    else:
+        magic_code = get_magic_code(user_info["email"], user_info["password"], retries=2, delay=5)
+
+        if magic_code is None:
+
+            page.locator(f"span:has-text('Didn't receive a magic code?')").first.click()
+            magic_code = get_magic_code(user_info["email"], user_info["password"], retries=6, delay=5)
+        print(f"Magic code: {magic_code}")
+        validate_code_input.fill(magic_code)
+
+    page.wait_for_timeout(3000)
+
+    select_activity_dialog = page.get_by_text("What do you want to do today?")
+    if select_activity_dialog.count() > 0:
+        select_activity(page, user_info["first_name"], user_info["last_name"], activity_text)
+
+
+def launch_app(pw, headless=True, device=None, geolocation=None):
+    browser = pw.chromium.launch(headless=headless, args=[
             "--disable-web-security",
-            "--disable-features=IsolateOrigins,site-per-process",
+            "--disable-features=IsolateOrigins,site-per-process"
         ],
-        slow_mo=1000,
     )
-    context_args = {"permissions": permissions or []}
+    context_args = {"viewport": {"width": 1024, "height": 640}}
     if device:
         context_args.update(pw.devices[device])
     if geolocation:
         context_args["geolocation"] = geolocation
-        context_args["permissions"].append("geolocation")
+        context_args["permissions"] = ["geolocation"]
     context = browser.new_context(**context_args)
     page = context.new_page()
     return browser, context, page
 
-
-def login_user(page, user_email, first_name="John", last_name="Doe"):
-    """
-    Log into the Expensify app.
-    """
-    # Open the Expensify app
-    page.goto(EXPENSIFY_URL)
-    # Login user
-    page.get_by_test_id("username").fill(user_email)
-    page.get_by_role("button", name="Continue").click()
-    # Check if OTP is required for the login
-    try:
-        expect(page.get_by_test_id("SignInPage").get_by_test_id("validateCode")).to_be_visible(timeout=7000)
-    except (AssertionError, TimeoutError):
-        # If not required, expect the join button to appear and click the button
-        page.get_by_test_id("SignInPage").get_by_role("button", name="Join").click()
-    else:
-        # Get the OTP and complete verification
-        otp_code = "123456"
-        page.get_by_test_id("SignInPage").get_by_test_id("validateCode").fill(otp_code)
+    
+def test_clear_btn_on_saved_search_name_field():
+    with sync_playwright() as p:
+        user_info = get_test_user_info()
+        delete_email_inbox(user_info["email"], user_info["password"], retries=6, delay=5)
+        browser, context, page = launch_app(p)
+        context.tracing.start(title="test_clear_btn_on_saved_search_name_field", screenshots=True, snapshots=True, sources=True)
         try:
-            page.get_by_test_id("SignInPage").get_by_role("button", name="Sign in").click(timeout=2000)
-        except (AssertionError, TimeoutError):
-            pass
-    # Check if onboarding is required
-    try:
-        expect(page.get_by_text("What do you want to do today?")).to_be_visible(timeout=5000)
-    except (AssertionError, TimeoutError):
-        pass
-    else:
-        # Complete the onboarding
-        page.get_by_label("Track and budget expenses").click()
-        page.get_by_role("button", name="Continue").first.click()
-        page.get_by_role("textbox", name="First name").fill(first_name)
-        page.get_by_role("textbox", name="Last name").fill(last_name)
-        page.get_by_role("button", name="Continue").last.click()
-    # Dismiss get started dialog if appears
-    try:
-        page.get_by_role("button", name="Get started").click(timeout=3000)
-    except (AssertionError, TimeoutError):
-        pass
-    # Expect the main screen to appear
-    expect(page.get_by_test_id("BaseSidebarScreen")).to_be_visible(timeout=7000)
+            login_user(page, user_info)
+
+            page.get_by_test_id("CustomBottomTabNavigator").get_by_label("Search").click()
+            page.get_by_label("More").click()
+            page.get_by_label("Rename").click()
+            
+            page.wait_for_timeout(3000)
 
 
-def test_navigating_back_from_the_access_level_page():
-    """
-    Verify that the app navigates to the confirmation page on navigating back from access level page.
-    """
-    with sync_playwright() as pw:
-        # Login user
-        user_email = generate_user_email()
-        browser, context, page = launch_browser(pw)
-        # Start tracing
-        context.tracing.start(screenshots=True, snapshots=True, sources=True)
+            clear_button = page.locator("button[aria-label='Clear']")
+            assert clear_button.is_visible(), "The button with aria-label 'Clear' is not present on the page."
 
-        try:
-            login_user(page, user_email)
+            print("The button with aria-label 'Clear' is present on the page.")
 
-            # Go to Settings -> Security
-            page.get_by_test_id("CustomBottomTabNavigator").get_by_role("button", name="My Settings").click()
-            page.get_by_test_id("InitialSettingsPage").get_by_role("menuitem", name="Security").click()
-
-            # Add copilot
-            other_user_email = "otheruser@gmail.com"
-            page.get_by_test_id("SettingSecurityPage").get_by_role("menuitem", name="Add copilot").click()
-            page.get_by_test_id("AddDelegatePage").get_by_role("textbox", name="Name, email, or phone number").fill(other_user_email)
-            page.get_by_test_id("AddDelegatePage").get_by_text(other_user_email).last.click()
-            page.get_by_test_id("SelectDelegateRolePage").get_by_role("button", name="Full").click()
-            page.get_by_test_id("ConfirmDelegatePage").get_by_role("menuitem", name="Full").click()
-
-            # Verify navigation
-            page.get_by_test_id("SelectDelegateRolePage").get_by_role("button", name="Back").click()
-            expect(
-                page.get_by_test_id("ConfirmDelegatePage"),
-                "Confirmation page should appear on navigating back from access level page",
-            ).to_be_visible(timeout=2000)
-
+            page.wait_for_timeout(1000)
+        except Exception as e:
+            print(f"An error occurred: {e}")
+            raise
         finally:
-            # Stop tracing and export trace file
-            trace_path = "/app/expensify/user_tool/output_browser1.zip"
-            context.tracing.stop(path=trace_path)
-            trace_cleaner(trace_path)
-            context.close()
+            context.tracing.stop(path="/app/expensify/user_tool/output_browser1.zip")
+            trace_cleaner("/app/expensify/user_tool/output_browser1.zip")
+            page.close()
             browser.close()
-
-
-if __name__ == "__main__":
-    test_navigating_back_from_the_access_level_page()

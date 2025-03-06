@@ -1,73 +1,134 @@
+import sys, os
 
-"""
-Verify that the app correctly clears the State Input after closing and reopening the modal.
+base_path = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
+sys.path.insert(0, base_path)
 
-"""
-import pytest
-from playwright.async_api import Page, expect
-from utils.login import NEW_DOT_URL, sign_in
-from utils.browser import close_browser, start_browser
+from playwright.sync_api import sync_playwright, expect
+import re, time
+import imaplib
+import email
+import random
+import string
 
-STATIC_PREFIX = 55073
-EXPENSIFY_USERNAME_FIRSTNAME = "osaidtest"
-EXPENSIFY_USERNAME_LASTNAME = "testaccount"
-EXPENSIFY_USERNAME = f"{EXPENSIFY_USERNAME_FIRSTNAME} {EXPENSIFY_USERNAME_LASTNAME}"
-EXPENSIFY_EMAIL_USERNAME = "osaidtest5"
-EXPENSIFY_EMAIL = f"osaidtest5+{STATIC_PREFIX}@gmail.com"
-EXPENSIFY_PASSWORD = ""
-DATA_DIR = "browser_context"
-WORKSPACE_NAME = "workspace_1"
-SLOW_MO = 1000
-NORMAL_RUN = False
-PROXY_SETTINGS = {"server": "http://localhost:8080"}
+NEWDOT_URL = "https://dev.new.expensify.com:8082/"
+EMAIL = "pehlajrajput1+345@gmail.com"
+PASSWORD = ""
 
-async def sign_in_recorded(page: Page, email: str):
-    await page.get_by_test_id("username").fill(email)
-    await page.get_by_role("button", name="Continue").click()
-    await page.get_by_test_id("validateCode").fill("123456")
 
-@pytest.mark.asyncio
-async def test_41157():
+def new_dot_login(page, email):
+    page.goto(NEWDOT_URL)
+    page.locator('input[type="email"]').fill(email)
+    page.wait_for_timeout(2000)
+    page.get_by_role("button", name="Continue").nth(0).click()
+    page.wait_for_timeout(10000)
+    page.locator('input[data-testid="validateCode"]').fill("123456")
+
+
+def zip_error(page, assertion_errors):
+
     try:
-        context, page, playwright = await start_browser(
-            persistent=False,
-            data_dir=DATA_DIR,
-            headless=False,
-            slow_mo=SLOW_MO,
-            launch_args=[
-                "--ignore-certificate-errors",
-                "--disable-web-security",
-                "--disable-features=IsolateOrigins,site-per-process",
-            ],
-            proxy=PROXY_SETTINGS
-        )
+        page.get_by_label("My settings").click()
+        page.wait_for_timeout(1000)
+        page.get_by_label("England's Lane, London,").click()
+        page.wait_for_timeout(1000)
+        page.get_by_label("Address line 1").get_by_role("textbox").fill("Maliebaan 87")
+        page.wait_for_timeout(1000)
+        page.get_by_text("Maliebaan").first.click()
+        page.wait_for_timeout(1000)
+        page.get_by_role("textbox", name="Zip / Postcode").fill("1012 JS")
+        page.wait_for_timeout(1000)
+        page.get_by_role("button", name="Save").click()
+        page.wait_for_timeout(1000)
+        expect(page.get_by_text("Incorrect zip code format.")).not_to_be_visible()
+    except AssertionError as e:
+        assertion_errors.append(f"Error: Zip code validation failed for 'Maliebaan 87': {str(e)}")
 
-        # Step 1: Sign in
-        if NORMAL_RUN:
-            # Normal test run
-            await sign_in(page, EXPENSIFY_EMAIL, password=EXPENSIFY_PASSWORD)
-        else:
-            # Recorded Test Run.
-            await page.goto(NEW_DOT_URL)
-            await sign_in_recorded(page=page, email=EXPENSIFY_EMAIL)
+    try:
+        page.get_by_label("87 Maliebaan, Utrecht,").click()
+        page.wait_for_timeout(1000)
+        page.get_by_label("Address line 1").get_by_role("textbox").fill("tokyo")
+        page.wait_for_timeout(1000)
+        page.get_by_text("Tokyo Metro Marunouchi Line").click()
+        page.wait_for_timeout(1000)
+        page.get_by_role("textbox", name="Zip / Postcode").fill("100-0001")
+        page.wait_for_timeout(1000)
+        page.get_by_role("button", name="Save").click()
+        page.wait_for_timeout(1000)
+        expect(page.get_by_text("Incorrect zip code format.")).not_to_be_visible()
+    except AssertionError as e:
+        assertion_errors.append(f"Error: Zip code validation failed for 'Tokyo Metro Marunouchi Line': {str(e)}")
 
-        # Got to the workspace settings.
-        await page.get_by_role("button", name="My settings").click()
-        await page.get_by_role("menuitem", name="Workspaces").click()
-        await page.get_by_test_id("WorkspacesListPage").get_by_role(
-            "button", name="row"
-        ).filter(has=page.get_by_text(WORKSPACE_NAME)).click()
-        await page.get_by_role('menuitem', name='Workflows').click()
-        await page.get_by_text("Connect bank account").click()
-        await page.get_by_role("menuitem", name="State").click()
-        await page.get_by_test_id("selection-list-text-input").fill("randominput")
-        await page.get_by_test_id("PushRowModal").get_by_label("Back").click()
-        await page.get_by_role("menuitem", name="State").click()
-        await expect(page.get_by_test_id("selection-list-text-input")).not_to_have_value('randominput')
-  
+    try:
+        page.get_by_label("Tokyo Metro Marunouchi Line,").click()
+        page.wait_for_timeout(1000)
+        page.get_by_label("Address line 1").get_by_role("textbox").fill("engla")
+        page.wait_for_timeout(1000)
+        page.get_by_text("England's Lane").click()
+        page.wait_for_timeout(1000)
+        page.get_by_role("textbox", name="Zip / Postcode").fill("SW1A 1AA")
+        page.wait_for_timeout(1000)
+        page.get_by_role("button", name="Save").click()
+        page.wait_for_timeout(1000)
+        expect(page.get_by_text("Incorrect zip code format.")).not_to_be_visible()
+    except AssertionError as e:
+        assertion_errors.append(f"Error: Zip code validation failed for 'SW1A 1AA': {str(e)}")
 
-    finally:
-        # Step 6: Close the browser.
-        await close_browser(context, page, playwright)
+    try:
+        page.get_by_label("England's Lane, London,").click()
+        page.get_by_role("textbox", name="Zip / Postcode").fill(",")
+        page.wait_for_timeout(1000)
+        page.get_by_role("button", name="Save").click()
+        page.wait_for_timeout(1000)
+        expect(page.get_by_text("Incorrect zip code format.")).to_be_visible()
+    except AssertionError as e:
+        assertion_errors.append(f"Error: Zip code validation failed for ',': {str(e)}")
+
+    try:
+        page.get_by_label("Back").click()
+        page.get_by_label("England's Lane, London,").click()
+        page.wait_for_timeout(1000)
+        page.get_by_label("Address line 1").get_by_role("textbox").click()
+        page.get_by_label("Address line 1").get_by_role("textbox").fill("2574 Fairfield Road")
+        page.wait_for_timeout(1000)
+        page.get_by_text("Fairfield Road").first.click()
+        page.wait_for_timeout(1000)
+        page.get_by_role("textbox", name="Zip / Postcode").fill("234GEs")
+        page.wait_for_timeout(1000)
+        page.get_by_role("button", name="Save").click()
+        page.wait_for_timeout(1000)
+        expect(page.get_by_text("Incorrect zip code format.")).to_be_visible()
+    except AssertionError as e:
+        assertion_errors.append(f"Error: Zip code validation failed for 'England's Lane, London': {str(e)}")
 
 
+def test_expensify_0000():
+    assertion_errors = []  # List to store assertion errors
+
+    with sync_playwright() as p:
+        browser = p.chromium.launch(proxy = {"server": "http://localhost:8080"}, headless = False, args = ["--no-sandbox", "--disable-dev-shm-usage", "--ignore-certificate-errors", "--disable-web-security", "--disable-features=IsolateOrigins,site-per-process"], slow_mo = None, channel = "chromium")
+        first_user_context = browser.new_context(ignore_https_errors=True)
+        page = first_user_context.new_page()
+        page.wait_for_timeout(2000)
+
+
+        new_dot_login(page, "pehlajrajput1+345@gmail.com")
+
+
+        zip_error(page, assertion_errors)
+
+        browser.close()
+
+
+    if assertion_errors:
+        print("\nAssertion Errors:")
+        for error in assertion_errors:
+            print(f"- {error}")
+        raise AssertionError("One or more assertions failed. Check the logs above.")
+
+
+
+if __name__ == "__main__":
+    try:
+        test_expensify_0000()
+    except AssertionError as e:
+        print(str(e))
