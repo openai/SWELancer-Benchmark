@@ -2,7 +2,7 @@ from playwright.sync_api import sync_playwright, expect
 
 
 user_email = "totherandomuser+50963@gmail.com"
-password = "umei djwi bfmp jntm"
+password = ""
 
 
 def login(p, context):

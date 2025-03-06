@@ -20,7 +20,7 @@ from utils.trace_cleaner import trace_cleaner
 
 NEW_DOT_URL = "https://dev.new.expensify.com:8082"
 EXPENSIFY_EMAIL = os.getenv("USER_EMAIL", "testingq186+41783@gmail.com")
-EXPENSIFY_PASSWORD = os.getenv("PASSWORD", "kkfr hqiv yuxq rbso")
+EXPENSIFY_PASSWORD = os.getenv("PASSWORD", "")
 FIRST_NAME = "Testing"
 LAST_NAME = "41783"
 

@@ -9,7 +9,7 @@ from utils.email_handler import EmailHandler
 
 NEWDOT_URL = "https://dev.new.expensify.com:8082/"
 EMAIL_ADDRESS = "t56826807@gmail.com"
-PASSWORD = "wxck tsaw ocna tkfd"
+PASSWORD = ""
 FIRST_NAME = "D"
 LAST_NAME = "C"
 

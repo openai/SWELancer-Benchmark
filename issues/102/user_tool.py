@@ -5,7 +5,7 @@ from playwright.sync_api import sync_playwright, expect, Page
 from utils.trace_cleaner import trace_cleaner
 
 EMAIL = "velmoner+375@gmail.com"
-PASSWORD = "aory ezrb qkmi qkas"
+PASSWORD = ""
 NEWDOT_URL = "https://dev.new.expensify.com:8082/"
 
 

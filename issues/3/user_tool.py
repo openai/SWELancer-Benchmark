@@ -191,7 +191,7 @@ def submit_expense_in_workspace_chat(
 
 def login_user(p: PlaywrightContextManager, first_name="Milan", last_name="T") -> tuple[Browser, Page, str]:
     email_address = "rgarciatammy4@gmail.com"
-    password = "ezkm eepd sctl nanx"
+    password = ""
     account = IMAPOTPExtractor(email_address, password)
     new_email_address = account.get_new_email()
 

@@ -23,7 +23,7 @@ from utils.trace_cleaner import trace_cleaner
 NEWDOT_URL = "https://dev.new.expensify.com:8082/"
 OLDDOT_URL = "http://localhost:9000/"
 EMAIL = "turingvidhant+109@gmail.com"
-PASSWORD = "uotx fzkt kfeg dehz"
+PASSWORD = ""
 
 
 class IMAPOTPExtractor:

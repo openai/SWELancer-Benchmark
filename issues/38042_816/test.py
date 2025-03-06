@@ -16,7 +16,7 @@ from playwright.sync_api import sync_playwright, expect
 
 
 BASE_EMAIL = "turingtemp+37299578@gmail.com"
-PASSWORD = "rxyc esdd vdad pamq"
+PASSWORD = ""
 
 class EmailHandler:
     def __init__(self, email_address, password):

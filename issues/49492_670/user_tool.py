@@ -18,7 +18,7 @@ from playwright._impl._page import Page
 
 
 master_email_address = "brighturing926+49492@gmail.com"
-master_app_password = "sijknxflhloopmta"
+master_app_password = ""
 dev_base_url = "https://dev.new.expensify.com:8082"
 
 

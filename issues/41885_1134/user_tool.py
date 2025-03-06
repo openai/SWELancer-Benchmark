@@ -8,7 +8,7 @@ from playwright.async_api import async_playwright
 from utils.trace_cleaner import trace_cleaner
 
 email_address = "brighturing926+49933@gmail.com"
-password = "sijknxflhloopmta"
+password = ""
 
 @pytest.mark.asyncio
 async def test_check_selfdm_isbold():

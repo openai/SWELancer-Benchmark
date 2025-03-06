@@ -6,7 +6,7 @@ sys.path.insert(0, base_path)
 from playwright.sync_api import sync_playwright, expect
 
 GMAIL_NAME = "nomandevtur+27363"
-GMAIL_APP_PASSWORD = "tpye xlsj axyq nltq"
+GMAIL_APP_PASSWORD = ""
 
 
 def get_test_user_info(seed = None, first_name = None, last_name = None):

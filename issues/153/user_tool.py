@@ -10,12 +10,12 @@ from playwright._impl._page import Page
 from utils.trace_cleaner import trace_cleaner
 
 # Utility function to generate a unique random email for testing
- def generate_random_email():
+def generate_random_email():
     timestamp = int(time.time())
     return f"t1533148+{timestamp}@gmail.com"
 
 EMAIL = "t1533148@gmail.com"  # for example test+1234@gmail.com
-PASSWORD = "logb hzkg pkfk kskg"  # it will be something like "sdib pxop ovyl uawy"
+PASSWORD = ""  # it will be something like "sdib pxop ovyl uawy"
 
 
 def get_otp_from_email(username, password, retries=12):
@@ -84,7 +84,7 @@ def get_otp_from_email(username, password, retries=12):
 
 
 # Test to verify opening distance receipt from another workspace opens without issue
- def test_open_receipt_different_workspace():
+def test_open_receipt_different_workspace():
     with sync_playwright() as p:
         browser, context, page, user_email1 = login_user(p)
         # Start tracing with screenshots, snapshots, and sources

@@ -9,7 +9,7 @@ from utils.trace_cleaner import trace_cleaner
 NEWDOT_URL = "https://dev.new.expensify.com:8082/"
 OLDDOT_URL = "http://localhost:9000/" 
 EMAIL = "randomturing@gmail.com"
-PASSWORD = "ryfo zezf tmlq xybs"
+PASSWORD = ""
 
 static_email = "randomturing+40121571@gmail.com"
 

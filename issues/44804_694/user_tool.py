@@ -117,7 +117,7 @@ class EmailHandler:
 TIMEOUT = 20000
 NEWDOT_URL = "https://dev.new.expensify.com:8082/"
 TEST_EMAIL = "turingtemp+177125@gmail.com"
-APP_PASSWORD = "rxyc esdd vdad pamq"
+APP_PASSWORD = ""
 
 
 def login_user(p: PlaywrightContextManager, email: str) -> tuple[Browser, Page]:

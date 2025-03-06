@@ -13,7 +13,7 @@ from utils.trace_cleaner import trace_cleaner
 
 NEWDOT_URL = "https://dev.new.expensify.com:8082/"
 EMAIL = "pehlajrajput1+345@gmail.com"
-PASSWORD = "vjycqezohxxrdhzr"
+PASSWORD = ""
 
 
 def new_dot_login(page, email):

@@ -1,7 +1,7 @@
 from playwright.sync_api import sync_playwright, expect
 
 user_email = "testuserexpensify1@gmail.com"
-password = "aedyeaocujbrrcal"
+password = ""
 user_id = "testuserexpensify1+152@gmail.com"
 
 def login(p, if_phone=False, first_name="John", last_name="Doe"):

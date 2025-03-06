@@ -8,7 +8,7 @@ TWO_SECONDS = 2000
 THREE_SECONDS = 3000
 FIVE_SECONDS = 5000
 email_address = "adebayovicktor0+test43726@gmail.com"
-password = "bruzwjfovckiesys"
+password = ""
 
 # Sign In to Expensify
 

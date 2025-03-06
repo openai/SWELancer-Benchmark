@@ -18,7 +18,7 @@ EXPENSIFY_URL = "http://localhost:8082/"
 
 
 EMAIL_USERNAME = "naturesv057@gmail.com"
-EMAIL_PASSWORD = "hyjk ilxi pnom oret"
+EMAIL_PASSWORD = ""
 
 
 EMAIL_USERNAME_POSTFIX = "26235_4"

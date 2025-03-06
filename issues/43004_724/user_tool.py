@@ -39,7 +39,7 @@ def test_invalid_currency():
         page = context.new_page()
 
         email = "bobexpensifytest+12385484515@gmail.com"
-        password = "aymv mpce nrvd cvye "
+        password = ""
 
         try:
             page = sign_in_new_dot(page, email, password)

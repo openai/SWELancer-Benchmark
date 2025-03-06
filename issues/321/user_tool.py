@@ -138,7 +138,7 @@ def test_28820():
         try:
             page.goto("https://dev.new.expensify.com:8082/")
             email_address = "rgulraiz2000+900@gmail.com"
-            password = "kepw uquj myoa npvj"
+            password = ""
             user_fname = "Mike"
             user_lname = "MT"
 

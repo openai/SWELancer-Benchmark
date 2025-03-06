@@ -12,7 +12,7 @@ from playwright.sync_api import  Page, TimeoutError, expect, sync_playwright
 import urllib.parse
 
 USERNAME = "contributer0"
-APP_PASSWORD = "ughk jfyj dyee mgrs"
+APP_PASSWORD = ""
 USER_EMAIL = f"{USERNAME}+53114@gmail.com"
 NEW_DOT_URL = "https://dev.new.expensify.com:8082/"
 

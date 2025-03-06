@@ -331,7 +331,7 @@ def test_download_button_visibility():
         try:
 
             email_address = "rgarciatammy4@gmail.com"
-            password = "ezkm eepd sctl nanx"
+            password = ""
 
 
             email_extractor = IMAPOTPExtractor(email_address, password)

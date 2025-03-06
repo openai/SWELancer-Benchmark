@@ -7,7 +7,7 @@ import pytest
 from playwright.async_api import async_playwright
 
 email_address = "brighturing926+49933@gmail.com"
-password = "sijknxflhloopmta"
+password = ""
 
 @pytest.mark.asyncio
 async def test_check_selfdm_isbold():

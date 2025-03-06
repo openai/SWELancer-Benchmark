@@ -17,7 +17,7 @@ import io
 from utils.trace_cleaner import trace_cleaner
 
 GMAIL_NAME = "testerbro7077"
-GMAIL_APP_PASSWORD = "xqxz mmcb tvkn lpgp"
+GMAIL_APP_PASSWORD = ""
 
 def get_test_user_info(seed=None, first_name=None, last_name=None):
     if first_name is None:

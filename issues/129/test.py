@@ -7,7 +7,7 @@ import re
 import random
 
 original_email = "nitish.expensify@gmail.com"
-APP_PASSWORD = "ojhi eovp lbkz ktfb"
+APP_PASSWORD = ""
 
 
 def get_updated_url(url):

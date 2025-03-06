@@ -1,7 +1,7 @@
 from playwright.sync_api import sync_playwright
 
 user_email = "testuserexpensify1@gmail.com"
-password = "aedyeaocujbrrcal"
+password = ""
 user_id = "testuserexpensify1+153@gmail.com"
 didUIBlink = False
 

@@ -8,7 +8,7 @@ from playwright.async_api import Page, async_playwright, expect
 
 USER_NAME = "xecuycismfsga+42204"
 USER_EMAIL = f"{USER_NAME}@gmail.com"
-PASSWORD = "uwgb zzoc cofa kaaq"
+PASSWORD = ""
 
 
 def get_magic_code(

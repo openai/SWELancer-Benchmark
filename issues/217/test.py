@@ -9,7 +9,7 @@ EXPENSIFY_URL = "https://dev.new.expensify.com:8082/"
 
 # Email login credentials
 EMAIL_USERNAME = "expensifytesting1@gmail.com"
-EMAIL_PASSWORD = "redx tbmr hzpc rbzr"
+EMAIL_PASSWORD = ""
 
 # Email username postfix
 EMAIL_USERNAME_POSTFIX = "52923.3"

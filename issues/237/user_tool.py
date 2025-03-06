@@ -13,7 +13,7 @@ import urllib.parse
 from utils.trace_cleaner import trace_cleaner
 
 USERNAME = "contributer0"
-APP_PASSWORD = "ughk jfyj dyee mgrs"
+APP_PASSWORD = ""
 USER_EMAIL = f"{USERNAME}+53114@gmail.com"
 NEW_DOT_URL = "https://dev.new.expensify.com:8082/"
 

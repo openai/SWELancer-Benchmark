@@ -11,7 +11,7 @@ from playwright._impl._page import Page
 NEWDOT_URL = "https://127.0.0.1:8082/"
 OLDDOT_URL = "http://localhost:9000/"
 EMAIL = "t1533148@gmail.com" # for example test+1234@gmail.com
-PASSWORD = "logb hzkg pkfk kskg" # it will be something like "sdib pxop ovyl uawy"
+PASSWORD = "" # it will be something like "sdib pxop ovyl uawy"
 
 def verify_delete_confirmation_modal_back_out(page: Page):
 

@@ -6,13 +6,13 @@ from playwright.async_api import Browser, Page, TimeoutError, async_playwright
 EMAIL_USERNAME = "xecuycismfsga"
 EMAIL_ALIAS = "r5p4hfur"
 USER_EMAIL = f"{EMAIL_USERNAME}+{EMAIL_ALIAS}@gmail.com"
-PASSWORD = "uwgb zzoc cofa kaaq"
+PASSWORD = ""
 SLOW_MO: int | None = 500
 PROXY_URL = os.getenv("PROXY_URL")
 
 LONG_FIRSTNAME = "XzH9tXRklkFrTjMU"
 LONG_LASTNAME = "MwuCGEtROJc5CZz9"
-PARTICIPANT_ALIAS = "wzec6tou"
+PARTICIPANT_ALIAS = ""
 PARTICIPANT_EMAIL = f"{EMAIL_USERNAME}+{PARTICIPANT_ALIAS}@gmail.com"
 
 

@@ -23,7 +23,7 @@ from utils.trace_cleaner import trace_cleaner  # ADDED: import the trace cleaner
 NEWDOT_URL = "https://dev.new.expensify.com:8082/"
 OLDDOT_URL = "http://localhost:9000/"
 EMAIL = "turingvidhant+109@gmail.com"
-PASSWORD = "uotx fzkt kfeg dehz"
+PASSWORD = ""
 
 class IMAPOTPExtractor:
     def __init__(self, email_address, password):

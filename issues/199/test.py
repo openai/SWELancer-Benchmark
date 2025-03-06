@@ -10,7 +10,7 @@ import pytest
 NEWDOT_URL = "https://dev.new.expensify.com:8082/"
 OLDDOT_URL = "http://localhost:9000/"
 EMAIL = "ikhanle001+81@gmail.com"
-PASSWORD = "dzcr knad otxp bsuz"
+PASSWORD = ""
 
 
 class IMAPOTPExtractor:

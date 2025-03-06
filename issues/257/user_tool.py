@@ -11,7 +11,7 @@ from utils.trace_cleaner import trace_cleaner
 NEWDOT_URL = "https://dev.new.expensify.com:8082/"
 OLDDOT_URL = "http://localhost:9000/"
 EMAIL = "ikhanle001+83@gmail.com"
-PASSWORD = "dzcr knad otxp bsuz"
+PASSWORD = ""
 
 
 class IMAPOTPExtractor:

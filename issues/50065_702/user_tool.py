@@ -178,7 +178,7 @@ async def connect_netsuite(accounting_page: Page):
 async def test_send_invoice_workspace():
     async with async_playwright() as p:
         base_email = "namesomerandomemail@gmail.com"
-        password = "fkto mqnl wkuw ecgx"
+        password = ""
 
         derived_email = get_unique_derived_email(base_email)
         derived_email = 'namesomerandomemail+1733924831@gmail.com'

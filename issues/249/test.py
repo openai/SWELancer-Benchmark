@@ -6,7 +6,7 @@ from playwright.async_api import Page, TimeoutError, async_playwright
 EMAIL_USERNAME = "xecuycismfsga"
 EMAIL_ALIAS = "8ita506t"
 USER_EMAIL = f"{EMAIL_USERNAME}+{EMAIL_ALIAS}@gmail.com"
-PASSWORD = "uwgb zzoc cofa kaaq"
+PASSWORD = ""
 SLOW_MO: int | None = 500
 PROXY_URL = os.getenv("PROXY_URL")
 

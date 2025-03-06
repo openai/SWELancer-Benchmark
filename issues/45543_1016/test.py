@@ -11,9 +11,9 @@ from utils.browser import close_browser
 
 USER_EMAILA = "doorsqueaky+3182311@gmail.com"
 USERNAME_A = 'John Doe'
-PASSWORD_A = "eabcahqraatorpvt"
+PASSWORD_A = ""
 USER_EMAILB = "windowsqueaky+3919211@gmail.com"
-PASSWORD_B = "jeaqzqklzxxdetsh"
+PASSWORD_B = ""
 USERNAME_B = 'Jane Doe'
 
 

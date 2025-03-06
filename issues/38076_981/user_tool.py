@@ -17,7 +17,7 @@ from playwright._impl._page import Page
 from utils.trace_cleaner import trace_cleaner
 
 EMAIL_USERNAME = "ibukunsamuel999"
-EMAIL_PASSWORD = "jkgz unyn rnwl slrp"
+EMAIL_PASSWORD = ""
 
 EXPENSIFY_URL = "https://dev.new.expensify.com:8082/"
 

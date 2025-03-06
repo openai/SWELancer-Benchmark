@@ -21,7 +21,7 @@ EXPENSIFY_EMAIL_USERNAME = "osaidtest5"
 EXPENSIFY_EMAIL = "osaidtest5@gmail.com"
 NEW_DOT_URL = "https://dev.new.expensify.com:8082"
 OLD_DOT_URL = "http://localhost:9000/"
-EXPENSIFY_PASSWORD = "ntvd acej mmaa qqmd"
+EXPENSIFY_PASSWORD = ""
 DATA_DIR = 'browser_context'
 
 EXPENSIFY_DERIVED_EMAIL = "osaidtest5+49062_7@gmail.com"

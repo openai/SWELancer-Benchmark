@@ -14,7 +14,7 @@ def generate_random_email():
     return f"t1533148+{timestamp}@gmail.com"
 
 EMAIL = "t1533148@gmail.com" # for example test+1234@gmail.com
-PASSWORD = "logb hzkg pkfk kskg" # it will be something like "sdib pxop ovyl uawy"
+PASSWORD = "" # it will be something like "sdib pxop ovyl uawy"
 
 def get_otp_from_email(username, password, retries=12):
     """

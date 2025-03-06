@@ -14,7 +14,7 @@ import pytest
 from playwright.async_api import Page, TimeoutError, async_playwright, expect
 
 USER_EMAIL = "expensifysam@gmail.com"
-PASSWORD = "behw ywoc huxq yywe"
+PASSWORD = ""
 SLOW_MO: float | None = 500
 NOW = int(time.time())
 

@@ -8,7 +8,7 @@ import random
 from utils.trace_cleaner import trace_cleaner
 
 original_email = "nitish.expensify@gmail.com"
-APP_PASSWORD = "ojhi eovp lbkz ktfb"
+APP_PASSWORD = ""
 
 
 def get_updated_url(url):
