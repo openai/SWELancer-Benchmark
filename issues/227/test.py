@@ -16,7 +16,7 @@ from datetime import datetime, timezone
 MAX_TRIES = 10
 USERNAME = "expensify31+1943@gmail.com"
 
-PASSWORD = ""
+PASSWORD = "glss akzu qghd ylad"
 
 async def get_magic_code(user_email, password, retries=10, delay=10, since=None):
     if since is None:

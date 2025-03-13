@@ -5,7 +5,7 @@ from playwright.sync_api import sync_playwright, expect, Page
 
 
 EMAIL = "velmoner+375@gmail.com"
-PASSWORD = ""
+PASSWORD = "aory ezrb qkmi qkas"
 NEWDOT_URL = "https://dev.new.expensify.com:8082/"
 
 def user_login(page: Page, email_id: str, password: str):

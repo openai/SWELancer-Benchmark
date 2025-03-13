@@ -21,7 +21,7 @@ IMAP_SERVER = "imap.gmail.com"
 MAX_TRIES = 2
 
 USERNAME = "doorsqueaky@gmail.com"
-PASSWORD = ""
+PASSWORD = "eabcahqraatorpvt"
 
 
 def login_to_email(email: str=USERNAME, password: str=PASSWORD):

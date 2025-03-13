@@ -13,7 +13,7 @@ import time
 from playwright.sync_api import TimeoutError, Playwright, Browser, Page, sync_playwright, expect
 
 EMAIL_USERNAME = "ibukunsamuel999"
-EMAIL_PASSWORD = ""
+EMAIL_PASSWORD = "jkgz unyn rnwl slrp"
 
 EXPENSIFY_URL = "https://dev.new.expensify.com:8082/"
 

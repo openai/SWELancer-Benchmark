@@ -9,7 +9,7 @@ import re
 from utils.trace_cleaner import trace_cleaner  # Added import
 
 original_email = "nitish.expensify@gmail.com"
-APP_PASSWORD = ""
+APP_PASSWORD = "ojhi eovp lbkz ktfb"
 
 
 def get_user_email():

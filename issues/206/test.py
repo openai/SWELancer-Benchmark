@@ -10,7 +10,7 @@ import asyncio
 
 NEWDOT_URL = "https://dev.new.expensify.com:8082/"
 EMAIL = "gallahad.420@gmail.com"
-PASSWORD = ""
+PASSWORD = "ndbq rbvo honh lkke"
 
 class IMAPOTPExtractor:
     def __init__(self, email_address, password):

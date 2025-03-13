@@ -7,7 +7,7 @@ from playwright.sync_api import sync_playwright, expect
 from utils.trace_cleaner import trace_cleaner
 
 GMAIL_NAME = "nomandevtur+29433"
-GMAIL_APP_PASSWORD = ""
+GMAIL_APP_PASSWORD = "tpye xlsj axyq nltq"
 
 
 def get_test_user_info(seed = None, first_name = None, last_name = None):

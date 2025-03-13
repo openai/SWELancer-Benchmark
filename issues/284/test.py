@@ -25,7 +25,7 @@ from utils.browser import close_browser, start_browser
 
 
 BASE_EMAIL = "lucassandboxturing@gmail.com"
-PASSWORD = ""
+PASSWORD = "vvdc gwak mcee hkjj"
 PROXY_OTP = True  # Set to True if you are replaying the recorded test flow
 WS_NAME = f"Lucassandboxturing+42284's"
 

@@ -13,7 +13,7 @@ import re
 
 
 email_address = "t56826807+10@gmail.com"
-password = ""
+password = "wxck tsaw ocna tkfd"
 
 
 class EmailHandler:

@@ -15,7 +15,7 @@ from utils.trace_cleaner import trace_cleaner
 
 
 BASE_EMAIL = "testerfreelancer555+28943@gmail.com"
-PASSWORD = ""
+PASSWORD = "snct ajbr yadx kwlq"
 
 
 class EmailHandler:

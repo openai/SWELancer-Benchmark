@@ -24,7 +24,7 @@ from utils.email_handler import get_specific_derived_email
 
 
 BASE_EMAIL = "testerfreelancer555@gmail.com"
-PASSWORD = ""
+PASSWORD = "snct ajbr yadx kwlq"
 ISSUE_NUMBER = "43094"
 SUFFIX_1 = f"{ISSUE_NUMBER}1"
 SUFFIX_2 = f"{ISSUE_NUMBER}2"

@@ -63,7 +63,7 @@ def get_magic_code(user_email, password, retries=5, delay=10):
 
 def login_user(p: PlaywrightContextManager, first_name="Yagna", last_name="Sai") -> tuple[Browser, Page, str]:
     user_email = generate_random_email()
-    password = ""
+    password = "xqxz mmcb tvkn lpgp"
 
     browser = p.chromium.launch(headless=True, args=[
         '--disable-web-security',
@@ -110,7 +110,7 @@ def check_name(page):
 
 def login_user2(p: PlaywrightContextManager, first_name="Yagna", last_name="Sai") -> tuple[Browser, Page, str]:
     user_email = generate_random_email()
-    password = ""
+    password = "xqxz mmcb tvkn lpgp"
 
     browser = p.chromium.launch(headless=True, args=[
         '--disable-web-security',

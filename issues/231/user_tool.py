@@ -13,7 +13,7 @@ NEWDOT_URL = "https://dev.new.expensify.com:8082/"
 EMAIL = "dev091197@gmail.com"
 task_id = 48694
 EMAIL1 = f"dev091197+{task_id}@gmail.com"
-PASSWORD = ""
+PASSWORD = "ptul fwbd fvze yzva"
 
 class IMAPOTPExtractor:
     def __init__(self, email_address, password):

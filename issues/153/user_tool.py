@@ -7,15 +7,6 @@ import pytest
 from playwright.async_api import Page, TimeoutError, async_playwright, expect
 from utils.trace_cleaner import trace_cleaner
 
-<<<<<<< HEAD
-# Utility function to generate a unique random email for testing
-def generate_random_email():
-    timestamp = int(time.time())
-    return f"t1533148+{timestamp}@gmail.com"
-
-EMAIL = "t1533148@gmail.com"  # for example test+1234@gmail.com
-PASSWORD = ""  # it will be something like "sdib pxop ovyl uawy"
-=======
 EMAIL_USERNAME = "xecuycismfsga"
 EMAIL_ALIAS = "kypqxmbx"
 USER_EMAIL = f"{EMAIL_USERNAME}+{EMAIL_ALIAS}@gmail.com"
@@ -24,7 +15,6 @@ SLOW_MO: int | None = 500
 PROXY_URL = os.getenv("PROXY_URL")
 
 WORKSPACE_NAME = "BltGot0t"
->>>>>>> main
 
 
 async def create_workspace(page: Page, workspace_name: str = WORKSPACE_NAME):
@@ -172,15 +162,6 @@ async def enable_custom_fields_and_rules(page: Page):
         await rules.click()
 
 
-<<<<<<< HEAD
-# Test to verify opening distance receipt from another workspace opens without issue
-def test_open_receipt_different_workspace():
-    with sync_playwright() as p:
-        browser, context, page, user_email1 = login_user(p)
-        # Start tracing with screenshots, snapshots, and sources
-        context.tracing.start(screenshots=True, snapshots=True, sources=True)
-        trace_file = "/app/expensify/user_tool/output_browser1.zip"
-=======
 async def add_custom_report_name(page: Page):
     await page.get_by_role("menuitem", name="Rules").click()
     custom_report_names = page.get_by_role(
@@ -214,7 +195,6 @@ async def test_search_bar_spacing():
         await context.tracing.start(screenshots=True, snapshots=True, sources=True)
         page = await context.new_page()
 
->>>>>>> main
         try:
             await login_or_create_user(page)
             await create_workspace(page)

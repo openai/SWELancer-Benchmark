@@ -10,7 +10,7 @@ WORKSPACE_NAME = "pyPtFh23"
 EMAIL_USERNAME = "xecuycismfsga"
 EMAIL_ALIAS = "kj56jrdw"
 USER_EMAIL = f"{EMAIL_USERNAME}+{EMAIL_ALIAS}@gmail.com"
-PASSWORD = ""
+PASSWORD = "uwgb zzoc cofa kaaq"
 SLOW_MO: int | None = 500
 PROXY_URL = os.getenv("PROXY_URL")
 

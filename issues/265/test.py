@@ -10,7 +10,7 @@ from playwright._impl._browser import Browser
 from playwright._impl._page import Page
 
 EMAIL = "t1533148@gmail.com" # for example test+1234@gmail.com
-PASSWORD = "" # it will be something like "sdib pxop ovyl uawy"
+PASSWORD = "logb hzkg pkfk kskg" # it will be something like "sdib pxop ovyl uawy"
 
 
 

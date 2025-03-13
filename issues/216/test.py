@@ -25,7 +25,7 @@ PARTICIPANT_EMAILS = [
     "xecuycismfsga+eawdvh@gmail.com",
     "xecuycismfsga+nzfgxzu@gmail.com",
 ]
-PASSWORD = ""
+PASSWORD = "uwgb zzoc cofa kaaq"
 SLOW_MO = 1000
 CACHED: bool = True
 PROXY_URL = os.getenv("PROXY_URL")

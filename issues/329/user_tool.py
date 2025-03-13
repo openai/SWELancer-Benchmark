@@ -19,7 +19,7 @@ from PIL import Image
 NEWDOT_URL = "https://dev.new.expensify.com:8082/"
 OLDDOT_URL = "http://localhost:9000/"
 EXPENSIFY_EMAIL = "testingq186@gmail.com"
-EXPENSIFY_PASSWORD = ""
+EXPENSIFY_PASSWORD = "kkfr hqiv yuxq rbso"
 
 
 logging.basicConfig(level=logging.INFO, stream=sys.stdout, format="%(message)s")

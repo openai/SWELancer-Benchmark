@@ -16,7 +16,7 @@ from playwright._impl._page import Page
 
 
 EMAIL_USERNAME = "ibukunsamuel999"
-EMAIL_PASSWORD = ""
+EMAIL_PASSWORD = "jkgz unyn rnwl slrp"
 
 EXPENSIFY_URL = "https://dev.new.expensify.com:8082/"
 

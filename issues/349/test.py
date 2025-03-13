@@ -15,7 +15,7 @@ from email.header import decode_header
 from json import tool
 
 USER_EMAIL = "playwright2user+105@gmail.com"
-PASSWORD = ""
+PASSWORD = "zehr mglm gizg gjcc"
 
 def fetch_verification_code_from_email(user_email, password, retries=10, delay=10):
     """

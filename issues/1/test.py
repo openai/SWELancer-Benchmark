@@ -4,15 +4,9 @@ import re
 from email.header import decode_header
 from playwright.sync_api import sync_playwright, expect
 
-<<<<<<< HEAD:issues/50163_1076/test.py
-
-GMAIL_NAME = "nomandevtur+50163"
-GMAIL_APP_PASSWORD = ""
-=======
 # Enter Gmail credentials for a disposable
 GMAIL_NAME = "nomandevtur+55827.2"
 GMAIL_APP_PASSWORD = "tpye xlsj axyq nltq"
->>>>>>> main:issues/1/test.py
 
 
 def get_test_user_info(seed = None, first_name = None, last_name = None):
