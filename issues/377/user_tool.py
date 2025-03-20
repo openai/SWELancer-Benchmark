@@ -17,7 +17,7 @@ from utils.trace_cleaner import trace_cleaner
 
 NEWDOT_URL = "http://localhost:8082/"
 EMAIL = "f2139887@gmail.com"
-PASSWORD = "sdib pdop ovyl uawy"
+PASSWORD = ""
 
 
 def generate_random_email():

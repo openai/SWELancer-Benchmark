@@ -5,7 +5,7 @@ from playwright.sync_api import sync_playwright, Page
 
 NEW_DOT_URL = "https://dev.new.expensify.com:8082"
 EMAIL = "testexpensifyturing+034@gmail.com"
-PASSWORD = "qqdd pegp kagr emax"
+PASSWORD = ""
 
 
 class EmailHandler:

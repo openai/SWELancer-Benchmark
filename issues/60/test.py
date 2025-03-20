@@ -10,9 +10,14 @@ from playwright._impl._page import Page
 
 NEWDOT_URL = "https://dev.new.expensify.com:8082/"
 OLDDOT_URL = "http://localhost:9000/"
+<<<<<<< HEAD:issues/38087_1083/test.py
+EMAIL = "turingvidhant+109@gmail.com"
+PASSWORD = ""
+=======
 EMAIL = "turingsampleopen+53660@gmail.com"
 PASSWORD = "dmyi iqgn znbg kqii"
 
+>>>>>>> main:issues/60/test.py
 
 class IMAPOTPExtractor:
     def __init__(self, email_address, password):

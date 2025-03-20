@@ -13,7 +13,7 @@ from utils.login import EmailHandler, complete_onboarding
 
 NEWDOT_URL = "http://dev.new.expensify.com:8082/"
 EXPENSIFY_EMAIL = "testingq186+52114@gmail.com"
-EXPENSIFY_PASSWORD = "kkfr hqiv yuxq rbso"
+EXPENSIFY_PASSWORD = ""
 
 TESTING_FLOW = True
 

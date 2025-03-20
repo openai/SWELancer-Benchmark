@@ -15,7 +15,7 @@ from utils.trace_cleaner import trace_cleaner
 logging.basicConfig(level=logging.INFO)
 
 master_email_address = "brighturing926+50155@gmail.com"
-master_app_password = "sijknxflhloopmta"
+master_app_password = ""
 dev_base_url = "https://dev.new.expensify.com:8082"
 
 

@@ -13,7 +13,7 @@ import re
 from utils.trace_cleaner import trace_cleaner
 
 email_address = "t56826807+10@gmail.com"
-password = "wxck tsaw ocna tkfd"
+password = ""
 
 
 class EmailHandler:

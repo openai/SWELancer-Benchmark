@@ -19,7 +19,7 @@ class TestSuite(unittest.TestCase):
     def setUp(cls):
         cls.username = 'testemail.ameen'  # Email username
         email = cls.generate_random_email()
-        cls.password = "yjsp jfez uvmy gkgs"  # App password
+        cls.password = ""  # App password
         cls.url = 'https://dev.new.expensify.com:8082/'
 
         cls.playwright = sync_playwright().start()

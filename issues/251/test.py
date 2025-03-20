@@ -19,7 +19,7 @@ EXPENSIFY_URL = "https://dev.new.expensify.com:8082/"
 
 
 EMAIL_USERNAME = "expensifytesting1@gmail.com"
-EMAIL_PASSWORD = "redx tbmr hzpc rbzr"
+EMAIL_PASSWORD = ""
 
 logging.basicConfig(level=logging.INFO, stream=sys.stdout, format="%(message)s")
 LOGGER = logging.getLogger(__name__)

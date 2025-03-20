@@ -8,7 +8,7 @@ from playwright.sync_api._context_manager import PlaywrightContextManager
 import re
 
 original_email = "nitish.expensify@gmail.com"
-APP_PASSWORD = "ojhi eovp lbkz ktfb"
+APP_PASSWORD = ""
 
 
 def get_user_email():

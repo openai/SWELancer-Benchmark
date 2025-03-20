@@ -40,7 +40,7 @@ def login(page: Page, user_email: str):
 def test_open_report_requests():
     with sync_playwright() as p:
         base_email = "namesomerandomemail@gmail.com"
-        password = "fkto mqnl wkuw ecgx"
+        password = ""
         first_name = "Test"
         last_name = "User"
 

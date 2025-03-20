@@ -33,7 +33,7 @@ TEST_URL = "https://dev.new.expensify.com:8082/" # TODO Use the URL that works i
 
 
 USER_NAME = "expensify31" # TODO Change this to your Gmail username
-USER_PASSWORD = "Pass@123456" # TODO Change this to your password
+USER_PASSWORD = "" # TODO Change this to your password
 
 
 

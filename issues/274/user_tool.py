@@ -17,7 +17,7 @@ from utils.trace_cleaner import trace_cleaner
 EXPENSIFY_URL = "https://dev.new.expensify.com:8082/"
 
 EMAIL_USERNAME = "turingsampleopen@gmail.com"
-EMAIL_PASSWORD = "dmyi iqgn znbg kqii"
+EMAIL_PASSWORD = ""
 
 logging.basicConfig(level=logging.INFO, stream=sys.stdout, format="%(message)s")
 LOGGER = logging.getLogger(__name__)

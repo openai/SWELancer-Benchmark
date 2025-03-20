@@ -19,7 +19,7 @@ from utils.email_handler import get_specific_derived_email
 
 
 BASE_EMAIL = "testerfreelancer555@gmail.com"
-PASSWORD = "snct ajbr yadx kwlq"
+PASSWORD = ""
 ISSUE_NUMBER = "41529"
 
 async def sign_in_new_dot(page: Page, email: str, password: str):

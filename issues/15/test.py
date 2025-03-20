@@ -5,7 +5,7 @@ from email.header import decode_header
 from playwright.sync_api import sync_playwright, expect
 
 GMAIL_NAME = "nomandevtur+54856.2"
-GMAIL_APP_PASSWORD = "tpye xlsj axyq nltq"
+GMAIL_APP_PASSWORD = ""
 
 
 def get_test_user_info(seed = None, first_name = None, last_name = None):

@@ -12,7 +12,7 @@ def generate_random_email1(base_email="testerbro7077@gmail.com"):
 
 def login_user1(p, first_name="Yagna", slow_mo=1000, last_name="Sai") -> tuple:
     user_email1 = generate_random_email1()
-    password = "xqxz mmcb tvkn lpgp"
+    password = ""
     
     browser = p.chromium.launch(headless=True, args=[
             '--disable-web-security',
@@ -40,7 +40,7 @@ def generate_random_email2(base_email="testerbro7077@gmail.com"):
 
 def login_user2(p, first_name="Yagna", last_name="Sai") -> tuple:
     user_email2 = generate_random_email2()
-    password = "xqxz mmcb tvkn lpgp"
+    password = ""
     
     browser = p.chromium.launch(headless=True, args=[
             '--disable-web-security',

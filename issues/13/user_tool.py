@@ -9,7 +9,7 @@ SECOND_NAME = "Test"
 
 
 # Utility to generate a random email
- def generate_random_email():
+def generate_random_email():
     timestamp = 123456
     return f"testuser+{timestamp}@gmail.com"
 
