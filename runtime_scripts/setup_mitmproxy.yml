@@ -10,7 +10,7 @@
   
     - name: Start mitmdump in the background
       shell: |
-        nohup mitmdump --mode transparent --showhost 2>&1 & echo $! > /tmp/mitmdump.pid
+        nohup mitmdump --mode transparent@8082 --showhost 2>&1 & echo $! > /tmp/mitmdump.pid
       async: 1
       poll: 0
 
