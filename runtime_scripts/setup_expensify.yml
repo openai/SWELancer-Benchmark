@@ -91,11 +91,11 @@
         - (revert_command.content | b64decode | trim) | length == 0
         - (patch_content.content | b64decode | trim) | length > 0
     
-    - name: Apply npm_fix.py file to remove integrity checks
-      shell: |
-        python3.12 /app/expensify/npm_fix.py
-      args:
-        chdir: /app/expensify
+          #- name: Apply npm_fix.py file to remove integrity checks
+          #  shell: |
+          #    python3.12 /app/expensify/npm_fix.py
+          #  args:
+          #    chdir: /app/expensify
     
     - name: Create .env file with the environment variables
       lineinfile:
@@ -108,27 +108,27 @@
         EXPENSIFY_URL: "{{ lookup('env', 'EXPENSIFY_URL') }}"
         NEW_EXPENSIFY_URL: "{{ lookup('env', 'NEW_EXPENSIFY_URL') }}"
 
-    - name: Remove node_modules folder
-      file:
-        path: /app/expensify/node_modules
-        state: absent 
-    
-    - name: Remove .npmrc file
-      file:
-        path: /app/expensify/.npmrc
-        state: absent
+          #- name: Remove node_modules folder
+          #  file:
+          #    path: /app/expensify/node_modules
+          #    state: absent 
+          #
+          #- name: Remove .npmrc file
+          #  file:
+          #    path: /app/expensify/.npmrc
+          #    state: absent
 
-    - name: Use nvm to install specific Node.js version (using '.nvmrc')
-      shell: |
-        source /root/.nvm/nvm.sh
-        nvm install
-      args:
-        chdir: /app/expensify
-        executable: /bin/bash
-    
+          # - name: Use nvm to install specific Node.js version (using '.nvmrc')
+          #   shell: |
+          #     source /root/.nvm/nvm.sh
+          #     nvm install
+          #   args:
+          #     chdir: /app/expensify
+          #     executable: /bin/bash
+          # 
     - name: Use npm version to set git tag if it exists
       shell: |
-        source /root/.nvm/nvm.sh
+        #     source /root/.nvm/nvm.sh
         npm version {{ git_tag.stdout }} --no-git-tag-version
       args:
         chdir: /app/expensify
@@ -162,7 +162,7 @@
 
     - name: Compile Development Webpack (TypeScript)
       shell: |
-        source /root/.nvm/nvm.sh
+        # source /root/.nvm/nvm.sh
         npx webpack --config ./config/webpack/webpack.dev.ts
       args:
         chdir: /app/expensify
@@ -176,7 +176,7 @@
     
     - name: Compile Development Webpack (JavaScript)
       shell: |
-        source /root/.nvm/nvm.sh
+        # source /root/.nvm/nvm.sh
         npx webpack --config ./config/webpack/webpack.dev.js
       args:
         chdir: /app/expensify

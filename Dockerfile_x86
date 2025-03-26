@@ -125,7 +125,7 @@ RUN npm install --no-cache
 # RUN npm install --save-dev webpack@5.98.0 webpack-cli
 
 # Copy remaining application files
-COPY . /app/expensify
+# COPY . /app/expensify
 
 # Install Pip
 COPY requirements.txt .
