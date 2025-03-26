@@ -17,6 +17,7 @@ RUN apt-get update && apt-get install -y \
     wget \
     tar \
     gzip \
+    jq \
     gnupg \
     openssh-client \
     xz-utils \
@@ -102,13 +103,29 @@ RUN mkdir -p /etc/nginx/ssl && \
     -out /etc/nginx/ssl/pusher.crt \
     -subj "/C=US/ST=State/L=City/O=Organization/CN=ws-mt1.pusher.com"
 
+# Install dependencies needed to install node
+RUN apt-get update && apt-get install -y curl xz-utils --no-install-recommends
+
+# Explicitly install Node.js 20.18.1 and npm 10.8.2
+RUN curl -fsSL https://nodejs.org/dist/v20.18.1/node-v20.18.1-linux-x64.tar.xz | tar -xJ -C /usr/local --strip-components=1 \
+    && npm install -g npm@10.8.2 \
+    && node -v && npm -v
+#
 # Clone the GitHub repository into /app/expensify
 # RUN mkdir -p -m 0700 ~/.ssh && ssh-keyscan github.com >> ~/.ssh/known_hosts
 RUN git clone https://github.com/Expensify/App.git /app/expensify --single-branch
 
-# Install NVM and Node.js
-RUN curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.40.1/install.sh | bash && \
-    . "$NVM_DIR/nvm.sh"
+WORKDIR /app/expensify
+
+# Cache npm install
+# COPY package.json package-lock.json ./
+RUN npm install --no-cache
+
+# Explicitly install webpack and webpack-cli
+# RUN npm install --save-dev webpack@5.98.0 webpack-cli
+
+# Copy remaining application files
+COPY . /app/expensify
 
 # Install Pip
 COPY requirements.txt .

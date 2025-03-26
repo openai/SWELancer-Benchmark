@@ -143,17 +143,17 @@
     #     chdir: /app/expensify
     #     executable: /bin/bash
 
-    - name: Install node modules via npm
-      shell: |
-        source /root/.nvm/nvm.sh
-        npm install --no-cache
-      args:
-        chdir: /app/expensify
-        executable: /bin/bash
-      retries: 3
-      delay: 5
-      register: result
-      until: result is not failed
+        #- name: Install node modules via npm
+        #  shell: |
+        #    source /root/.nvm/nvm.sh
+        #    npm install --no-cache
+        #  args:
+        #    chdir: /app/expensify
+        #    executable: /bin/bash
+        #  retries: 3
+        #  delay: 5
+        #  register: result
+        #  until: result is not failed
 
     - name: Check if the webpack.dev.ts file exists
       ansible.builtin.stat:
