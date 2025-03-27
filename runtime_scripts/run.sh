@@ -44,7 +44,7 @@ else
 
     # Run ansible playbooks to setup expensify and mitmproxy
     ansible-playbook -i "localhost," --connection=local /app/tests/setup_expensify.yml
-    ansible-playbook -i "localhost," --connection=local /app/tests/setup_mitmproxy.yml
+    ansible-playbook -i "localhost," --connection=local /app/tests/setup_mitmproxy.yml -vvvv
 
     # Set an environment variable to indicate that the setup is done
     echo "done" > /setup_done.txt

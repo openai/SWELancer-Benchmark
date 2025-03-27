@@ -10,18 +10,39 @@
   
     - name: Start mitmdump in the background
       shell: |
-        nohup mitmdump --mode transparent@8082 --showhost 2>&1 & echo $! > /tmp/mitmdump.pid
+        nohup mitmdump --mode transparent@8090 --showhost </dev/null > /tmp/mitmdump.log 2>&1 & echo $! > /tmp/mitmdump.pid
       async: 1
       poll: 0
 
+    - name: Read mitmdump PID file
+      shell: cat /tmp/mitmdump.pid
+      register: mitm_pid
+    - debug: var=mitm_pid.stdout
+
+    - name: Print mitmdump log file
+      shell: cat /tmp/mitmdump.log
+      register: mitm_pid_log
+    - debug: var=mitm_pid_log.stdout
+
+    - name: Check if mitmdump process is running
+      shell: "ps -p $(cat /tmp/mitmdump.pid) -o comm="
+      register: mitm_process_check
+      failed_when: false  # don't fail if process is not found
+    - debug: var=mitm_process_check.stdout 
+
     - name: Wait for mitmdump to start
       pause:
-        seconds: 10
+        seconds: 20
 
     - name: Stop mitmdump
-      shell: "kill `cat /tmp/mitmdump.pid`"
+      shell: "kill $(cat /tmp/mitmdump.pid)"
       ignore_errors: yes
-    
+
+    - name: List /root/.mitmproxy contents
+      shell: ls -la /root/.mitmproxy/
+      register: mitm_dir
+    - debug: var=mitm_dir.stdout_lines
+
     - name: Ensure mitmproxy-ca-cert.pem is present
       assert:
         that:
