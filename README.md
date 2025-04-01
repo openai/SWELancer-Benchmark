@@ -189,3 +189,7 @@ For a complete example of a ComputerInterface implementation, you can refer to t
 We include the following utilities to facilitate future research:
 
 - `download_videos.py` allows you to download the videos attached to an Expensify GitHub issue if your model supports video input
+
+## SWELancer-Lite 
+
+If you'd like to run SWELancer-Lite, swap out `swelancer_tasks.csv` with `swelancer_tasks_lite.csv` in `swelancer.py`. The lite dataset contains 174 tasks each worth over $1,000 (61 IC SWE tasks and 113 SWE Manager tasks). 
