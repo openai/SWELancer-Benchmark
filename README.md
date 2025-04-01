@@ -183,3 +183,9 @@ For a complete example of a ComputerInterface implementation, you can refer to t
       url={https://arxiv.org/abs/2502.12115}, 
 }
 ```
+
+## Utilities 
+
+We include the following utilities to facilitate future research:
+
+- `download_videos.py` allows you to download the videos attached to an Expensify GitHub issue if your model supports video input
