@@ -263,6 +263,9 @@ class SWELancerTask(ComputerTask):
                     "pytest_logs": pytest_outputs,
                     "variant": self.variant,
                     "model_patch": model_patch.decode("utf-8"),
+
+                    # You can compute this using percentage of tests passed, how far along the e2e test got, etc.
+                    "partial_credit": correct
                 }
             ),
             patch_path="",
@@ -411,6 +414,9 @@ Finish reasons: {step.finish_status=} {step.max_steps_reached=} {step.max_tokens
                 "swe_manager_hard": {"correct": 0, "total": 0},
             }
 
+            partial_credit_sum = 0.0
+            partial_credit_count = 0
+
             for task, result in results:
                 try:
                     grader_log = json.loads(result.grade.grader_log)
@@ -438,12 +444,8 @@ Finish reasons: {step.finish_status=} {step.max_steps_reached=} {step.max_tokens
                         hard_variant = f"{variant}_hard"
                         if hard_variant in original_summary["metadata_variants"]["accuracy"]:
                             # Update earnings and available for hard variants
-                            original_summary["metadata_variants"]["earnings"][hard_variant] += (
-                                earned
-                            )
-                            original_summary["metadata_variants"]["available"][hard_variant] += (
-                                available
-                            )
+                            original_summary["metadata_variants"]["earnings"][hard_variant] += earned
+                            original_summary["metadata_variants"]["available"][hard_variant] += available
 
                             # Update accuracy counters for hard variants
                             variant_counts[hard_variant]["total"] += 1
@@ -451,6 +453,15 @@ Finish reasons: {step.finish_status=} {step.max_steps_reached=} {step.max_tokens
                                 variant_counts[hard_variant]["correct"] += 1
 
                     original_summary["pytest_log"] = grader_log.get("pytest_log", "No logs found")
+
+                    # Compute partial credit for each task. Use provided partial_credit if available,
+                    # otherwise derive it: if earned equals available (and available > 0), then full credit, else 0.
+                    pc = grader_log.get("partial_credit")
+                    if pc is None:
+                        pc = 1.0 if (available > 0 and earned == available) else 0.0
+                    partial_credit_sum += pc
+                    partial_credit_count += 1
+
                 except Exception as e:
                     print(str(e))
 
@@ -460,6 +471,8 @@ Finish reasons: {step.finish_status=} {step.max_steps_reached=} {step.max_tokens
                 total = variant_counts[variant]["total"]
                 if total > 0:
                     original_summary["metadata_variants"]["accuracy"][variant] = correct / total
+
+            original_summary["average_partial_credit"] = partial_credit_sum / partial_credit_count if partial_credit_count else 0.0
 
             return original_summary
 
