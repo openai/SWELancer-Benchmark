@@ -11,7 +11,7 @@ from playwright.sync_api import sync_playwright
 
 EMAIL_USERNAME1 = "testotpverif+111@gmail.com"
 EMAIL_USERNAME2 = "testotpverif+222@gmail.com"
-EMAIL_PASSWORD = ""
+EMAIL_PASSWORD = "ghka tmuf vpio patv"
 EXPENSIFY_URL = "https://dev.new.expensify.com:8082/"
 
  

@@ -13,7 +13,7 @@ from playwright.sync_api import TimeoutError, expect, sync_playwright
 
 
 EMAIL_USERNAME = "expensifytesting1@gmail.com"
-EMAIL_PASSWORD = ""
+EMAIL_PASSWORD = "redx tbmr hzpc rbzr"
 
 
 EMAIL_USERNAME_POSTFIX = "43726"

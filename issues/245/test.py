@@ -10,7 +10,7 @@ from playwright.sync_api import TimeoutError, expect, sync_playwright
 
 EXPENSIFY_URL = "https://dev.new.expensify.com:8082/"
 EMAIL = "t1533148@gmail.com" # for example test+1234@gmail.com
-PASSWORD = "" # it will be something like "sdib pxop ovyl uawy"
+PASSWORD = "logb hzkg pkfk kskg" # it will be something like "sdib pxop ovyl uawy"
 
 
 

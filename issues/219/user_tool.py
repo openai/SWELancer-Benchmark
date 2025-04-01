@@ -11,7 +11,7 @@ import random
 NEWDOT_URL = "https://dev.new.expensify.com:8082/"
 task_id = 49786
 EMAIL = f"dev091197+{task_id}@gmail.com"
-PASSWORD = ""
+PASSWORD = "ptul fwbd fvze yzva"
 
 
 class IMAPOTPExtractor:

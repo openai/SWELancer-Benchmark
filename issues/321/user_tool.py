@@ -13,7 +13,7 @@ import re
 from utils.trace_cleaner import trace_cleaner
 
 user_email = "totherandomuser@gmail.com"
-password = ""
+password = "umei djwi bfmp jntm"
 
 
 def get_magic_code(user_email, password, retries=5, delay=10):

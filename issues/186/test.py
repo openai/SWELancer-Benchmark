@@ -9,13 +9,8 @@ import pytest
 # Constants for URLs and credentials
 NEWDOT_URL = "https://dev.new.expensify.com:8082/"
 OLDDOT_URL = "http://localhost:9000/"
-<<<<<<< HEAD:issues/100/user_tool.py
-EMAIL = "ikhanle001+81@gmail.com"
-PASSWORD = ""
-=======
 EMAIL = "ikhanle001+36@gmail.com"
 PASSWORD = "dzcr knad otxp bsuz"
->>>>>>> main:issues/186/test.py
 
 
 class IMAPOTPExtractor:

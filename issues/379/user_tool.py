@@ -19,7 +19,7 @@ import re
 from utils.trace_cleaner import trace_cleaner
 
 USER_EMAIL = "playwright2user+1@gmail.com"
-PASSWORD = ""
+PASSWORD = "zehr mglm gizg gjcc"
 
 def fetch_verification_code_from_email(user_email, password, retries=10, delay=10):
     """
@@ -176,3 +176,4 @@ def test_save_description_in_submitted_expense():
 
 
             browser.close()
+}

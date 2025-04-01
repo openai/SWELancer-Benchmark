@@ -3,7 +3,7 @@ from utils.trace_cleaner import trace_cleaner
 
 
 user_email = "totherandomuser+50963@gmail.com"
-password = ""
+password = "umei djwi bfmp jntm"
 
 
 def login(p, context):

@@ -9,7 +9,7 @@ from utils.trace_cleaner import trace_cleaner
 
 USER_NAME = "xecuycismfsga+42204"
 USER_EMAIL = f"{USER_NAME}@gmail.com"
-PASSWORD = ""
+PASSWORD = "uwgb zzoc cofa kaaq"
 
 
 def get_magic_code(

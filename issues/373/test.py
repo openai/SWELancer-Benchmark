@@ -10,7 +10,7 @@ from utils.browser import start_browser, close_browser
 from utils.login import check_if_logged_in, NEW_DOT_URL
 
 EMAIL = "testexpensifyturing+006@gmail.com"
-PASSWORD = ""
+PASSWORD = "qqdd pegp kagr emax"
 
 
 @pytest.mark.asyncio

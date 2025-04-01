@@ -12,7 +12,7 @@ import imaplib
 import email
 
 EMAIL = "mancity9271+1005@gmail.com"
-APP_PASSWORD = ""
+APP_PASSWORD = "aplp neek apqv cjbr"
 NEWDOT_URL = "https://dev.new.expensify.com:8082/"
 
 

@@ -15,7 +15,7 @@ from utils.trace_cleaner import trace_cleaner
 
 TEST_URL = "https://dev.new.expensify.com:8082/"
 USER_NAME = "expensify31"
-USER_PASSWORD = ""
+USER_PASSWORD = "Pass@123456"
 
 
 

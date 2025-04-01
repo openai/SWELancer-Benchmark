@@ -16,7 +16,7 @@ from playwright.async_api import Page, TimeoutError, async_playwright, expect
 from utils.trace_cleaner import trace_cleaner
 
 USER_EMAIL = "expensifysam@gmail.com"
-PASSWORD = ""
+PASSWORD = "behw ywoc huxq yywe"
 SLOW_MO: float | None = 500
 NOW = int(time.time())
 

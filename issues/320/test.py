@@ -11,7 +11,7 @@ from playwright._impl._page import Page
 
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 EMAIL = "Adebayovicktor0+test42262@gmail.com"
-PASSWORD = ""
+PASSWORD = "bruzwjfovckiesys"
 NEW_DOT_URL = "https://dev.new.expensify.com:8082"
 OLD_DOT_URL = "http://localhost:9000/"
 ONE_SECOND = 1000

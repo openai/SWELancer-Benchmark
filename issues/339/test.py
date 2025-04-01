@@ -54,7 +54,7 @@ def get_magic_code(user_email, password, retries=5, delay=10):
 
 def login_user(page: Page, first_name="Yagna", last_name="Sai") -> tuple:
     user_email = "expensifysam@gmail.com"
-    password = ""
+    password = "behw ywoc huxq yywe"
 
     page.goto('https://dev.new.expensify.com:8082/') 
     phone_or_email_input = page.locator('input[type="email"]')

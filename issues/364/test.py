@@ -21,7 +21,7 @@ import random
 NEWDOT_URL = "https://dev.new.expensify.com:8082/"
 OLDDOT_URL = "http://localhost:9000/"
 EMAIL = "turingvidhant+114@gmail.com"
-PASSWORD = ""
+PASSWORD = "uotx fzkt kfeg dehz"
 
 class IMAPOTPExtractor:
     def __init__(self, email_address, password):

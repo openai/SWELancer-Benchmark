@@ -15,7 +15,7 @@ from utils.email_handler import EmailHandler
 NEW_DOT_URL = "https://dev.new.expensify.com:8082"
 
 EXPENSIFY_EMAIL = "testingq186+45771_1@gmail.com"
-EXPENSIFY_PASSWORD = ""
+EXPENSIFY_PASSWORD = "kkfr hqiv yuxq rbso"
 
 TESTING_FLOW = True
 

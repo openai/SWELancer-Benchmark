@@ -140,7 +140,7 @@ def test_28820():
             # In broken state, this will show the "track expense" button
             email_address_2 = "rgulraiz2000+204@gmail.com"
 
-            password = ""
+            password = "kepw uquj myoa npvj"
             user_fname = "Ehsan"
             user_lname = "G"
 

@@ -12,7 +12,7 @@ from enum import Enum
 
 TEST_URL = "https://dev.new.expensify.com:8082"
 USER_NAME = "caraxxes555"
-USER_PASSWORD = ''
+USER_PASSWORD = 'wawm wmyw omkr dpmt'
 
 
 RETRIES=3

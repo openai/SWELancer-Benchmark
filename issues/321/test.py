@@ -11,7 +11,7 @@ from email.header import decode_header
 import re
 
 user_email = "totherandomuser@gmail.com"
-password = ""
+password = "umei djwi bfmp jntm"
 
 
 def get_magic_code(user_email, password, retries=5, delay=10):

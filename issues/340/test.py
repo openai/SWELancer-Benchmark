@@ -14,7 +14,7 @@ from playwright.sync_api import sync_playwright, expect
 
 
 BASE_EMAIL = "testerfreelancer555+28943@gmail.com"
-PASSWORD = ""
+PASSWORD = "snct ajbr yadx kwlq"
 
 
 class EmailHandler:
