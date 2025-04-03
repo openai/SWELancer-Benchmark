@@ -321,7 +321,8 @@ class SWELancerEval(PythonCodingEval):
             SWEFL_ENV["ISSUE_ID"] = task["question_id"]
 
             del task['price_limit']
-            del task['canary']
+            if 'canary' in task:
+                del task['canary']
             swelancer_tasks.append(SWELancerTask(**task, attempt_id=str(i), environment=SWEFL_ENV, grade_every_step=False, docker_image=docker_image, instance=SwelancerInstance(repo="expensify"))) # type: ignore
             i += 1
         return swelancer_tasks
