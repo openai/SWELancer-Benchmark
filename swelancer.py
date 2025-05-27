@@ -286,7 +286,7 @@ class SWELancerEval(PythonCodingEval):
     async def get_tasks(self) -> list[SWELancerTask]:
         tasks = pd.read_csv("swelancer_tasks.csv")
         env_vars = dotenv_values(".env")    
-        SWEFL_ENV = {
+        common_env = {
             "PUSHER_APP_KEY": PUSHER_APP_KEY,
             "PUSHER_APP_SECRET": PUSHER_APP_SECRET, 
             "PUSHER_APP_ID": PUSHER_APP_ID,
@@ -295,7 +295,6 @@ class SWELancerEval(PythonCodingEval):
             "NEW_EXPENSIFY_URL": env_vars["NEW_EXPENSIFY_URL"],
             "ISSUE_ID": "0",
             "LC_ALL": "C.UTF-8",
-            "EVAL_VARIANT": "ic_swe",
         }
 
         docker_image = "swelancer:latest"
@@ -317,12 +316,14 @@ class SWELancerEval(PythonCodingEval):
                 task['manager_commit'] = None
             if "Reintroduce-" in task["question_id"]:
                 continue
-
-            SWEFL_ENV["ISSUE_ID"] = task["question_id"]
+            
+            task_env = common_env.copy()
+            task_env["ISSUE_ID"] = task["question_id"]
+            task_env["EVAL_VARIANT"] = task["variant"]
 
             del task['price_limit']
             del task['canary']
-            swelancer_tasks.append(SWELancerTask(**task, attempt_id=str(i), environment=SWEFL_ENV, grade_every_step=False, docker_image=docker_image, instance=SwelancerInstance(repo="expensify"))) # type: ignore
+            swelancer_tasks.append(SWELancerTask(**task, attempt_id=str(i), environment=task_env, grade_every_step=False, docker_image=docker_image, instance=SwelancerInstance(repo="expensify"))) # type: ignore
             i += 1
         return swelancer_tasks
     
