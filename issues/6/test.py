@@ -5,8 +5,9 @@ from playwright.sync_api import Page, expect, sync_playwright
 
 
 # Utility to generate a random email
+# Don't use gmail as it has been ban
 def generate_random_email(timestamp: int = int(time.time())):
-    return f"turingtemp+1739871051@gmail.com"
+    return f"turingtemp+{timestamp}@mustok{timestamp}.com"
 
 
 def create_user(
@@ -43,7 +44,7 @@ def test_issue():
         page.get_by_label("Start chat (Floating action)").click()
         page.get_by_text("New workspace").click()
         page.get_by_role("button", name="Confirm").click()
-        page.get_by_test_id("WorkspaceInitialPage").get_by_label("TestUser Surname's Workspace").click()
+        page.get_by_test_id("WorkspaceInitialPage").get_by_label(f"Mustok{timestamp}'s Workspace").click()
         page.get_by_label("Create").last.click()
 
         menu_items = page.locator('[role="menuitem"]')
