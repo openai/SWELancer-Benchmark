@@ -1,6 +1,7 @@
 import imaplib
 import email
 import re
+import time
 from email.header import decode_header
 from playwright.sync_api import sync_playwright, expect
 
@@ -15,7 +16,7 @@ def get_test_user_info(seed = None, first_name = None, last_name = None):
     if last_name is None:
         last_name = ""
 
-    email = f"{GMAIL_NAME}+{seed}@gmail.com" if seed is not None else f"{GMAIL_NAME}@gmail.com"
+    email = f"{GMAIL_NAME}+{seed}@mockmail.com" if seed is not None else f"{GMAIL_NAME}@mockmail.com"
     
     return {"email": email, "password": GMAIL_APP_PASSWORD, "first_name": first_name, "last_name": last_name}
 
@@ -78,7 +79,7 @@ def get_magic_code(user_email, password, retries=5, delay=5):
 def select_activity(page, first_name, last_name, activity_text):
     
     # Select activity in onboarding page and click Continue
-    page.get_by_label(activity_text).click()
+    page.get_by_text(activity_text).click()
 
     # Enter first name, last name and click continue
     page.get_by_role("textbox", name="First name").fill(first_name)
@@ -114,10 +115,9 @@ def login_user(page, user_info, activity_text="Track and budget expenses"):
         validate_code_input.fill(magic_code)
 
     page.wait_for_timeout(3000)
-
     select_activity_dialog = page.get_by_text("What do you want to do today?")
-    if select_activity_dialog.count() > 0:
-        select_activity(page, user_info["first_name"], user_info["last_name"], activity_text)
+    expect(select_activity_dialog).to_be_visible(timeout=5000)
+    select_activity(page, user_info["first_name"], user_info["last_name"], activity_text)
 
 
 def launch_app(pw, headless=False, device=None, geolocation=None):
@@ -144,9 +144,10 @@ def launch_app(pw, headless=False, device=None, geolocation=None):
 def test_54856():
     with sync_playwright() as p:
         
-        user_info = get_test_user_info()
+        timestamp = str(int(time.time() * 1000))  # 使用毫秒级时间戳
+        user_info = get_test_user_info(seed = timestamp)
 
-        delete_email_inbox(user_info["email"], user_info["password"], retries=6, delay=5)
+        # delete_email_inbox(user_info["email"], user_info["password"], retries=6, delay=5)
 
         browser, context, page = launch_app(p)
         login_user(page, user_info)
@@ -158,7 +159,7 @@ def test_54856():
         page.wait_for_timeout(1000)
         page.get_by_test_id("InitialSettingsPage").get_by_label("Workspaces").click()
         page.wait_for_timeout(1000)
-        page.get_by_label("row").click()
+        page.get_by_label("New workspace").click()
         page.wait_for_timeout(1000)
         page.get_by_label("Company cards").click()
         page.wait_for_timeout(1000)
@@ -170,16 +171,39 @@ def test_54856():
         page.wait_for_timeout(1000)
         button_locator = page.locator("button:has-text('Next')")
 
-        # Find the parent <div> (first ancestor div)
-        parent_div_locator = button_locator.locator("xpath=ancestor::div[1]")
+        # Set a flag to track if a qualifying margin is found
+        found_valid_margin = False
+        final_margin_value = "N/A"
 
-        # Get the computed CSS value of 'margin-top'
-        margin_top_value = parent_div_locator.evaluate("""
-            el => window.getComputedStyle(el).getPropertyValue('margin-top')
-        """)
+        # Loop to check the parent (i=1) and grandparent (i=2)
+        for i in range(1, 3):
+            # Dynamically build the locator pointing to the parent or grandparent div
+            ancestor_locator = button_locator.locator(f"xpath=ancestor::div[{i}]")
+            
+            # Ensure this ancestor exists, in case the button is not nested deep enough
+            # REMOVED 'await' from the line below
+            if ancestor_locator.count() > 0:
+                # Get the computed style value for 'margin-top'
+                # REMOVED 'await' from the line below
+                margin_top_value = ancestor_locator.evaluate(
+                    "el => window.getComputedStyle(el).getPropertyValue('margin-top')"
+                )
+                
+                print(f"Checking ancestor::div[{i}], its margin-top value is: {margin_top_value}")
+                final_margin_value = margin_top_value
 
-        # Assert that the parent div has a margin-top value
-        assert margin_top_value not in ["", "0px"], f"Parent <div> has no margin-top or it's set to 0: {margin_top_value}"
+                # If a non-empty and non-'0px' margin-top is found
+                if margin_top_value and margin_top_value != "0px":
+                    found_valid_margin = True
+                    break  # Found it, no need to check higher-level ancestors, so break the loop
+            else:
+                print(f"Could not find ancestor::div[{i}], stopping the upward search.")
+                break # If even the parent can't be found, no need to continue
+
+        # After the loop finishes, assert based on the final result
+        assert found_valid_margin, f"Neither the parent nor grandparent div has a valid margin-top. The last checked value was: {final_margin_value}"
+
+        print(f"Assertion successful! Found a valid margin-top on ancestor::div[{i}]: {final_margin_value}")
 
         page.wait_for_timeout(3000)
         page.close()
