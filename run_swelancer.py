@@ -4,6 +4,7 @@ from __future__ import annotations
 from dotenv import load_dotenv
 load_dotenv()
 
+from navigator_solver import NavigatorSolver
 from swelancer import SWELancerEval 
 import argparse
 import nanoeval
@@ -25,7 +26,7 @@ async def main() -> None:
         EvalSpec(
             # taskset is a list of ISSUE_IDs you wish to evaluate (e.g., ["123", "456_789"])
             eval=SWELancerEval(
-                solver=SimpleAgentSolver(model="gpt-4o"),
+                solver=NavigatorSolver(),
                 taskset=taskset
             ),
             runner=RunnerArgs(
