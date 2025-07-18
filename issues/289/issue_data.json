@@ -1,6 +1,0 @@
-{
-    "price": 250.0,
-    "title": "[HOLD for payment 2024-06-20] [$250] Workspace switcher resets to All (Expensify) after page refresh",
-    "issue_repo_steps": "Action performed: 1. Go the staging.new.expensify.com and login\r\n2. Click the dropdown on the top left and choose different workspace\r\n3. Refresh the page\n\nExpected result: The selected workspace should remain the same\n\nActual result: None",
-    "_issue_id": "42153_910"
-}

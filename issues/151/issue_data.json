@@ -1,6 +1,0 @@
-{
-    "price": 125.0,
-    "title": "[HOLD for payment 2024-12-09] [$125] Make sure the first result in most recents is highlighted when user uses CMD+K ",
-    "issue_repo_steps": "From the design doc. \r\n\r\n> Recent chats is the same as our existing CMD+K command, which means: \r\n> - The router can be opened and focused via the same keyboard shortcut\r\n> - When CMD+K is pressed and no search has been entered, the top-most result in Recent chats is highlighted. Hitting the return key closes the router and navigates a member to the corresponding report \r\n\r\n![CleanShot 2024-11-01 at 19 44 45@2x](https://github.com/user-attachments/assets/8709a3c4-ee32-4c95-bd61-48de4385356a)\r\n\r\n\r\n\r\ncc @luacmartins \n<details><summary>Upwork Automation - Do Not Edit</summary>\n    <ul>\n        <li>Upwork Job URL: https://www.upwork.com/jobs/~021852421610290735954</li>\n        <li>Upwork Job ID: 1852421610290735954</li>\n        <li>Last Price Increase: 2024-11-01</li>\n<li>Automatic offers: </li>\n<ul>\n<li>nyomanjyotisa | Contributor | 104805899</li>\n</ul></li>\n    </ul>\n</details>\n\n<details><summary>Issue Owner</summary>Current Issue Owner: @JmillsExpensify</details>",
-    "_issue_id": "51894"
-}

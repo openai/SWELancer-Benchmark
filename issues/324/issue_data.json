@@ -1,6 +1,0 @@
-{
-    "price": 500.0,
-    "title": "[HOLD for payment 2023-12-07] [$500] Go back from `Flag as offensive` doesn't display correct report page",
-    "issue_repo_steps": "Action performed: 1. Go to any public room report [exam](https://staging.new.expensify.com/r/8292963527436014)\r\n2. Hold touch on any chat message select \"Flag as offensive\"\r\n3. Reload page [exam](https://staging.new.expensify.com/flag/8292963527436014/533025741267772385)\r\n4. Select back button\n\nExpected result: None\n\nActual result: None",
-    "_issue_id": "30101_403"
-}

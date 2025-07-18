@@ -1,6 +1,0 @@
-{
-    "price": 1000.0,
-    "title": "[HOLD for payment 2023-09-20] [$1000] FAB menu - Pressing Enter doesn't open the selected option page",
-    "issue_repo_steps": "Action performed: 1. Click plus button.\r\n2. Use arrow up to select the option, press Enter.\r\n3. Notice that sometimes it doesn't open the page after pressing Enter.\n\nExpected result: After pressing Enter, it should open selected option.\n\nActual result: None",
-    "_issue_id": "26228_719"
-}

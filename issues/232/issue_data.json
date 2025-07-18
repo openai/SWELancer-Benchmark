@@ -1,6 +1,0 @@
-{
-    "price": 250.0,
-    "title": "[HOLD for payment 2024-10-17] [$250] Distance - Invalid waypoints aren't cleared when a request fails",
-    "issue_repo_steps": "Action performed: 1. Navigate to staging.new.expensify.com\r\n2. Create a workspace\r\n3. Go to workspace chat\r\n4. Go offline\r\n5. Go to submit distance expense\r\n6. Enter an invalid waypoint and click save\r\n12. Add another waypoint and continue to submit the expense\r\n13. Go online\r\n14. Verify the request fails\r\n15. Green plus, submit an expense, distance\r\n16. Go to enter a waypoint\n\nExpected result: Invalid waypoints should be removed from suggestion list\n\nActual result: None",
-    "_issue_id": "48631_667"
-}

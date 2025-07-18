@@ -1,6 +1,0 @@
-{
-    "price": 500.0,
-    "title": "[HOLD for payment 2023-11-22] [$500] [Wave 6: Tags] IOU-No result found message is not shown in tag search in Workspace",
-    "issue_repo_steps": "Action performed: Pre-Condition: 1 Enable tags in admin account in old dot by visiting policy settings----tags\r\n2.Give a custom name for tag eg shahrukh khan\r\n3.Create few tags\r\n1. Launch app\r\n2. Tap on a workspace chat as employee\r\n3. Tap plus icon----request money ---manual\r\n4. Enter an amount\r\n5. Tap next\r\n6. Tap show more\r\n7. Tap tag and search the term \"rabbit\"\n\nExpected result: In tag search, if there is no result for the term we entered, it must show \"no results found\" message.\n\nActual result: None",
-    "_issue_id": "30166_402"
-}

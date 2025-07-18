@@ -1,6 +1,0 @@
-{
-    "price": 500.0,
-    "title": "[HOLD for payment 2023-11-01] [$500] The error message does not close in one click if the address dropdown is open.",
-    "issue_repo_steps": "Action performed: 1. Go to the staging environment.\r\n2. Open the FAB icon and select the \"Request Money\" option.\r\n3. Navigate to the distance tab and click on \"Start.\"\r\n4. Trigger an error message by selecting \"use current location\" and denying access.\r\n5. Open the dropdown by clicking on the address input and entering a few characters.\r\n6. Attempt to close the error message by clicking the close button on the error.\r\n7. Observe that the dropdown is closed, but the error message remains open.\n\nExpected result: The error message should be removed with a single click just like in native devices\n\nActual result: None",
-    "_issue_id": "29433_762"
-}

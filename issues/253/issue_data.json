@@ -1,6 +1,0 @@
-{
-    "price": 250.0,
-    "title": "[HOLD for payment 2024-08-02] [$250] Individually selected expense rows in grouped reports don't have a background color applied to them",
-    "issue_repo_steps": "Action performed: Precondition: User have some shared group expenses in a report\r\n1. Go to staging.new.expensify.com\r\n2. Click Search in bottom navigation\r\n3. Click \"Shared\" > Click check box on any one of the grouped expenses\n\nExpected result: Selected expense in a group, should get a background color the same way that it does if it's a single expense row that isn't grouped is selected.\n\nActual result: None",
-    "_issue_id": "45190_520"
-}

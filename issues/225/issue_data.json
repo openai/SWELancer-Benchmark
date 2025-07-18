@@ -1,6 +1,0 @@
-{
-    "price": 250.0,
-    "title": "[HOLD for payment 2024-10-14] [$250] The intro text on private notes list stays fixed when it should scroll with the page",
-    "issue_repo_steps": "Action performed: 1. Open 1:1 chat\r\n2. Click on the header\r\n3. Add private notes with many lines\r\n4. In private notes list page, scroll the page\n\nExpected result: The intro text should be attached to the content of the page and scroll like we did with many pages\n\nActual result: None",
-    "_issue_id": "49298_510"
-}

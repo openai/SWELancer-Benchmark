@@ -1,6 +1,0 @@
-{
-    "price": 500.0,
-    "title": "[HOLD for payment 2024-03-29] [$500] [Polish] Web - LHN - \"This is the beginning of your chat\" message can be seen for \"Your space\"",
-    "issue_repo_steps": "Action performed: 1. Log in with a new account\r\n2. Pin \"Your space\" from search if it's not visible in the LHN\n\nExpected result: The message shouldn't be seen.\n\nActual result: None",
-    "_issue_id": "38087_1083"
-}

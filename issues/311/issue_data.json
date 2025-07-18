@@ -1,6 +1,0 @@
-{
-    "price": 500.0,
-    "title": "[HOLD for payment 2024-04-05] [$500] Not able to share logs to own self DM from \"Debug console\"",
-    "issue_repo_steps": "Action performed: 1. Open app\r\n2. Go to settings > about> troubleshoot\r\n3. Toggle client side logging> view debug console\r\n4. Click share logs\n\nExpected result: User should be able to share to own DM to access in desktop\n\nActual result: None",
-    "_issue_id": "38147_954"
-}

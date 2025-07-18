@@ -1,6 +1,0 @@
-{
-    "price": 1000.0,
-    "title": "[HOLD for payment 2023-09-08] [$1000] mWeb - Chat - Hide the keyboard on click of confirm button",
-    "issue_repo_steps": "Action performed: 1. go to any chat and send password protected pdf\r\n2. click on PDF and type wrong password\r\n3. click on confirm button\r\n\r\n\r\n\r\n[example protected PDF.pdf](https://github.com/Expensify/App/files/12428724/example.protected.PDF.pdf)\r\nPassword: `25570`\n\nExpected result: Should not hide the keyboard same as native app\n\nActual result: None",
-    "_issue_id": "25570_780"
-}

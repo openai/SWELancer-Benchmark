@@ -1,6 +1,0 @@
-{
-    "price": 1000.0,
-    "title": "[HOLD for payment 2024-01-11] [$1000] Chat - Tab with list of user suggestions opens with delay and appears empty or partially displayed",
-    "issue_repo_steps": "Action performed: 1. Open the App\r\n2. Login with any account\r\n3. Open any chat\r\n4. Type @ for list of user suggestions opens\n\nExpected result: The tab with list of user suggestions opens without delay\n\nActual result: None",
-    "_issue_id": "32401_821"
-}

@@ -1,6 +1,0 @@
-{
-    "price": 500.0,
-    "title": "[HOLD for payment 2024-06-06] [$500] Access the `PRIVATE_BLOCKED_FROM_CHAT` NVP to block the UI for adding comments",
-    "issue_repo_steps": "Action performed: Open NewDot as a user who has been blocked from chat. You can use a test account and flag a message as assault sent from another test account. In the message sent from the other test account, say something like \"This is a test message from an Expensify contributor! Please flag me as assault and block me.\"\n\nExpected result: You should be entirely blocked from chatting i.e. the compose box should be replaced with the component below\r\n<img width=\"799\" alt=\"Screenshot 2024-03-04 at 10 01 59\u202fAM\" src=\"https://github.com/Expensify/App/assets/31285285/fbed3e8f-4019-4067-ab11-f99defd36650\">\n\nActual result: None",
-    "_issue_id": "37688_441"
-}

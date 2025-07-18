@@ -1,6 +1,0 @@
-{
-    "price": 250.0,
-    "title": "[HOLD for payment 2024-08-02] [$250] Android - chat - After sending emoji art, tapping emoji picker app crashes",
-    "issue_repo_steps": "Action performed: 1. Launch app\r\n2. Tap on a report\r\n3. From the link - https://www.copyandpasteemojiart.com/?m=1\r\n- copy the below image\r\n4. Paste the image\r\n5. Send the message\r\n6. Tap emoji picker\n\nExpected result: After sending emoji art, tapping emoji picker app must not crash\n\nActual result: None",
-    "_issue_id": "45523_892"
-}

@@ -1,6 +1,0 @@
-{
-    "price": 500.0,
-    "title": "[HOLD for payment 2023-10-16] [$500] Chat -  LHN disappears after leaving a thread",
-    "issue_repo_steps": "Action performed: 1. Open any chat\r\n2. Send any message\r\n3. Press reply in thread on the message\r\n4. Send any message on the thread\r\n5. Refresh the web\r\n6. Leave the thread\n\nExpected result: LHN still visible\n\nActual result: None",
-    "_issue_id": "28087_800"
-}
